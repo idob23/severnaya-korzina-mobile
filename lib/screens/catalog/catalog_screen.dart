@@ -2,59 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:severnaya_korzina/models/product.dart';
 import 'package:severnaya_korzina/providers/cart_provider.dart';
+import 'package:severnaya_korzina/providers/products_provider.dart'; // НОВЫЙ
 
-class CatalogScreen extends StatelessWidget {
-  final List<Product> products = [
-    Product(
-      id: 1,
-      name: 'Гречка 1кг',
-      category: 'Крупы',
-      approximatePrice: 52.0,
-      lastPurchasePrice: 52.0,
-      description: 'Гречневая крупа высокого качества',
-      isActive: true,
-    ),
-    Product(
-      id: 2,
-      name: 'Рис круглый 1кг',
-      category: 'Крупы',
-      approximatePrice: 48.0,
-      lastPurchasePrice: 48.0,
-      description: 'Рис круглозерный для плова',
-      isActive: true,
-    ),
-    Product(
-      id: 3,
-      name: 'Говядина зам. 1кг',
-      category: 'Мясо',
-      approximatePrice: 420.0,
-      lastPurchasePrice: 420.0,
-      description: 'Говядина замороженная',
-      isActive: true,
-    ),
-    Product(
-      id: 4,
-      name: 'Курица зам. 1кг',
-      category: 'Мясо',
-      approximatePrice: 185.0,
-      lastPurchasePrice: 185.0,
-      description: 'Курица замороженная',
-      isActive: true,
-    ),
-    Product(
-      id: 5,
-      name: 'Молоко 3.2% 1л',
-      category: 'Молочка',
-      approximatePrice: 58.0,
-      lastPurchasePrice: 58.0,
-      description: 'Молоко пастеризованное',
-      isActive: true,
-    ),
-  ];
+class CatalogScreen extends StatefulWidget {
+  @override
+  _CatalogScreenState createState() => _CatalogScreenState();
+}
+
+class _CatalogScreenState extends State<CatalogScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    // ЗАГРУЖАЕМ ДАННЫЕ С СЕРВЕРА
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final productsProvider =
+          Provider.of<ProductsProvider>(context, listen: false);
+      productsProvider.loadProducts();
+      productsProvider.loadCategories();
+    });
+  }
 
   // Функция для расчета экономии
   double getRetailPrice(double optPrice) {
-    // Примерно розничная цена в 2.5-3 раза выше оптовой
     return optPrice * 2.8;
   }
 
@@ -70,148 +40,253 @@ class CatalogScreen extends StatelessWidget {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green),
-              ),
-              child: Text(
-                '💰 Цены указаны за коллективную закупку\n🚚 Экономия до 70% от розничных цен!',
-                style: TextStyle(
-                  color: Colors.green[800],
-                  fontWeight: FontWeight.bold,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final productsProvider =
+              Provider.of<ProductsProvider>(context, listen: false);
+          await productsProvider.refresh();
+        },
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green),
+                ),
+                child: Text(
+                  '💰 Цены указаны за коллективную закупку\n🚚 Экономия до 70% от розничных цен!',
+                  style: TextStyle(
+                    color: Colors.green[800],
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-            ),
-            SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                itemCount: products.length,
-                itemBuilder: (context, index) {
-                  final product = products[index];
-                  final retailPrice = getRetailPrice(product.approximatePrice);
-                  final savings =
-                      getSavingsPercent(product.approximatePrice, retailPrice);
+              SizedBox(height: 16),
 
-                  return Card(
-                    margin: EdgeInsets.only(bottom: 12),
-                    elevation: 2,
-                    child: Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: Colors.blue,
-                            child: Icon(Icons.shopping_basket,
-                                color: Colors.white),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  product.name,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  product.category,
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Text(
-                                      '${product.approximatePrice.toInt()}₽',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green,
-                                      ),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      '${retailPrice.toInt()}₽',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        decoration: TextDecoration.lineThrough,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        '-${savings}%',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+              // СОДЕРЖИМОЕ ЗАГРУЖАЕТСЯ С СЕРВЕРА
+              Expanded(
+                child: Consumer<ProductsProvider>(
+                  builder: (context, productsProvider, child) {
+                    if (productsProvider.isLoading) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text('Загружаем товары...'),
+                          ],
+                        ),
+                      );
+                    }
+
+                    if (productsProvider.error != null) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: Colors.red,
                             ),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              print('🔥 Кнопка нажата!');
-                              try {
-                                final cartProvider = Provider.of<CartProvider>(
-                                    context,
-                                    listen: false);
-                                print('📦 CartProvider получен');
-                                print(
-                                    '📊 Товаров в корзине ДО добавления: ${cartProvider.itemCount}');
+                            SizedBox(height: 16),
+                            Text(
+                              'Ошибка загрузки товаров',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              productsProvider.error!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                            SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () {
+                                productsProvider.loadProducts();
+                              },
+                              child: Text('Повторить'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
 
-                                cartProvider.addItem(product);
+                    if (!productsProvider.hasProducts) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.inventory_2_outlined,
+                              size: 64,
+                              color: Colors.grey,
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Товары не найдены',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text('Попробуйте обновить список'),
+                          ],
+                        ),
+                      );
+                    }
 
-                                print(
-                                    '📊 Товаров в корзине ПОСЛЕ добавления: ${cartProvider.itemCount}');
-                                print(
-                                    '🛒 Список товаров: ${cartProvider.items.map((item) => item.product.name).toList()}');
+                    // ОТОБРАЖАЕМ РЕАЛЬНЫЕ ТОВАРЫ С СЕРВЕРА
+                    return ListView.builder(
+                      itemCount: productsProvider.products.length,
+                      itemBuilder: (context, index) {
+                        final product = productsProvider.products[index];
+                        return _buildProductCard(product, context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        '${product.name} добавлен в корзину'),
-                                    duration: Duration(seconds: 1),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              } catch (e) {
-                                print('❌ Ошибка: $e');
-                              }
-                            },
-                            icon: Icon(Icons.add_shopping_cart,
-                                color: Colors.blue),
-                          ),
-                        ],
+  Widget _buildProductCard(Map<String, dynamic> product, BuildContext context) {
+    final double price = double.tryParse(product['price'].toString()) ?? 0.0;
+    final double retailPrice = getRetailPrice(price);
+    final int savingsPercent = getSavingsPercent(price, retailPrice);
+
+    return Card(
+      margin: EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Row(
+          children: [
+            // Изображение товара (заглушка)
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.inventory_2,
+                size: 40,
+                color: Colors.grey[400],
+              ),
+            ),
+            SizedBox(width: 16),
+
+            // Информация о товаре
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product['name'] ?? 'Неизвестный товар',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    product['description'] ?? '',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+
+                  // Цены и экономия
+                  Row(
+                    children: [
+                      Text(
+                        '${price.toStringAsFixed(0)} ₽',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        '${retailPrice.toStringAsFixed(0)} ₽',
+                        style: TextStyle(
+                          fontSize: 14,
+                          decoration: TextDecoration.lineThrough,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Экономия $savingsPercent%',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  );
-                },
+                  ),
+                ],
               ),
+            ),
+
+            // Кнопка добавления в корзину
+            Consumer<CartProvider>(
+              builder: (context, cartProvider, child) {
+                return ElevatedButton(
+                  onPressed: () {
+                    // Преобразуем Map в объект для корзины
+                    final cartItem = {
+                      'id': product['id'],
+                      'name': product['name'],
+                      'price': price,
+                      'unit': product['unit'] ?? 'шт',
+                      'quantity': 1,
+                    };
+
+                    cartProvider.addItem(cartItem as Product);
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${product['name']} добавлен в корзину'),
+                        duration: Duration(seconds: 2),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  child: Text('В корзину'),
+                );
+              },
             ),
           ],
         ),

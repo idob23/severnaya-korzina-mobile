@@ -1,6 +1,10 @@
+// lib/screens/auth/register_screen.dart - ПОЛНОСТЬЮ ОБНОВЛЕННАЯ ВЕРСИЯ
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:severnaya_korzina/providers/auth_provider.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import '../../providers/auth_provider.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -12,8 +16,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
 
-  bool _isLoading = false;
+  // Маска для номера телефона
+  final _phoneMask = MaskTextInputFormatter(
+    mask: '+7 (###) ###-##-##',
+    filter: {'#': RegExp(r'[0-9]')},
+    type: MaskAutoCompletionType.lazy,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +32,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         title: Text('Регистрация'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -34,12 +45,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 SizedBox(height: 20),
 
                 // Логотип и заголовок
-                Icon(
-                  Icons.person_add,
-                  size: 80,
-                  color: Colors.blue,
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(40),
+                  ),
+                  child: Icon(
+                    Icons.person_add,
+                    size: 40,
+                    color: Colors.blue,
+                  ),
                 ),
                 SizedBox(height: 24),
+
                 Text(
                   'Создать аккаунт',
                   textAlign: TextAlign.center,
@@ -50,8 +70,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 SizedBox(height: 8),
+
                 Text(
-                  'Присоединяйтесь к коллективным закупкам',
+                  'Присоединяйтесь к коллективным закупкам\nи экономьте до 70%',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
@@ -60,20 +81,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 SizedBox(height: 32),
 
-                // Поле имени
+                // Поле "Имя"
                 TextFormField(
                   controller: _firstNameController,
+                  textCapitalization: TextCapitalization.words,
                   decoration: InputDecoration(
                     labelText: 'Имя *',
-                    prefixIcon: Icon(Icons.person),
-                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person, color: Colors.blue),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.blue, width: 2),
+                    ),
                     filled: true,
                     fillColor: Colors.grey[50],
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   ),
-                  textCapitalization: TextCapitalization.words,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Введите имя';
+                      return 'Введите ваше имя';
                     }
                     if (value.trim().length < 2) {
                       return 'Имя должно содержать минимум 2 символа';
@@ -83,17 +112,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 SizedBox(height: 16),
 
-                // Поле фамилии
+                // Поле "Фамилия" (необязательное)
                 TextFormField(
                   controller: _lastNameController,
+                  textCapitalization: TextCapitalization.words,
                   decoration: InputDecoration(
                     labelText: 'Фамилия',
-                    prefixIcon: Icon(Icons.person_outline),
-                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person_outline, color: Colors.blue),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.blue, width: 2),
+                    ),
                     filled: true,
                     fillColor: Colors.grey[50],
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    helperText: 'Необязательное поле',
                   ),
-                  textCapitalization: TextCapitalization.words,
                   validator: (value) {
                     if (value != null &&
                         value.trim().isNotEmpty &&
@@ -105,100 +143,226 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 SizedBox(height: 16),
 
-                // Поле телефона
+                // Поле "Номер телефона"
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [_phoneMask],
                   decoration: InputDecoration(
                     labelText: 'Номер телефона *',
-                    prefixIcon: Icon(Icons.phone),
-                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.phone, color: Colors.blue),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.blue, width: 2),
+                    ),
+                    hintText: '+7 (999) 123-45-67',
                     filled: true,
                     fillColor: Colors.grey[50],
-                    hintText: '+7 (999) 123-45-67',
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    helperText: 'Для подтверждения будет отправлен SMS',
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Введите номер телефона';
                     }
-                    // Простая проверка на российский номер
-                    final phoneRegex = RegExp(
-                        r'^(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$');
-                    if (!phoneRegex.hasMatch(
-                        value.replaceAll(RegExp(r'[\s\-\(\)]'), ''))) {
-                      return 'Введите корректный номер телефона';
+
+                    final cleanPhone = value.replaceAll(RegExp(r'[^\d]'), '');
+
+                    if (cleanPhone.length != 11) {
+                      return 'Номер должен содержать 11 цифр';
+                    }
+
+                    if (!cleanPhone.startsWith('7')) {
+                      return 'Номер должен начинаться с +7';
+                    }
+
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+
+                // Поле "Email" (необязательное)
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: Icon(Icons.email, color: Colors.blue),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.blue, width: 2),
+                    ),
+                    hintText: 'example@mail.ru',
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    helperText: 'Необязательное поле',
+                  ),
+                  validator: (value) {
+                    if (value != null && value.trim().isNotEmpty) {
+                      final emailRegex =
+                          RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                      if (!emailRegex.hasMatch(value.trim())) {
+                        return 'Введите корректный email адрес';
+                      }
                     }
                     return null;
                   },
                 ),
-                SizedBox(height: 32),
+                SizedBox(height: 24),
 
-                // Информация о безопасности
+                // Информационное сообщение
                 Container(
                   padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.green[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green[200]!),
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue[200]!),
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Icon(Icons.security, color: Colors.green),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Безопасная регистрация',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green[800],
-                              ),
+                      Row(
+                        children: [
+                          Icon(Icons.security, color: Colors.blue, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Безопасная регистрация',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blue[800],
                             ),
-                            Text(
-                              'Доступ подтверждается через SMS',
-                              style: TextStyle(
-                                color: Colors.green[700],
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Ваши данные сохраняются локально на устройстве и защищены шифрованием. Доступ подтверждается через SMS.',
+                        style: TextStyle(
+                          color: Colors.blue[700],
+                          fontSize: 13,
                         ),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(height: 24),
+                SizedBox(height: 32),
 
                 // Кнопка регистрации
-                SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _register,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? CircularProgressIndicator(color: Colors.white)
-                        : Text(
-                            'Зарегистрироваться',
-                            style: TextStyle(fontSize: 18),
+                Consumer<AuthProvider>(
+                  builder: (context, authProvider, child) {
+                    return Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed:
+                                authProvider.isLoading ? null : _register,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: authProvider.isLoading
+                                ? Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                      SizedBox(width: 12),
+                                      Text('Регистрируем...'),
+                                    ],
+                                  )
+                                : Text(
+                                    'Зарегистрироваться',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                           ),
-                  ),
+                        ),
+
+                        // Отображение ошибок
+                        if (authProvider.lastError != null) ...[
+                          SizedBox(height: 16),
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red[200]!),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.error_outline,
+                                    color: Colors.red, size: 20),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    authProvider.lastError!,
+                                    style: TextStyle(
+                                      color: Colors.red[800],
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
                 ),
-                SizedBox(height: 16),
+
+                SizedBox(height: 24),
 
                 // Ссылка на вход
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text('Уже есть аккаунт? Войти'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Уже есть аккаунт? ',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 16,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => LoginScreen()),
+                        );
+                      },
+                      child: Text(
+                        'Войти',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
 
                 SizedBox(height: 16),
@@ -207,28 +371,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Container(
                   padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue[200]!),
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green[200]!),
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.blue),
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline,
+                              color: Colors.green, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Северная корзина',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green[800],
+                            ),
+                          ),
+                        ],
+                      ),
                       SizedBox(height: 8),
                       Text(
-                        'Северная корзина',
+                        'Коллективные закупки для жителей Усть-Неры. Объединяем заказы и получаем скидки до 70%. Предоплата 90%, остальное при получении.',
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue[800],
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Коллективные закупки со скидкой до 70%\nдля жителей Усть-Неры',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.blue[700],
+                          color: Colors.green[700],
+                          fontSize: 13,
                         ),
                       ),
                     ],
@@ -247,71 +415,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    authProvider.clearError();
 
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    // Получаем данные из формы
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    final cleanPhone = _phoneController.text.replaceAll(RegExp(r'[^\d]'), '');
+    final formattedPhone = '+$cleanPhone';
+    final email = _emailController.text.trim();
 
-      // Формируем данные для регистрации
-      final firstName = _firstNameController.text.trim();
-      final lastName = _lastNameController.text.trim();
-      final phone = _formatPhoneNumber(_phoneController.text);
+    // Регистрируем пользователя
+    final success = await authProvider.register(
+      formattedPhone,
+      firstName,
+      '', // Пустой пароль для SMS авторизации
+      lastName: lastName.isEmpty ? null : lastName,
+    );
 
-      // Попытка регистрации (только имя и телефон)
-      final success = await authProvider.register(
-        phone,
-        firstName,
-        '', // Пустой пароль
-        lastName: lastName.isEmpty ? null : lastName,
-      );
-
-      if (success) {
-        // Показываем сообщение об успехе
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Регистрация успешна! Теперь войдите в систему'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-
-        // Возвращаемся к предыдущему экрану
-        Navigator.pop(context);
-      } else {
-        // Показываем ошибку
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка регистрации. Попробуйте еще раз.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+    if (success) {
+      // Сохраняем email если был введен
+      if (email.isNotEmpty && authProvider.currentUser != null) {
+        await authProvider.updateUserProfile(email: email);
       }
-    } catch (e) {
+
+      // Показываем сообщение об успехе
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Произошла ошибка: $e'),
-          backgroundColor: Colors.red,
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Регистрация успешна! Теперь войдите в систему'),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
         ),
       );
-    } finally {
-      setState(() => _isLoading = false);
+
+      // Переходим к экрану входа
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => LoginScreen()),
+      );
     }
-  }
-
-  String _formatPhoneNumber(String phone) {
-    // Убираем все символы кроме цифр
-    final digitsOnly = phone.replaceAll(RegExp(r'[^\d]'), '');
-
-    // Приводим к формату 7XXXXXXXXXX
-    if (digitsOnly.startsWith('8') && digitsOnly.length == 11) {
-      return '7${digitsOnly.substring(1)}';
-    } else if (digitsOnly.startsWith('7') && digitsOnly.length == 11) {
-      return digitsOnly;
-    } else if (digitsOnly.length == 10) {
-      return '7$digitsOnly';
-    }
-
-    return digitsOnly;
+    // Ошибки отображаются через Consumer выше
   }
 
   @override
@@ -319,6 +468,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 }
