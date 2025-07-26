@@ -1,11 +1,12 @@
+// lib/services/api_service.dart - ОБНОВЛЕННАЯ ВЕРСИЯ
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
 class ApiService {
-  // URL сервера - в продакшене будет облачный сервер
+  // URL сервера - используем наш готовый backend
   static const String baseUrl = kDebugMode
-      ? 'http://192.168.88.229:3000/api' // Локальный сервер для разработки
+      ? 'http://localhost:3000/api' // Локальный сервер для разработки
       : 'https://your-cloud-server.com/api'; // Облачный сервер для продакшена
 
   // Singleton паттерн
@@ -27,13 +28,17 @@ class ApiService {
   /// Устанавливает токен авторизации
   void setAuthToken(String? token) {
     _authToken = token;
-    print('API: Токен установлен: ${token?.substring(0, 10)}...');
+    if (kDebugMode) {
+      print('API: Токен установлен: ${token?.substring(0, 10)}...');
+    }
   }
 
   /// Очищает токен авторизации
   void clearAuthToken() {
     _authToken = null;
-    print('API: Токен очищен');
+    if (kDebugMode) {
+      print('API: Токен очищен');
+    }
   }
 
   // === МЕТОДЫ ДЛЯ АВТОРИЗАЦИИ ===
@@ -46,7 +51,9 @@ class ApiService {
     String? email,
   }) async {
     try {
-      print('API: Регистрация пользователя $phone');
+      if (kDebugMode) {
+        print('API: Регистрация пользователя $phone');
+      }
 
       final body = <String, dynamic>{
         'phone': phone,
@@ -67,8 +74,9 @@ class ApiService {
         body: jsonEncode(body),
       );
 
-      print('API: Ответ регистрации - ${response.statusCode}');
-      print('API: Тело ответа - ${response.body}');
+      if (kDebugMode) {
+        print('API: Ответ регистрации - ${response.statusCode}');
+      }
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -92,7 +100,9 @@ class ApiService {
         };
       }
     } catch (e) {
-      print('API: Ошибка регистрации - $e');
+      if (kDebugMode) {
+        print('API: Ошибка регистрации - $e');
+      }
       return {
         'success': false,
         'error': 'Ошибка подключения к серверу: $e',
@@ -106,7 +116,9 @@ class ApiService {
     required String smsCode,
   }) async {
     try {
-      print('API: Вход пользователя $phone с кодом $smsCode');
+      if (kDebugMode) {
+        print('API: Вход пользователя $phone с кодом $smsCode');
+      }
 
       final response = await _client.post(
         Uri.parse('$baseUrl/auth/login'),
@@ -117,7 +129,9 @@ class ApiService {
         }),
       );
 
-      print('API: Ответ входа - ${response.statusCode}');
+      if (kDebugMode) {
+        print('API: Ответ входа - ${response.statusCode}');
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -141,7 +155,9 @@ class ApiService {
         };
       }
     } catch (e) {
-      print('API: Ошибка входа - $e');
+      if (kDebugMode) {
+        print('API: Ошибка входа - $e');
+      }
       return {
         'success': false,
         'error': 'Ошибка подключения к серверу',
@@ -152,7 +168,9 @@ class ApiService {
   /// Получить профиль пользователя
   Future<Map<String, dynamic>> getProfile() async {
     try {
-      print('API: Получение профиля пользователя');
+      if (kDebugMode) {
+        print('API: Получение профиля пользователя');
+      }
 
       final response = await _client.get(
         Uri.parse('$baseUrl/auth/profile'),
@@ -172,7 +190,9 @@ class ApiService {
         };
       }
     } catch (e) {
-      print('API: Ошибка получения профиля - $e');
+      if (kDebugMode) {
+        print('API: Ошибка получения профиля - $e');
+      }
       return {
         'success': false,
         'error': 'Ошибка подключения к серверу',
@@ -190,14 +210,25 @@ class ApiService {
     int limit = 20,
   }) async {
     try {
-      print('API: Получение товаров (page: $page, limit: $limit)');
+      if (kDebugMode) {
+        print('API: Получение товаров');
+      }
 
-      final uri = Uri.parse('$baseUrl/products').replace(queryParameters: {
-        if (categoryId != null) 'categoryId': categoryId.toString(),
-        if (search != null && search.isNotEmpty) 'search': search,
+      final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
-      });
+      };
+
+      if (categoryId != null) {
+        queryParams['categoryId'] = categoryId.toString();
+      }
+
+      if (search != null && search.isNotEmpty) {
+        queryParams['search'] = search;
+      }
+
+      final uri =
+          Uri.parse('$baseUrl/products').replace(queryParameters: queryParams);
 
       final response = await _client.get(uri, headers: _defaultHeaders);
 
@@ -215,7 +246,9 @@ class ApiService {
         };
       }
     } catch (e) {
-      print('API: Ошибка получения товаров - $e');
+      if (kDebugMode) {
+        print('API: Ошибка получения товаров - $e');
+      }
       return {
         'success': false,
         'error': 'Ошибка подключения к серверу',
@@ -244,7 +277,9 @@ class ApiService {
         };
       }
     } catch (e) {
-      print('API: Ошибка получения товара - $e');
+      if (kDebugMode) {
+        print('API: Ошибка получения товара - $e');
+      }
       return {
         'success': false,
         'error': 'Ошибка подключения к серверу',
@@ -255,7 +290,9 @@ class ApiService {
   /// Получить все категории
   Future<Map<String, dynamic>> getCategories() async {
     try {
-      print('API: Получение категорий');
+      if (kDebugMode) {
+        print('API: Получение категорий');
+      }
 
       final response = await _client.get(
         Uri.parse('$baseUrl/products/categories/all'),
@@ -275,7 +312,92 @@ class ApiService {
         };
       }
     } catch (e) {
-      print('API: Ошибка получения категорий - $e');
+      if (kDebugMode) {
+        print('API: Ошибка получения категорий - $e');
+      }
+      return {
+        'success': false,
+        'error': 'Ошибка подключения к серверу',
+      };
+    }
+  }
+
+  // === МЕТОДЫ ДЛЯ АДРЕСОВ ===
+
+  /// Получить все адреса пользователя
+  Future<Map<String, dynamic>> getAddresses() async {
+    try {
+      if (kDebugMode) {
+        print('API: Получение адресов');
+      }
+
+      final response = await _client.get(
+        Uri.parse('$baseUrl/addresses'),
+        headers: _defaultHeaders,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'addresses': data['addresses'],
+        };
+      } else {
+        return {
+          'success': false,
+          'error': 'Не удалось загрузить адреса',
+        };
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('API: Ошибка получения адресов - $e');
+      }
+      return {
+        'success': false,
+        'error': 'Ошибка подключения к серверу',
+      };
+    }
+  }
+
+  /// Добавить новый адрес
+  Future<Map<String, dynamic>> addAddress({
+    required String title,
+    required String address,
+    bool isDefault = false,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print('API: Добавление адреса');
+      }
+
+      final response = await _client.post(
+        Uri.parse('$baseUrl/addresses'),
+        headers: _defaultHeaders,
+        body: jsonEncode({
+          'title': title,
+          'address': address,
+          'isDefault': isDefault,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'address': data['address'],
+          'message': data['message'],
+        };
+      } else {
+        final error = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': error['error'] ?? 'Ошибка добавления адреса',
+        };
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('API: Ошибка добавления адреса - $e');
+      }
       return {
         'success': false,
         'error': 'Ошибка подключения к серверу',
@@ -287,20 +409,26 @@ class ApiService {
 
   /// Получить заказы пользователя
   Future<Map<String, dynamic>> getOrders({
-    int? userId,
     String? status,
     int page = 1,
     int limit = 10,
   }) async {
     try {
-      print('API: Получение заказов');
+      if (kDebugMode) {
+        print('API: Получение заказов');
+      }
 
-      final uri = Uri.parse('$baseUrl/orders').replace(queryParameters: {
-        if (userId != null) 'userId': userId.toString(),
-        if (status != null) 'status': status,
+      final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
-      });
+      };
+
+      if (status != null) {
+        queryParams['status'] = status;
+      }
+
+      final uri =
+          Uri.parse('$baseUrl/orders').replace(queryParameters: queryParams);
 
       final response = await _client.get(uri, headers: _defaultHeaders);
 
@@ -318,7 +446,9 @@ class ApiService {
         };
       }
     } catch (e) {
-      print('API: Ошибка получения заказов - $e');
+      if (kDebugMode) {
+        print('API: Ошибка получения заказов - $e');
+      }
       return {
         'success': false,
         'error': 'Ошибка подключения к серверу',
@@ -328,20 +458,20 @@ class ApiService {
 
   /// Создать новый заказ
   Future<Map<String, dynamic>> createOrder({
-    required int userId,
     required int addressId,
     int? batchId,
     required List<Map<String, dynamic>> items,
     String? notes,
   }) async {
     try {
-      print('API: Создание заказа для пользователя $userId');
+      if (kDebugMode) {
+        print('API: Создание заказа');
+      }
 
       final response = await _client.post(
         Uri.parse('$baseUrl/orders'),
         headers: _defaultHeaders,
         body: jsonEncode({
-          'userId': userId,
           'addressId': addressId,
           'batchId': batchId,
           'items': items,
@@ -364,7 +494,9 @@ class ApiService {
         };
       }
     } catch (e) {
-      print('API: Ошибка создания заказа - $e');
+      if (kDebugMode) {
+        print('API: Ошибка создания заказа - $e');
+      }
       return {
         'success': false,
         'error': 'Ошибка подключения к серверу',
@@ -377,7 +509,9 @@ class ApiService {
   /// Получить активные закупки
   Future<Map<String, dynamic>> getBatches({String status = 'active'}) async {
     try {
-      print('API: Получение закупок со статусом $status');
+      if (kDebugMode) {
+        print('API: Получение закупок со статусом $status');
+      }
 
       final uri = Uri.parse('$baseUrl/batches').replace(queryParameters: {
         'status': status,
@@ -398,7 +532,9 @@ class ApiService {
         };
       }
     } catch (e) {
-      print('API: Ошибка получения закупок - $e');
+      if (kDebugMode) {
+        print('API: Ошибка получения закупок - $e');
+      }
       return {
         'success': false,
         'error': 'Ошибка подключения к серверу',
@@ -427,7 +563,9 @@ class ApiService {
         };
       }
     } catch (e) {
-      print('API: Ошибка получения закупки - $e');
+      if (kDebugMode) {
+        print('API: Ошибка получения закупки - $e');
+      }
       return {
         'success': false,
         'error': 'Ошибка подключения к серверу',
@@ -447,7 +585,9 @@ class ApiService {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('API: Ошибка подключения - $e');
+      if (kDebugMode) {
+        print('API: Ошибка подключения - $e');
+      }
       return false;
     }
   }

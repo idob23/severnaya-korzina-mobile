@@ -1,7 +1,7 @@
+// lib/screens/profile/profile_screen.dart - ИСПРАВЛЕННАЯ ВЕРСИЯ
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:severnaya_korzina/providers/auth_provider.dart';
-import 'package:severnaya_korzina/providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../auth/auth_choice_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -15,295 +15,390 @@ class ProfileScreen extends StatelessWidget {
       ),
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
-          if (authProvider.isAuthenticated &&
-              authProvider.currentUser != null) {
-            // Авторизованный пользователь
-            return _buildAuthenticatedProfile(context, authProvider);
-          } else {
-            // Неавторизованный пользователь
-            return _buildUnauthenticatedProfile(context);
+          if (!authProvider.isAuthenticated) {
+            return _buildUnauthenticatedView(context);
           }
+
+          final user = authProvider.currentUser!;
+          return _buildAuthenticatedView(context, user, authProvider);
         },
       ),
     );
   }
 
-  Widget _buildAuthenticatedProfile(
-      BuildContext context, AuthProvider authProvider) {
-    final user = authProvider.currentUser!;
-    final cartProvider = Provider.of<CartProvider>(context);
+  Widget _buildUnauthenticatedView(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.person_outline,
+              size: 80,
+              color: Colors.grey[400],
+            ),
+            SizedBox(height: 24),
+            Text(
+              'Войдите в аккаунт',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Авторизуйтесь для доступа к профилю, заказам и персональным настройкам',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 16,
+              ),
+            ),
+            SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => AuthChoiceScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Text(
+                  'Войти или зарегистрироваться',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
+  Widget _buildAuthenticatedView(
+      BuildContext context, user, AuthProvider authProvider) {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
       child: Column(
         children: [
-          // Информация о пользователе
-          Card(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.blue,
-                    child: Icon(
-                      Icons.person,
-                      size: 40,
-                      color: Colors.white,
-                    ),
+          // Шапка профиля
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.blue[50]!, Colors.white],
+              ),
+            ),
+            child: Column(
+              children: [
+                // Аватар
+                CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Colors.blue[100],
+                  child: user.avatarUrl != null
+                      ? ClipOval(
+                          child: Image.network(
+                            user.avatarUrl!,
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildDefaultAvatar(user.initials);
+                            },
+                          ),
+                        )
+                      : _buildDefaultAvatar(user.initials),
+                ),
+                SizedBox(height: 16),
+
+                // Имя пользователя
+                Text(
+                  user.fullName,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
                   ),
-                  SizedBox(height: 16),
-                  Text(
-                    user.name,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                ),
+                SizedBox(height: 4),
+
+                // Телефон
+                Text(
+                  user.phone,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
                   ),
+                ),
+
+                if (user.email != null && user.email!.isNotEmpty) ...[
                   SizedBox(height: 4),
                   Text(
-                    user.phone,
+                    user.email!,
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],
                     ),
                   ),
-                  SizedBox(height: 8),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.green[100],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Активный пользователь',
-                      style: TextStyle(
-                        color: Colors.green[800],
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
                 ],
-              ),
+              ],
             ),
           ),
-          SizedBox(height: 16),
 
-          // Статистика
-          Card(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Моя статистика',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildStatItem(
-                        icon: Icons.shopping_cart,
-                        title: 'В корзине',
-                        value: '${cartProvider.itemCount}',
-                        color: Colors.blue,
-                      ),
-                      _buildStatItem(
-                        icon: Icons.list_alt,
-                        title: 'Заказов',
-                        value: '0', // TODO: реальная статистика
-                        color: Colors.orange,
-                      ),
-                      _buildStatItem(
-                        icon: Icons.savings,
-                        title: 'Экономия',
-                        value: '0₽', // TODO: реальная статистика
-                        color: Colors.green,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SizedBox(height: 16),
-
-          // Меню действий
-          Card(
+          // Меню профиля
+          Padding(
+            padding: EdgeInsets.all(16),
             child: Column(
               children: [
-                ListTile(
-                  leading: Icon(Icons.shopping_bag, color: Colors.blue),
-                  title: Text('Мои заказы'),
-                  subtitle: Text('История покупок и текущие заказы'),
-                  trailing: Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // TODO: переход к заказам
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text('Переход к заказам - в разработке')),
-                    );
-                  },
-                ),
-                Divider(),
-                ListTile(
-                  leading: Icon(Icons.notifications, color: Colors.orange),
-                  title: Text('Уведомления'),
-                  subtitle: Text('Настройки push-уведомлений'),
-                  trailing: Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content:
-                              Text('Настройки уведомлений - в разработке')),
-                    );
-                  },
-                ),
-                Divider(),
-                ListTile(
-                  leading: Icon(Icons.help_outline, color: Colors.purple),
-                  title: Text('Помощь'),
-                  subtitle: Text('Часто задаваемые вопросы'),
-                  trailing: Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    _showHelpDialog(context);
-                  },
-                ),
-                Divider(),
-                ListTile(
-                  leading: Icon(Icons.logout, color: Colors.red),
-                  title: Text('Выйти'),
-                  subtitle: Text('Выход из аккаунта'),
-                  trailing: Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    _showLogoutDialog(context, authProvider);
-                  },
+                _buildMenuSection('Аккаунт', [
+                  _buildMenuItem(
+                    icon: Icons.person,
+                    title: 'Редактировать профиль',
+                    subtitle: 'Изменить личные данные',
+                    onTap: () =>
+                        _showEditProfileDialog(context, user, authProvider),
+                  ),
+                  _buildMenuItem(
+                    icon: Icons.location_on,
+                    title: 'Адреса доставки',
+                    subtitle: 'Управление адресами',
+                    onTap: () => _showAddressesDialog(context),
+                  ),
+                ]),
+
+                SizedBox(height: 24),
+
+                _buildMenuSection('Заказы', [
+                  _buildMenuItem(
+                    icon: Icons.shopping_bag,
+                    title: 'Мои заказы',
+                    subtitle: 'История покупок и текущие заказы',
+                    onTap: () {
+                      // Переходим на вкладку заказов
+                      DefaultTabController.of(context)?.animateTo(2);
+                    },
+                  ),
+                  _buildMenuItem(
+                    icon: Icons.favorite,
+                    title: 'Избранное',
+                    subtitle: 'Понравившиеся товары',
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Избранное - в разработке')),
+                      );
+                    },
+                  ),
+                ]),
+
+                SizedBox(height: 24),
+
+                _buildMenuSection('Настройки', [
+                  _buildMenuItem(
+                    icon: Icons.notifications,
+                    title: 'Уведомления',
+                    subtitle: 'Настройки push-уведомлений',
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content:
+                                Text('Настройки уведомлений - в разработке')),
+                      );
+                    },
+                  ),
+                  _buildMenuItem(
+                    icon: Icons.help_outline,
+                    title: 'Помощь',
+                    subtitle: 'Часто задаваемые вопросы',
+                    onTap: () => _showHelpDialog(context),
+                  ),
+                  _buildMenuItem(
+                    icon: Icons.info_outline,
+                    title: 'О приложении',
+                    subtitle: 'Версия и информация',
+                    onTap: () => _showAboutDialog(context),
+                  ),
+                ]),
+
+                SizedBox(height: 32),
+
+                // Кнопка выхода
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showLogoutDialog(context, authProvider),
+                    icon: Icon(Icons.logout, color: Colors.red),
+                    label: Text(
+                      'Выйти из аккаунта',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.red),
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          SizedBox(height: 16),
-
-          // Информация о приложении
-          Card(
-            color: Colors.blue[50],
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.blue, size: 32),
-                  SizedBox(height: 8),
-                  Text(
-                    'Северная корзина v1.0.0',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue[800],
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Коллективные закупки для Усть-Неры',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.blue[700]),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildUnauthenticatedProfile(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.person_outline,
-            size: 100,
-            color: Colors.grey[400],
-          ),
-          SizedBox(height: 24),
-          Text(
-            'Войдите в аккаунт',
+  Widget _buildDefaultAvatar(String initials) {
+    return Text(
+      initials,
+      style: TextStyle(
+        fontSize: 36,
+        fontWeight: FontWeight.bold,
+        color: Colors.blue[800],
+      ),
+    );
+  }
+
+  Widget _buildMenuSection(String title, List<Widget> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            title,
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.grey[700],
             ),
           ),
-          SizedBox(height: 16),
-          Text(
-            'Авторизуйтесь для доступа к личному кабинету и оформления заказов',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
+        ),
+        Card(
+          child: Column(children: items),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: Colors.blue[50],
+        child: Icon(icon, color: Colors.blue[700]),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(fontWeight: FontWeight.w500),
+      ),
+      subtitle: Text(subtitle),
+      trailing: Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: onTap,
+    );
+  }
+
+  void _showEditProfileDialog(
+      BuildContext context, user, AuthProvider authProvider) {
+    final firstNameController = TextEditingController(text: user.name);
+    final lastNameController = TextEditingController(text: user.lastName ?? '');
+    final emailController = TextEditingController(text: user.email ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Редактировать профиль'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: firstNameController,
+              decoration: InputDecoration(
+                labelText: 'Имя',
+                border: OutlineInputBorder(),
+              ),
             ),
+            SizedBox(height: 16),
+            TextField(
+              controller: lastNameController,
+              decoration: InputDecoration(
+                labelText: 'Фамилия',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              decoration: InputDecoration(
+                labelText: 'Email (необязательно)',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Отмена'),
           ),
-          SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => AuthChoiceScreen()),
-                  (route) => false,
+          ElevatedButton(
+            onPressed: () async {
+              final success = await authProvider.updateUserProfile(
+                firstName: firstNameController.text.trim(),
+                lastName: lastNameController.text.trim(),
+                email: emailController.text.trim(),
+              );
+
+              Navigator.pop(context);
+
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Профиль обновлен'),
+                    backgroundColor: Colors.green,
+                  ),
                 );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(
-                'Войти или зарегистрироваться',
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Ошибка обновления профиля'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: Text('Сохранить'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color color,
-  }) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 32),
-        SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: color,
+  void _showAddressesDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Адреса доставки'),
+        content: Text('Управление адресами - в разработке'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Закрыть'),
           ),
-        ),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -312,31 +407,71 @@ class ProfileScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Помощь'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Как сделать заказ:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                  '1. Выберите товары в каталоге\n2. Добавьте их в корзину\n3. Оплатите предоплату (90%)\n4. Получите товары и доплатите остаток'),
-              SizedBox(height: 16),
-              Text(
-                'Контакты:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                  'Телефон поддержки: +7 (xxx) xxx-xx-xx\nEmail: support@severnaya-korzina.ru'),
-            ],
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Частые вопросы:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 12),
+            Text('• Как сделать заказ?'),
+            Text('• Как отследить доставку?'),
+            Text('• Как связаться с поддержкой?'),
+            Text('• Условия коллективных закупок'),
+            SizedBox(height: 16),
+            Text(
+              'Для получения помощи обратитесь в поддержку:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text('📞 +7 (999) 123-45-67'),
+            Text('📧 support@severnaya-korzina.ru'),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Понятно'),
+            child: Text('Закрыть'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('О приложении'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Северная корзина',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text('Версия: 1.0.0'),
+            SizedBox(height: 16),
+            Text(
+              'Платформа коллективных закупок для жителей Усть-Неры.',
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Экономьте до 70% на покупках благодаря совместным заказам!',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Закрыть'),
           ),
         ],
       ),
@@ -348,28 +483,26 @@ class ProfileScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Выход'),
-        content: Text('Вы действительно хотите выйти из аккаунта?'),
+        content: Text('Вы уверены, что хотите выйти из аккаунта?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Отмена'),
           ),
-          TextButton(
-            onPressed: () {
+          ElevatedButton(
+            onPressed: () async {
               Navigator.pop(context);
-              authProvider.logout();
+              await authProvider.logout();
 
-              // Очищаем корзину при выходе
-              Provider.of<CartProvider>(context, listen: false).clear();
-
-              // Переходим к экрану авторизации
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => AuthChoiceScreen()),
-                (route) => false,
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Вы вышли из аккаунта'),
+                  backgroundColor: Colors.green,
+                ),
               );
             },
-            child: Text('Выйти', style: TextStyle(color: Colors.red)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text('Выйти'),
           ),
         ],
       ),

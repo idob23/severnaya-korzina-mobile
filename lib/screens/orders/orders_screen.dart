@@ -1,8 +1,9 @@
+// lib/screens/orders/orders_screen.dart - ИСПРАВЛЕННАЯ ВЕРСИЯ
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:severnaya_korzina/providers/auth_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/orders_provider.dart';
 import '../auth/auth_choice_screen.dart';
-import 'order_details_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   @override
@@ -17,6 +18,22 @@ class _OrdersScreenState extends State<OrdersScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+
+    // Загружаем заказы при инициализации, если пользователь авторизован
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (authProvider.isAuthenticated) {
+        final ordersProvider =
+            Provider.of<OrdersProvider>(context, listen: false);
+        ordersProvider.init();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
@@ -83,7 +100,7 @@ class _OrdersScreenState extends State<OrdersScreen>
             ),
             SizedBox(height: 16),
             Text(
-              'Авторизуйтесь чтобы видеть свои заказы и отслеживать их статус',
+              'Авторизуйтесь, чтобы видеть свои заказы и отслеживать их статус',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.grey[600],
@@ -92,15 +109,15 @@ class _OrdersScreenState extends State<OrdersScreen>
             SizedBox(height: 32),
             ElevatedButton(
               onPressed: () {
-                Navigator.pushAndRemoveUntil(
+                Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => AuthChoiceScreen()),
-                  (route) => false,
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               ),
               child: Text('Войти'),
             ),
@@ -111,152 +128,173 @@ class _OrdersScreenState extends State<OrdersScreen>
   }
 
   Widget _buildActiveOrders() {
-    // Демонстрационные данные
-    final activeOrders = [
-      {
-        'id': '#2025001',
-        'date': '12 июля 2025',
-        'status': 'Сбор заказов',
-        'items': 5,
-        'total': 4500.0,
-        'prepaid': 4050.0,
-        'remaining': 450.0,
-        'description': 'Молочные продукты, хлебобулочные изделия',
-        'deadline': '20 июля 2025',
-        'participants': 15,
-        'minParticipants': 20,
-      },
-      {
-        'id': '#2025002',
-        'date': '10 июля 2025',
-        'status': 'Подтвержден',
-        'items': 3,
-        'total': 2800.0,
-        'prepaid': 2520.0,
-        'remaining': 280.0,
-        'description': 'Мясные продукты',
-        'deadline': 'Закрыт',
-        'participants': 25,
-        'minParticipants': 20,
-      },
-    ];
+    return Consumer<OrdersProvider>(
+      builder: (context, ordersProvider, child) {
+        if (ordersProvider.isLoading) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Загружаем заказы...'),
+              ],
+            ),
+          );
+        }
 
-    return _buildOrdersList(activeOrders, OrderStatus.active);
+        if (ordersProvider.error != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.red),
+                SizedBox(height: 16),
+                Text(
+                  'Ошибка загрузки заказов',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text(ordersProvider.error!),
+                SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => ordersProvider.refresh(),
+                  child: Text('Повторить'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final activeOrders = ordersProvider.activeOrders;
+
+        if (activeOrders.isEmpty) {
+          return _buildEmptyState(
+            'Нет активных заказов',
+            'Ваши новые заказы будут отображаться здесь',
+            Icons.shopping_cart_outlined,
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () => ordersProvider.refresh(),
+          child: ListView.builder(
+            padding: EdgeInsets.all(16),
+            itemCount: activeOrders.length,
+            itemBuilder: (context, index) {
+              final order = activeOrders[index];
+              return _buildOrderCard(order);
+            },
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildInTransitOrders() {
-    final inTransitOrders = [
-      {
-        'id': '#2025003',
-        'date': '5 июля 2025',
-        'status': 'В пути из Якутска',
-        'items': 7,
-        'total': 6200.0,
-        'prepaid': 5580.0,
-        'remaining': 620.0,
-        'description': 'Бытовая химия, косметика',
-        'eta': '16 июля 2025',
-        'trackingNumber': 'YAK12345678',
-      },
-    ];
+    return Consumer<OrdersProvider>(
+      builder: (context, ordersProvider, child) {
+        final inTransitOrders = ordersProvider.getOrdersByStatus('shipped');
 
-    return _buildOrdersList(inTransitOrders, OrderStatus.inTransit);
+        if (inTransitOrders.isEmpty) {
+          return _buildEmptyState(
+            'Нет заказов в пути',
+            'Отправленные заказы будут отображаться здесь',
+            Icons.local_shipping_outlined,
+          );
+        }
+
+        return ListView.builder(
+          padding: EdgeInsets.all(16),
+          itemCount: inTransitOrders.length,
+          itemBuilder: (context, index) {
+            final order = inTransitOrders[index];
+            return _buildOrderCard(order);
+          },
+        );
+      },
+    );
   }
 
   Widget _buildReadyOrders() {
-    final readyOrders = [
-      {
-        'id': '#2025004',
-        'date': '1 июля 2025',
-        'status': 'Готов к выдаче',
-        'items': 4,
-        'total': 3800.0,
-        'prepaid': 3420.0,
-        'remaining': 380.0,
-        'description': 'Крупы, консервы',
-        'pickupAddress': 'ул. Ленина, 15 (склад)',
-        'pickupTime': 'Пн-Пт: 9:00-18:00',
-      },
-    ];
+    return Consumer<OrdersProvider>(
+      builder: (context, ordersProvider, child) {
+        final readyOrders = ordersProvider.completedOrders;
 
-    return _buildOrdersList(readyOrders, OrderStatus.ready);
+        if (readyOrders.isEmpty) {
+          return _buildEmptyState(
+            'Нет готовых заказов',
+            'Готовые к получению заказы будут отображаться здесь',
+            Icons.inventory_2_outlined,
+          );
+        }
+
+        return ListView.builder(
+          padding: EdgeInsets.all(16),
+          itemCount: readyOrders.length,
+          itemBuilder: (context, index) {
+            final order = readyOrders[index];
+            return _buildOrderCard(order);
+          },
+        );
+      },
+    );
   }
 
   Widget _buildHistoryOrders() {
-    final historyOrders = [
-      {
-        'id': '#2025005',
-        'date': '25 июня 2025',
-        'status': 'Получен',
-        'items': 6,
-        'total': 5100.0,
-        'prepaid': 4590.0,
-        'remaining': 0.0,
-        'description': 'Овощи, фрукты',
-        'completedDate': '28 июня 2025',
-        'rating': 5,
-      },
-      {
-        'id': '#2025006',
-        'date': '20 июня 2025',
-        'status': 'Получен',
-        'items': 2,
-        'total': 1800.0,
-        'prepaid': 1620.0,
-        'remaining': 0.0,
-        'description': 'Замороженные продукты',
-        'completedDate': '25 июня 2025',
-        'rating': 4,
-      },
-    ];
+    return Consumer<OrdersProvider>(
+      builder: (context, ordersProvider, child) {
+        final allOrders = ordersProvider.orders;
 
-    return _buildOrdersList(historyOrders, OrderStatus.completed);
+        if (allOrders.isEmpty) {
+          return _buildEmptyState(
+            'История заказов пуста',
+            'Все ваши заказы будут отображаться здесь',
+            Icons.history,
+          );
+        }
+
+        return ListView.builder(
+          padding: EdgeInsets.all(16),
+          itemCount: allOrders.length,
+          itemBuilder: (context, index) {
+            final order = allOrders[index];
+            return _buildOrderCard(order);
+          },
+        );
+      },
+    );
   }
 
-  Widget _buildOrdersList(
-      List<Map<String, dynamic>> orders, OrderStatus status) {
-    if (orders.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              _getEmptyIcon(status),
-              size: 64,
-              color: Colors.grey[400],
+  Widget _buildEmptyState(String title, String subtitle, IconData icon) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 64, color: Colors.grey[400]),
+          SizedBox(height: 16),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
             ),
-            SizedBox(height: 16),
-            Text(
-              _getEmptyMessage(status),
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        // Имитация обновления данных
-        await Future.delayed(Duration(seconds: 1));
-      },
-      child: ListView.builder(
-        padding: EdgeInsets.all(16),
-        itemCount: orders.length,
-        itemBuilder: (context, index) {
-          final order = orders[index];
-          return _buildOrderCard(order, status);
-        },
+          ),
+          SizedBox(height: 8),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey[500]),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildOrderCard(Map<String, dynamic> order, OrderStatus status) {
+  Widget _buildOrderCard(Order order) {
     return Card(
-      margin: EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
@@ -267,458 +305,246 @@ class _OrdersScreenState extends State<OrdersScreen>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Заказ ${order['id']}',
+                  'Заказ #${order.id}',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                _buildStatusChip(order['status'], status),
+                _buildStatusChip(order.status),
               ],
             ),
-            SizedBox(height: 8),
-            Text(
-              'Дата заказа: ${order['date']}',
-              style: TextStyle(color: Colors.grey[600]),
+
+            SizedBox(height: 12),
+
+            // Информация о заказе
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Сумма: ${order.formattedAmount}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[700],
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Товаров: ${order.totalItems} шт.',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      _formatDate(order.createdAt),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      _formatTime(order.createdAt),
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            SizedBox(height: 8),
-            Text(
-              order['description'],
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[800],
+
+            if (order.notes != null && order.notes!.isNotEmpty) ...[
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.note, size: 16, color: Colors.grey[600]),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        order.notes!,
+                        style: TextStyle(color: Colors.grey[700]),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            SizedBox(height: 12),
-
-            // Информация в зависимости от статуса
-            _buildStatusSpecificInfo(order, status),
+            ],
 
             SizedBox(height: 12),
-
-            // Финансовая информация
-            _buildFinancialInfo(order),
-
-            SizedBox(height: 16),
 
             // Кнопки действий
-            _buildActionButtons(order, status),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      _showOrderDetails(order);
+                    },
+                    child: Text('Подробнее'),
+                  ),
+                ),
+                if (order.status == 'pending') ...[
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _cancelOrder(order);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text('Отменить'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusChip(String status, OrderStatus orderStatus) {
+  Widget _buildStatusChip(String status) {
     Color color;
-    switch (orderStatus) {
-      case OrderStatus.active:
+    switch (status) {
+      case 'pending':
         color = Colors.orange;
         break;
-      case OrderStatus.inTransit:
+      case 'confirmed':
         color = Colors.blue;
         break;
-      case OrderStatus.ready:
+      case 'paid':
         color = Colors.green;
         break;
-      case OrderStatus.completed:
-        color = Colors.grey;
+      case 'shipped':
+        color = Colors.purple;
         break;
+      case 'delivered':
+        color = Colors.green;
+        break;
+      case 'cancelled':
+        color = Colors.red;
+        break;
+      default:
+        color = Colors.grey;
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(
-        status,
+        _getStatusText(status),
         style: TextStyle(
           color: color,
           fontSize: 12,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
   }
 
-  Widget _buildStatusSpecificInfo(
-      Map<String, dynamic> order, OrderStatus status) {
+  String _getStatusText(String status) {
     switch (status) {
-      case OrderStatus.active:
-        return Column(
-          children: [
-            if (order['deadline'] != 'Закрыт')
-              Row(
-                children: [
-                  Icon(Icons.schedule, size: 16, color: Colors.orange),
-                  SizedBox(width: 4),
-                  Text(
-                    'Сбор до: ${order['deadline']}',
-                    style: TextStyle(color: Colors.orange[700]),
-                  ),
-                ],
-              ),
-            SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.people, size: 16, color: Colors.blue),
-                SizedBox(width: 4),
-                Text(
-                    '${order['participants']}/${order['minParticipants']} участников'),
-              ],
-            ),
-          ],
-        );
-
-      case OrderStatus.inTransit:
-        return Column(
-          children: [
-            Row(
-              children: [
-                Icon(Icons.local_shipping, size: 16, color: Colors.blue),
-                SizedBox(width: 4),
-                Text('Ожидаемое прибытие: ${order['eta']}'),
-              ],
-            ),
-            SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.track_changes, size: 16, color: Colors.grey),
-                SizedBox(width: 4),
-                Text('Трек-номер: ${order['trackingNumber']}'),
-              ],
-            ),
-          ],
-        );
-
-      case OrderStatus.ready:
-        return Column(
-          children: [
-            Row(
-              children: [
-                Icon(Icons.location_on, size: 16, color: Colors.green),
-                SizedBox(width: 4),
-                Expanded(child: Text('Адрес: ${order['pickupAddress']}')),
-              ],
-            ),
-            SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.access_time, size: 16, color: Colors.grey),
-                SizedBox(width: 4),
-                Text('Время работы: ${order['pickupTime']}'),
-              ],
-            ),
-          ],
-        );
-
-      case OrderStatus.completed:
-        return Column(
-          children: [
-            Row(
-              children: [
-                Icon(Icons.check_circle, size: 16, color: Colors.green),
-                SizedBox(width: 4),
-                Text('Получен: ${order['completedDate']}'),
-              ],
-            ),
-            SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.star, size: 16, color: Colors.amber),
-                SizedBox(width: 4),
-                Text('Оценка: ${order['rating']}/5'),
-                SizedBox(width: 8),
-                ...List.generate(
-                    5,
-                    (index) => Icon(
-                          index < order['rating']
-                              ? Icons.star
-                              : Icons.star_border,
-                          size: 16,
-                          color: Colors.amber,
-                        )),
-              ],
-            ),
-          ],
-        );
+      case 'pending':
+        return 'Ожидает';
+      case 'confirmed':
+        return 'Подтвержден';
+      case 'paid':
+        return 'Оплачен';
+      case 'shipped':
+        return 'Отправлен';
+      case 'delivered':
+        return 'Доставлен';
+      case 'cancelled':
+        return 'Отменен';
+      default:
+        return status;
     }
   }
 
-  Widget _buildFinancialInfo(Map<String, dynamic> order) {
-    return Container(
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Товаров: ${order['items']} шт.'),
-              Text('${order['total'].toStringAsFixed(0)} ₽'),
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
+  }
+
+  String _formatTime(DateTime date) {
+    return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  void _showOrderDetails(Order order) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Заказ #${order.id}'),
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Статус: ${_getStatusText(order.status)}'),
+            SizedBox(height: 8),
+            Text('Сумма: ${order.formattedAmount}'),
+            SizedBox(height: 8),
+            Text(
+                'Дата: ${_formatDate(order.createdAt)} ${_formatTime(order.createdAt)}'),
+            if (order.notes != null && order.notes!.isNotEmpty) ...[
+              SizedBox(height: 8),
+              Text('Примечания: ${order.notes}'),
             ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Закрыть'),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Предоплата (90%):'),
-              Text('${order['prepaid'].toStringAsFixed(0)} ₽',
-                  style: TextStyle(color: Colors.green)),
-            ],
-          ),
-          if (order['remaining'] > 0)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('К доплате:'),
-                Text('${order['remaining'].toStringAsFixed(0)} ₽',
-                    style: TextStyle(
-                        color: Colors.orange, fontWeight: FontWeight.bold)),
-              ],
-            ),
         ],
       ),
     );
   }
 
-  Widget _buildActionButtons(Map<String, dynamic> order, OrderStatus status) {
-    switch (status) {
-      case OrderStatus.active:
-        return Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () {
-                  _showOrderDetails(order);
-                },
-                child: Text('Подробнее'),
-              ),
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: order['status'] == 'Сбор заказов'
-                    ? () {
-                        _showCancelOrderDialog(order);
-                      }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                ),
-                child: Text('Отменить'),
-              ),
-            ),
-          ],
-        );
-
-      case OrderStatus.inTransit:
-        return SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () {
-              _showTrackingInfo(order);
-            },
-            icon: Icon(Icons.track_changes),
-            label: Text('Отследить груз'),
-          ),
-        );
-
-      case OrderStatus.ready:
-        return SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              _showPickupInfo(order);
-            },
-            icon: Icon(Icons.location_on),
-            label: Text('Информация о получении'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-            ),
-          ),
-        );
-
-      case OrderStatus.completed:
-        return Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () {
-                  _showOrderDetails(order);
-                },
-                child: Text('Подробнее'),
-              ),
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  _showReorderDialog(order);
-                },
-                child: Text('Повторить заказ'),
-              ),
-            ),
-          ],
-        );
-    }
-  }
-
-  IconData _getEmptyIcon(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.active:
-        return Icons.shopping_cart_outlined;
-      case OrderStatus.inTransit:
-        return Icons.local_shipping_outlined;
-      case OrderStatus.ready:
-        return Icons.inventory_outlined;
-      case OrderStatus.completed:
-        return Icons.history;
-    }
-  }
-
-  String _getEmptyMessage(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.active:
-        return 'Нет активных заказов';
-      case OrderStatus.inTransit:
-        return 'Нет заказов в пути';
-      case OrderStatus.ready:
-        return 'Нет готовых заказов';
-      case OrderStatus.completed:
-        return 'История заказов пуста';
-    }
-  }
-
-  void _showOrderDetails(Map<String, dynamic> order) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OrderDetailsScreen(order: order),
-      ),
-    );
-  }
-
-  void _showCancelOrderDialog(Map<String, dynamic> order) {
+  void _cancelOrder(Order order) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Отмена заказа'),
-        content: Text('Вы действительно хотите отменить заказ ${order['id']}?'),
+        title: Text('Отменить заказ'),
+        content: Text('Вы уверены, что хотите отменить заказ #${order.id}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Нет'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
+              // TODO: Реализовать отмену заказа через API
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Заказ отменен')),
+                SnackBar(
+                  content: Text('Отмена заказа - в разработке'),
+                  backgroundColor: Colors.orange,
+                ),
               );
             },
-            child: Text('Да', style: TextStyle(color: Colors.red)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text('Да, отменить'),
           ),
         ],
       ),
     );
-  }
-
-  void _showTrackingInfo(Map<String, dynamic> order) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Отслеживание груза'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Заказ: ${order['id']}'),
-            Text('Трек-номер: ${order['trackingNumber']}'),
-            SizedBox(height: 16),
-            Text('Статус: ${order['status']}'),
-            Text('Ожидаемое прибытие: ${order['eta']}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Закрыть'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPickupInfo(Map<String, dynamic> order) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Информация о получении'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Заказ: ${order['id']}'),
-            SizedBox(height: 8),
-            Text('Адрес получения:'),
-            Text(order['pickupAddress'],
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            Text('Время работы:'),
-            Text(order['pickupTime'],
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            Text('К доплате: ${order['remaining'].toStringAsFixed(0)} ₽',
-                style: TextStyle(
-                    color: Colors.orange, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Закрыть'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showReorderDialog(Map<String, dynamic> order) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Повторить заказ'),
-        content: Text('Добавить товары из заказа ${order['id']} в корзину?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Товары добавлены в корзину')),
-              );
-            },
-            child: Text('Добавить'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 }
-
-enum OrderStatus { active, inTransit, ready, completed }

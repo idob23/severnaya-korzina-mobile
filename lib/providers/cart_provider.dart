@@ -1,68 +1,210 @@
+// lib/providers/cart_provider.dart - ПРОСТАЯ ВЕРСИЯ
 import 'package:flutter/foundation.dart';
-import 'package:severnaya_korzina/models/product.dart';
 
+/// Модель элемента корзины
 class CartItem {
-  final Product product;
+  final int productId;
+  final String name;
+  final double price;
+  final String unit;
   int quantity;
 
   CartItem({
-    required this.product,
-    this.quantity = 1,
+    required this.productId,
+    required this.name,
+    required this.price,
+    required this.unit,
+    required this.quantity,
   });
 
-  double get totalPrice => product.approximatePrice * quantity;
+  /// Общая стоимость позиции
+  double get totalPrice => price * quantity;
+
+  /// Форматированная общая стоимость
+  String get formattedTotalPrice => '${totalPrice.toStringAsFixed(0)} ₽';
+
+  /// Форматированная цена за единицу
+  String get formattedPrice => '${price.toStringAsFixed(0)} ₽';
+
+  @override
+  String toString() {
+    return 'CartItem(productId: $productId, name: $name, quantity: $quantity)';
+  }
 }
 
+/// Провайдер для управления корзиной
 class CartProvider with ChangeNotifier {
-  final List<CartItem> _items = [];
+  Map<int, CartItem> _items = {};
 
-  List<CartItem> get items => _items;
+  /// Получает все элементы корзины
+  Map<int, CartItem> get items => _items;
 
-  int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
+  /// Получает список элементов корзины
+  List<CartItem> get itemsList => _items.values.toList();
 
-  double get totalAmount =>
-      _items.fold(0.0, (sum, item) => sum + item.totalPrice);
+  /// Проверяет, пуста ли корзина
+  bool get isEmpty => _items.isEmpty;
 
-  double get prepaymentAmount => totalAmount * 0.9; // 90%
+  /// Проверяет, есть ли товары в корзине
+  bool get isNotEmpty => _items.isNotEmpty;
 
-  void addItem(Product product, {int quantity = 1}) {
-    print('🔄 addItem вызван для: ${product.name}');
+  /// Получает общее количество товаров в корзине
+  int get totalItems {
+    return _items.values.fold(0, (sum, item) => sum + item.quantity);
+  }
 
-    final existingIndex =
-        _items.indexWhere((item) => item.product.id == product.id);
+  /// Получает общую стоимость корзины
+  double get totalAmount {
+    return _items.values.fold(0.0, (sum, item) => sum + item.totalPrice);
+  }
 
-    if (existingIndex >= 0) {
-      print('📈 Увеличиваем количество существующего товара');
-      _items[existingIndex].quantity += quantity;
+  /// Получает форматированную общую стоимость
+  String get formattedTotalAmount {
+    return '${totalAmount.toStringAsFixed(0)} ₽';
+  }
+
+  /// Добавляет товар в корзину
+  void addItem({
+    required int productId,
+    required String name,
+    required double price,
+    required String unit,
+    int quantity = 1,
+  }) {
+    if (_items.containsKey(productId)) {
+      // Если товар уже есть в корзине, увеличиваем количество
+      _items[productId]!.quantity += quantity;
     } else {
-      print('🆕 Добавляем новый товар');
-      _items.add(CartItem(product: product, quantity: quantity));
+      // Если товара нет, добавляем новый
+      _items[productId] = CartItem(
+        productId: productId,
+        name: name,
+        price: price,
+        unit: unit,
+        quantity: quantity,
+      );
     }
 
-    print('📦 Всего товаров в корзине: ${_items.length}');
-    print('🔔 Вызываем notifyListeners()');
     notifyListeners();
+
+    if (kDebugMode) {
+      print('CartProvider: Добавлен товар $name (количество: $quantity)');
+    }
   }
 
+  /// Удаляет товар из корзины
   void removeItem(int productId) {
-    _items.removeWhere((item) => item.product.id == productId);
-    notifyListeners();
+    if (_items.containsKey(productId)) {
+      final removedItem = _items.remove(productId);
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('CartProvider: Удален товар ${removedItem?.name}');
+      }
+    }
   }
 
+  /// Обновляет количество товара
   void updateQuantity(int productId, int quantity) {
-    final index = _items.indexWhere((item) => item.product.id == productId);
-    if (index >= 0) {
+    if (_items.containsKey(productId)) {
       if (quantity <= 0) {
-        _items.removeAt(index);
+        removeItem(productId);
       } else {
-        _items[index].quantity = quantity;
+        _items[productId]!.quantity = quantity;
+        notifyListeners();
+
+        if (kDebugMode) {
+          print(
+              'CartProvider: Обновлено количество для ${_items[productId]!.name}: $quantity');
+        }
       }
+    }
+  }
+
+  /// Увеличивает количество товара на 1
+  void incrementItem(int productId) {
+    if (_items.containsKey(productId)) {
+      _items[productId]!.quantity++;
       notifyListeners();
     }
   }
 
-  void clear() {
+  /// Уменьшает количество товара на 1
+  void decrementItem(int productId) {
+    if (_items.containsKey(productId)) {
+      if (_items[productId]!.quantity > 1) {
+        _items[productId]!.quantity--;
+        notifyListeners();
+      } else {
+        removeItem(productId);
+      }
+    }
+  }
+
+  /// Проверяет, есть ли товар в корзине
+  bool containsProduct(int productId) {
+    return _items.containsKey(productId);
+  }
+
+  /// Получает количество конкретного товара в корзине
+  int getProductQuantity(int productId) {
+    return _items[productId]?.quantity ?? 0;
+  }
+
+  /// Получает элемент корзины по ID товара
+  CartItem? getCartItem(int productId) {
+    return _items[productId];
+  }
+
+  /// Очищает корзину
+  void clearCart() {
     _items.clear();
+    notifyListeners();
+
+    if (kDebugMode) {
+      print('CartProvider: Корзина очищена');
+    }
+  }
+
+  /// Получает данные для создания заказа
+  List<Map<String, dynamic>> getOrderItems() {
+    return _items.values
+        .map((item) => {
+              'productId': item.productId,
+              'quantity': item.quantity,
+              'price': item.price,
+            })
+        .toList();
+  }
+
+  /// Получает краткую сводку корзины
+  Map<String, dynamic> getCartSummary() {
+    return {
+      'totalItems': totalItems,
+      'totalAmount': totalAmount,
+      'itemsCount': _items.length,
+      'isEmpty': isEmpty,
+    };
+  }
+
+  /// Сохраняет корзину (заглушка для будущей реализации)
+  Future<void> saveCart() async {
+    // TODO: Сохранение в локальное хранилище
+    if (kDebugMode) {
+      print('CartProvider: Сохранение корзины (заглушка)');
+    }
+  }
+
+  /// Загружает корзину (заглушка для будущей реализации)
+  Future<void> loadCart() async {
+    // TODO: Загрузка из локального хранилища
+    if (kDebugMode) {
+      print('CartProvider: Загрузка корзины (заглушка)');
+    }
+  }
+
+  /// Принудительное обновление
+  void forceUpdate() {
     notifyListeners();
   }
 }

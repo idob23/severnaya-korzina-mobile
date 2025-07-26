@@ -1,4 +1,4 @@
-// lib/models/user.dart - ОБНОВЛЕННАЯ ВЕРСИЯ
+// lib/models/user.dart - ОБНОВЛЕННАЯ ВЕРСИЯ ДЛЯ РАБОТЫ С API
 import 'package:flutter/foundation.dart';
 
 part 'user.g.dart'; // Для генерации кода
@@ -6,7 +6,7 @@ part 'user.g.dart'; // Для генерации кода
 class User {
   final int id;
   final String phone;
-  final String name;
+  final String name; // firstName в API
   final String? lastName;
   final String? email;
   final DateTime createdAt;
@@ -32,39 +32,54 @@ class User {
     this.settings,
   });
 
+  /// Создает пользователя из JSON ответа API
   factory User.fromJson(Map<String, dynamic> json) {
+    // Обрабатываем адреса, если они есть
+    List<UserAddress>? addresses;
+    if (json['addresses'] != null) {
+      addresses = (json['addresses'] as List)
+          .map((addr) => UserAddress.fromJson(addr))
+          .toList();
+    }
+
     return User(
       id: json['id'] ?? 0,
       phone: json['phone'] ?? '',
-      name: json['name'] ?? json['firstName'] ?? '',
+      name: json['firstName'] ?? json['name'] ?? '',
       lastName: json['lastName'],
       email: json['email'],
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : DateTime.now(),
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
-          : null,
-      isActive: json['is_active'] ?? json['isActive'] ?? true,
-      avatarUrl: json['avatar_url'] ?? json['avatarUrl'],
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : (json['created_at'] != null
+              ? DateTime.parse(json['created_at'])
+              : DateTime.now()),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
+          : (json['updated_at'] != null
+              ? DateTime.parse(json['updated_at'])
+              : null),
+      isActive: json['isActive'] ?? json['is_active'] ?? true,
+      avatarUrl: json['avatarUrl'] ?? json['avatar_url'],
+      addresses: addresses,
     );
   }
 
+  /// Преобразует пользователя в JSON для отправки на API
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'phone': phone,
-      'name': name,
-      'first_name': name, // для совместимости
-      'last_name': lastName,
+      'firstName': name,
+      'lastName': lastName,
       'email': email,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
-      'is_active': isActive,
-      'avatar_url': avatarUrl,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+      'isActive': isActive,
+      'avatarUrl': avatarUrl,
     };
   }
 
+  /// Создает копию пользователя с измененными полями
   User copyWith({
     int? id,
     String? phone,
@@ -119,6 +134,17 @@ class User {
         (addresses?.isNotEmpty ?? false);
   }
 
+  /// Возвращает основной адрес пользователя
+  UserAddress? get defaultAddress {
+    if (addresses == null || addresses!.isEmpty) return null;
+
+    try {
+      return addresses!.firstWhere((addr) => addr.isDefault);
+    } catch (e) {
+      return addresses!.first; // Если нет основного, возвращаем первый
+    }
+  }
+
   @override
   String toString() {
     return 'User(id: $id, phone: $phone, name: $name, fullName: $fullName)';
@@ -152,28 +178,33 @@ class UserAddress {
     this.createdAt,
   });
 
+  /// Создает адрес из JSON ответа API
   factory UserAddress.fromJson(Map<String, dynamic> json) {
     return UserAddress(
       id: json['id'],
       title: json['title'],
       address: json['address'],
-      isDefault: json['is_default'] == 1,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : null,
+      isDefault: json['isDefault'] ?? json['is_default'] ?? false,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : (json['created_at'] != null
+              ? DateTime.parse(json['created_at'])
+              : null),
     );
   }
 
+  /// Преобразует адрес в JSON для отправки на API
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'title': title,
       'address': address,
-      'is_default': isDefault ? 1 : 0,
-      'created_at': createdAt?.toIso8601String(),
+      'isDefault': isDefault,
+      'createdAt': createdAt?.toIso8601String(),
     };
   }
 
+  /// Создает копию адреса с измененными полями
   UserAddress copyWith({
     int? id,
     String? title,
@@ -192,6 +223,20 @@ class UserAddress {
 
   @override
   String toString() {
-    return 'UserAddress(title: $title, address: $address, isDefault: $isDefault)';
+    return 'UserAddress(id: $id, title: $title, address: $address, isDefault: $isDefault)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is UserAddress &&
+        other.id == id &&
+        other.title == title &&
+        other.address == address;
+  }
+
+  @override
+  int get hashCode {
+    return id.hashCode ^ title.hashCode ^ address.hashCode;
   }
 }
