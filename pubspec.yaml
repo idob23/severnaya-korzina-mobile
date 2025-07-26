@@ -1,0 +1,35 @@
+name: severnaya_korzina
+description: Платформа коллективных закупок для Усть-Неры
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # HTTP запросы
+  http: ^1.1.0
+  
+  # State management
+  provider: ^6.0.5
+  
+  # Локальное хранение
+  shared_preferences: ^2.2.2
+  
+  # Форматирование даты
+  intl: ^0.18.1
+  mask_text_input_formatter: ^2.9.0
+  json_annotation: ^4.9.0
+  qr_flutter: ^4.1.0
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
