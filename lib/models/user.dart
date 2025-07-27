@@ -1,6 +1,5 @@
-// lib/models/user.dart - ОБНОВЛЕННАЯ ВЕРСИЯ ДЛЯ РАБОТЫ С API
+// lib/models/user.dart - ИСПРАВЛЕННАЯ ВЕРСИЯ
 import 'package:flutter/foundation.dart';
-
 part 'user.g.dart'; // Для генерации кода
 
 class User {
@@ -34,34 +33,98 @@ class User {
 
   /// Создает пользователя из JSON ответа API
   factory User.fromJson(Map<String, dynamic> json) {
-    // Обрабатываем адреса, если они есть
-    List<UserAddress>? addresses;
-    if (json['addresses'] != null) {
-      addresses = (json['addresses'] as List)
-          .map((addr) => UserAddress.fromJson(addr))
-          .toList();
-    }
+    try {
+      if (kDebugMode) {
+        print('🔧 Создание User из JSON: $json');
+      }
 
-    return User(
-      id: json['id'] ?? 0,
-      phone: json['phone'] ?? '',
-      name: json['firstName'] ?? json['name'] ?? '',
-      lastName: json['lastName'],
-      email: json['email'],
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : (json['created_at'] != null
-              ? DateTime.parse(json['created_at'])
-              : DateTime.now()),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
-          : (json['updated_at'] != null
-              ? DateTime.parse(json['updated_at'])
-              : null),
-      isActive: json['isActive'] ?? json['is_active'] ?? true,
-      avatarUrl: json['avatarUrl'] ?? json['avatar_url'],
-      addresses: addresses,
-    );
+      // Обрабатываем адреса, если они есть
+      List<UserAddress>? addresses;
+      try {
+        if (json['addresses'] != null && json['addresses'] is List) {
+          addresses = (json['addresses'] as List)
+              .map((addr) => UserAddress.fromJson(addr))
+              .toList();
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Ошибка обработки адресов: $e');
+        }
+        addresses = [];
+      }
+
+      // Безопасная обработка даты
+      DateTime createdAt;
+      try {
+        if (json['createdAt'] != null) {
+          createdAt = DateTime.parse(json['createdAt'].toString());
+        } else if (json['created_at'] != null) {
+          createdAt = DateTime.parse(json['created_at'].toString());
+        } else {
+          createdAt = DateTime.now();
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Ошибка парсинга даты createdAt: $e');
+        }
+        createdAt = DateTime.now();
+      }
+
+      // Безопасная обработка даты обновления
+      DateTime? updatedAt;
+      try {
+        if (json['updatedAt'] != null) {
+          updatedAt = DateTime.parse(json['updatedAt'].toString());
+        } else if (json['updated_at'] != null) {
+          updatedAt = DateTime.parse(json['updated_at'].toString());
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Ошибка парсинга даты updatedAt: $e');
+        }
+        updatedAt = null;
+      }
+
+      final user = User(
+        id: json['id'] ?? 0,
+        phone: json['phone']?.toString() ?? '',
+        // ИСПРАВЛЕНО: Приоритет полю 'name', затем 'firstName'
+        name: json['name']?.toString() ??
+            json['firstName']?.toString() ??
+            json['first_name']?.toString() ??
+            '',
+        lastName: json['lastName']?.toString() ?? json['last_name']?.toString(),
+        email: json['email']?.toString(),
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+        isActive: json['isActive'] ?? json['is_active'] ?? true,
+        avatarUrl:
+            json['avatarUrl']?.toString() ?? json['avatar_url']?.toString(),
+        addresses: addresses,
+      );
+
+      if (kDebugMode) {
+        print('✅ User создан успешно: ${user.fullName}');
+      }
+
+      return user;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Ошибка при создании User из JSON: $e');
+        print('JSON data: $json');
+      }
+
+      // Возвращаем пользователя с минимальными данными
+      return User(
+        id: json['id'] ?? 0,
+        phone: json['phone']?.toString() ?? '',
+        name: json['name']?.toString() ??
+            json['firstName']?.toString() ??
+            'Пользователь',
+        createdAt: DateTime.now(),
+        isActive: true,
+      );
+    }
   }
 
   /// Преобразует пользователя в JSON для отправки на API
@@ -110,38 +173,66 @@ class User {
 
   /// Возвращает полное имя пользователя
   String get fullName {
-    if (lastName != null && lastName!.isNotEmpty) {
-      return '$name $lastName';
+    try {
+      if (lastName != null && lastName!.isNotEmpty) {
+        return '$name $lastName';
+      }
+      return name;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Ошибка при получении fullName: $e');
+      }
+      return name.isNotEmpty ? name : 'Пользователь';
     }
-    return name;
   }
 
   /// Возвращает инициалы для аватара
   String get initials {
-    final nameWords = fullName.split(' ');
-    if (nameWords.length >= 2) {
-      return '${nameWords[0][0]}${nameWords[1][0]}'.toUpperCase();
-    } else if (nameWords.isNotEmpty) {
-      return nameWords[0][0].toUpperCase();
+    try {
+      final nameWords = fullName.split(' ');
+      if (nameWords.length >= 2) {
+        return '${nameWords[0][0]}${nameWords[1][0]}'.toUpperCase();
+      } else if (nameWords.isNotEmpty && nameWords[0].isNotEmpty) {
+        return nameWords[0][0].toUpperCase();
+      }
+      return 'U';
+    } catch (e) {
+      if (kDebugMode) {
+        print('Ошибка при получении initials: $e');
+      }
+      return 'U';
     }
-    return 'U';
   }
 
   /// Проверяет, заполнен ли профиль полностью
   bool get isProfileComplete {
-    return name.isNotEmpty &&
-        phone.isNotEmpty &&
-        (addresses?.isNotEmpty ?? false);
+    try {
+      return name.isNotEmpty &&
+          phone.isNotEmpty &&
+          (addresses?.isNotEmpty ?? false);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Ошибка при проверке isProfileComplete: $e');
+      }
+      return false;
+    }
   }
 
   /// Возвращает основной адрес пользователя
   UserAddress? get defaultAddress {
-    if (addresses == null || addresses!.isEmpty) return null;
-
     try {
-      return addresses!.firstWhere((addr) => addr.isDefault);
+      if (addresses == null || addresses!.isEmpty) return null;
+
+      try {
+        return addresses!.firstWhere((addr) => addr.isDefault);
+      } catch (e) {
+        return addresses!.first; // Если нет основного, возвращаем первый
+      }
     } catch (e) {
-      return addresses!.first; // Если нет основного, возвращаем первый
+      if (kDebugMode) {
+        print('Ошибка при получении defaultAddress: $e');
+      }
+      return null;
     }
   }
 
@@ -180,17 +271,50 @@ class UserAddress {
 
   /// Создает адрес из JSON ответа API
   factory UserAddress.fromJson(Map<String, dynamic> json) {
-    return UserAddress(
-      id: json['id'],
-      title: json['title'],
-      address: json['address'],
-      isDefault: json['isDefault'] ?? json['is_default'] ?? false,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : (json['created_at'] != null
-              ? DateTime.parse(json['created_at'])
-              : null),
-    );
+    try {
+      if (kDebugMode) {
+        print('🔧 Создание UserAddress из JSON: $json');
+      }
+
+      // Безопасная обработка даты
+      DateTime? createdAt;
+      try {
+        if (json['createdAt'] != null) {
+          createdAt = DateTime.parse(json['createdAt'].toString());
+        } else if (json['created_at'] != null) {
+          createdAt = DateTime.parse(json['created_at'].toString());
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Ошибка парсинга даты в UserAddress: $e');
+        }
+        createdAt = null;
+      }
+
+      final address = UserAddress(
+        id: json['id'],
+        title: json['title']?.toString() ?? '',
+        address: json['address']?.toString() ?? '',
+        isDefault: json['isDefault'] ?? json['is_default'] ?? false,
+        createdAt: createdAt,
+      );
+
+      if (kDebugMode) {
+        print('✅ UserAddress создан успешно: ${address.title}');
+      }
+
+      return address;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Ошибка при создании UserAddress из JSON: $e');
+        print('JSON data: $json');
+      }
+      // Возвращаем адрес с минимальными данными
+      return UserAddress(
+        title: 'Адрес',
+        address: '',
+      );
+    }
   }
 
   /// Преобразует адрес в JSON для отправки на API
@@ -239,4 +363,98 @@ class UserAddress {
   int get hashCode {
     return id.hashCode ^ title.hashCode ^ address.hashCode;
   }
+}
+
+/// Модель пользователя для админ панели
+class AdminUser {
+  final String id;
+  final String phone;
+  final String name;
+  final String? lastName;
+  final bool isActive;
+  final bool isVerified;
+  final DateTime? lastLoginAt;
+  final DateTime createdAt;
+  final int totalOrders;
+  final double totalSpent;
+
+  AdminUser({
+    required this.id,
+    required this.phone,
+    required this.name,
+    this.lastName,
+    required this.isActive,
+    required this.isVerified,
+    this.lastLoginAt,
+    required this.createdAt,
+    this.totalOrders = 0,
+    this.totalSpent = 0.0,
+  });
+
+  factory AdminUser.fromJson(Map<String, dynamic> json) {
+    try {
+      return AdminUser(
+        id: json['id']?.toString() ?? '',
+        phone: json['phone'] ?? '',
+        name: json['name'] ?? json['firstName'] ?? '',
+        lastName: json['last_name'] ?? json['lastName'],
+        isActive: json['is_active'] ?? json['isActive'] ?? true,
+        isVerified: json['is_verified'] ?? json['isVerified'] ?? false,
+        lastLoginAt: json['last_login_at'] != null
+            ? DateTime.parse(json['last_login_at'])
+            : (json['lastLoginAt'] != null
+                ? DateTime.parse(json['lastLoginAt'])
+                : null),
+        createdAt: json['created_at'] != null
+            ? DateTime.parse(json['created_at'])
+            : (json['createdAt'] != null
+                ? DateTime.parse(json['createdAt'])
+                : DateTime.now()),
+        totalOrders: json['total_orders'] ?? json['totalOrders'] ?? 0,
+        totalSpent:
+            (json['total_spent'] ?? json['totalSpent'] ?? 0.0).toDouble(),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Ошибка при создании AdminUser из JSON: $e');
+        print('JSON data: $json');
+      }
+      // Возвращаем пользователя с минимальными данными
+      return AdminUser(
+        id: json['id']?.toString() ?? '',
+        phone: json['phone'] ?? '',
+        name: json['name'] ?? json['firstName'] ?? 'Пользователь',
+        isActive: true,
+        isVerified: false,
+        createdAt: DateTime.now(),
+      );
+    }
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'phone': phone,
+      'name': name,
+      'last_name': lastName,
+      'is_active': isActive,
+      'is_verified': isVerified,
+      'last_login_at': lastLoginAt?.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'total_orders': totalOrders,
+      'total_spent': totalSpent,
+    };
+  }
+
+  String get fullName {
+    try {
+      return lastName != null && lastName!.isNotEmpty
+          ? '$name $lastName'
+          : name;
+    } catch (e) {
+      return name.isNotEmpty ? name : 'Пользователь';
+    }
+  }
+
+  String get status => isActive ? 'Активен' : 'Заблокирован';
 }

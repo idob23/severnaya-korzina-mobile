@@ -1,4 +1,7 @@
-// lib/screens/profile/profile_screen.dart - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// ========================================
+// 3. lib/screens/profile/profile_screen.dart
+// ========================================
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -19,7 +22,11 @@ class ProfileScreen extends StatelessWidget {
             return _buildUnauthenticatedView(context);
           }
 
-          final user = authProvider.currentUser!;
+          final user = authProvider.currentUser;
+          if (user == null) {
+            return _buildLoadingView();
+          }
+
           return _buildAuthenticatedView(context, user, authProvider);
         },
       ),
@@ -33,27 +40,35 @@ class ProfileScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.person_outline,
-              size: 80,
-              color: Colors.grey[400],
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.person_outline,
+                size: 60,
+                color: Colors.grey[400],
+              ),
             ),
             SizedBox(height: 24),
             Text(
-              'Войдите в аккаунт',
+              'Вы не авторизованы',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
+                color: Colors.grey[800],
               ),
             ),
-            SizedBox(height: 16),
+            SizedBox(height: 12),
             Text(
-              'Авторизуйтесь для доступа к профилю, заказам и персональным настройкам',
+              'Войдите в систему, чтобы получить доступ к профилю и заказам',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.grey[600],
                 fontSize: 16,
+                color: Colors.grey[600],
               ),
             ),
             SizedBox(height: 32),
@@ -61,19 +76,26 @@ class ProfileScreen extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => AuthChoiceScreen()),
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => AuthChoiceScreen(),
+                    ),
                   );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: Text(
-                  'Войти или зарегистрироваться',
-                  style: TextStyle(fontSize: 16),
+                  'Войти в аккаунт',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -83,171 +105,18 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAuthenticatedView(
-      BuildContext context, user, AuthProvider authProvider) {
-    return SingleChildScrollView(
+  Widget _buildLoadingView() {
+    return Center(
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Шапка профиля
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.blue[50]!, Colors.white],
-              ),
-            ),
-            child: Column(
-              children: [
-                // Аватар
-                CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Colors.blue[100],
-                  child: user.avatarUrl != null
-                      ? ClipOval(
-                          child: Image.network(
-                            user.avatarUrl!,
-                            width: 100,
-                            height: 100,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildDefaultAvatar(user.initials);
-                            },
-                          ),
-                        )
-                      : _buildDefaultAvatar(user.initials),
-                ),
-                SizedBox(height: 16),
-
-                // Имя пользователя
-                Text(
-                  user.fullName,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                SizedBox(height: 4),
-
-                // Телефон
-                Text(
-                  user.phone,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
-                ),
-
-                if (user.email != null && user.email!.isNotEmpty) ...[
-                  SizedBox(height: 4),
-                  Text(
-                    user.email!,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          // Меню профиля
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildMenuSection('Аккаунт', [
-                  _buildMenuItem(
-                    icon: Icons.person,
-                    title: 'Редактировать профиль',
-                    subtitle: 'Изменить личные данные',
-                    onTap: () =>
-                        _showEditProfileDialog(context, user, authProvider),
-                  ),
-                  _buildMenuItem(
-                    icon: Icons.location_on,
-                    title: 'Адреса доставки',
-                    subtitle: 'Управление адресами',
-                    onTap: () => _showAddressesDialog(context),
-                  ),
-                ]),
-
-                SizedBox(height: 24),
-
-                _buildMenuSection('Заказы', [
-                  _buildMenuItem(
-                    icon: Icons.shopping_bag,
-                    title: 'Мои заказы',
-                    subtitle: 'История покупок и текущие заказы',
-                    onTap: () {
-                      // Переходим на вкладку заказов
-                      DefaultTabController.of(context)?.animateTo(2);
-                    },
-                  ),
-                  _buildMenuItem(
-                    icon: Icons.favorite,
-                    title: 'Избранное',
-                    subtitle: 'Понравившиеся товары',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Избранное - в разработке')),
-                      );
-                    },
-                  ),
-                ]),
-
-                SizedBox(height: 24),
-
-                _buildMenuSection('Настройки', [
-                  _buildMenuItem(
-                    icon: Icons.notifications,
-                    title: 'Уведомления',
-                    subtitle: 'Настройки push-уведомлений',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content:
-                                Text('Настройки уведомлений - в разработке')),
-                      );
-                    },
-                  ),
-                  _buildMenuItem(
-                    icon: Icons.help_outline,
-                    title: 'Помощь',
-                    subtitle: 'Часто задаваемые вопросы',
-                    onTap: () => _showHelpDialog(context),
-                  ),
-                  _buildMenuItem(
-                    icon: Icons.info_outline,
-                    title: 'О приложении',
-                    subtitle: 'Версия и информация',
-                    onTap: () => _showAboutDialog(context),
-                  ),
-                ]),
-
-                SizedBox(height: 32),
-
-                // Кнопка выхода
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showLogoutDialog(context, authProvider),
-                    icon: Icon(Icons.logout, color: Colors.red),
-                    label: Text(
-                      'Выйти из аккаунта',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.red),
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                    ),
-                  ),
-                ),
-              ],
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text(
+            'Загрузка профиля...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
             ),
           ),
         ],
@@ -255,36 +124,154 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDefaultAvatar(String initials) {
-    return Text(
-      initials,
-      style: TextStyle(
-        fontSize: 36,
-        fontWeight: FontWeight.bold,
-        color: Colors.blue[800],
+  Widget _buildAuthenticatedView(
+      BuildContext context, user, AuthProvider authProvider) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Информация о пользователе
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  // Аватар
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.blue,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        user.initials,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+
+                  Text(
+                    user.fullName,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  SizedBox(height: 8),
+
+                  Text(
+                    user.phone,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+
+                  if (user.email != null && user.email!.isNotEmpty) ...[
+                    SizedBox(height: 4),
+                    Text(
+                      user.email!,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          SizedBox(height: 20),
+
+          // Пункты меню
+          _buildMenuSection(context, authProvider),
+
+          SizedBox(height: 20),
+
+          // Кнопка выхода
+          _buildLogoutButton(context, authProvider),
+        ],
       ),
     );
   }
 
-  Widget _buildMenuSection(String title, List<Widget> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
-            ),
+  Widget _buildMenuSection(BuildContext context, AuthProvider authProvider) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          _buildMenuItem(
+            icon: Icons.person_outline,
+            title: 'Редактировать профиль',
+            subtitle: 'Изменить имя, email и другие данные',
+            onTap: () => _showEditProfileDialog(context, authProvider),
           ),
-        ),
-        Card(
-          child: Column(children: items),
-        ),
-      ],
+          _buildDivider(),
+          _buildMenuItem(
+            icon: Icons.location_on_outlined,
+            title: 'Мои адреса',
+            subtitle: 'Управление адресами доставки',
+            onTap: () {
+              // TODO: Переход к экрану адресов
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Экран адресов в разработке')),
+              );
+            },
+          ),
+          _buildDivider(),
+          _buildMenuItem(
+            icon: Icons.shopping_bag_outlined,
+            title: 'История заказов',
+            subtitle: 'Посмотреть все ваши заказы',
+            onTap: () {
+              // TODO: Переход к истории заказов
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('История заказов в разработке')),
+              );
+            },
+          ),
+          _buildDivider(),
+          _buildMenuItem(
+            icon: Icons.notifications_outlined,
+            title: 'Уведомления',
+            subtitle: 'Настройка push-уведомлений',
+            onTap: () {
+              // TODO: Настройки уведомлений
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Настройки уведомлений в разработке')),
+              );
+            },
+          ),
+          _buildDivider(),
+          _buildMenuItem(
+            icon: Icons.help_outline,
+            title: 'Помощь и поддержка',
+            subtitle: 'Часто задаваемые вопросы',
+            onTap: () {
+              // TODO: Экран помощи
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Помощь в разработке')),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -295,22 +282,97 @@ class ProfileScreen extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: Colors.blue[50],
-        child: Icon(icon, color: Colors.blue[700]),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.blue.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          color: Colors.blue,
+          size: 20,
+        ),
       ),
       title: Text(
         title,
-        style: TextStyle(fontWeight: FontWeight.w500),
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 16,
+        ),
       ),
-      subtitle: Text(subtitle),
-      trailing: Icon(Icons.arrow_forward_ios, size: 16),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          color: Colors.grey[600],
+          fontSize: 14,
+        ),
+      ),
+      trailing: Icon(
+        Icons.arrow_forward_ios,
+        size: 16,
+        color: Colors.grey[400],
+      ),
       onTap: onTap,
     );
   }
 
-  void _showEditProfileDialog(
-      BuildContext context, user, AuthProvider authProvider) {
+  Widget _buildDivider() {
+    return Divider(
+      height: 1,
+      indent: 72,
+      endIndent: 16,
+      color: Colors.grey[200],
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context, AuthProvider authProvider) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: authProvider.isLoading
+            ? null
+            : () => _showLogoutDialog(context, authProvider),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.red[50],
+          foregroundColor: Colors.red[700],
+          elevation: 0,
+          padding: EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.red[200]!),
+          ),
+        ),
+        child: authProvider.isLoading
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.red[700],
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.logout, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Выйти из аккаунта',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  void _showEditProfileDialog(BuildContext context, AuthProvider authProvider) {
+    final user = authProvider.currentUser!;
     final firstNameController = TextEditingController(text: user.name);
     final lastNameController = TextEditingController(text: user.lastName ?? '');
     final emailController = TextEditingController(text: user.email ?? '');
@@ -319,34 +381,42 @@ class ProfileScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Редактировать профиль'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: firstNameController,
-              decoration: InputDecoration(
-                labelText: 'Имя',
-                border: OutlineInputBorder(),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: firstNameController,
+                decoration: InputDecoration(
+                  labelText: 'Имя',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
-            ),
-            SizedBox(height: 16),
-            TextField(
-              controller: lastNameController,
-              decoration: InputDecoration(
-                labelText: 'Фамилия',
-                border: OutlineInputBorder(),
+              SizedBox(height: 16),
+              TextField(
+                controller: lastNameController,
+                decoration: InputDecoration(
+                  labelText: 'Фамилия',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
-            ),
-            SizedBox(height: 16),
-            TextField(
-              controller: emailController,
-              decoration: InputDecoration(
-                labelText: 'Email (необязательно)',
-                border: OutlineInputBorder(),
+              SizedBox(height: 16),
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
-              keyboardType: TextInputType.emailAddress,
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -355,13 +425,13 @@ class ProfileScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
+              Navigator.pop(context);
+
               final success = await authProvider.updateUserProfile(
                 firstName: firstNameController.text.trim(),
                 lastName: lastNameController.text.trim(),
                 email: emailController.text.trim(),
               );
-
-              Navigator.pop(context);
 
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -373,7 +443,8 @@ class ProfileScreen extends StatelessWidget {
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Ошибка обновления профиля'),
+                    content:
+                        Text(authProvider.lastError ?? 'Ошибка обновления'),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -386,103 +457,11 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  void _showAddressesDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Адреса доставки'),
-        content: Text('Управление адресами - в разработке'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Закрыть'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showHelpDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Помощь'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Частые вопросы:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 12),
-            Text('• Как сделать заказ?'),
-            Text('• Как отследить доставку?'),
-            Text('• Как связаться с поддержкой?'),
-            Text('• Условия коллективных закупок'),
-            SizedBox(height: 16),
-            Text(
-              'Для получения помощи обратитесь в поддержку:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text('📞 +7 (999) 123-45-67'),
-            Text('📧 support@severnaya-korzina.ru'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Закрыть'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAboutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('О приложении'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Северная корзина',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text('Версия: 1.0.0'),
-            SizedBox(height: 16),
-            Text(
-              'Платформа коллективных закупок для жителей Усть-Неры.',
-            ),
-            SizedBox(height: 12),
-            Text(
-              'Экономьте до 70% на покупках благодаря совместным заказам!',
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Закрыть'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showLogoutDialog(BuildContext context, AuthProvider authProvider) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Выход'),
+        title: Text('Выход из аккаунта'),
         content: Text('Вы уверены, что хотите выйти из аккаунта?'),
         actions: [
           TextButton(
@@ -492,16 +471,21 @@ class ProfileScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
+
               await authProvider.logout();
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Вы вышли из аккаунта'),
-                  backgroundColor: Colors.green,
+              // Переходим к экрану выбора авторизации
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => AuthChoiceScreen(),
                 ),
+                (route) => false,
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: Text('Выйти'),
           ),
         ],

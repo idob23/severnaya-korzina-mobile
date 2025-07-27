@@ -1,8 +1,10 @@
-// lib/screens/auth/register_screen.dart - ПОЛНОСТЬЮ ОБНОВЛЕННАЯ ВЕРСИЯ
+// ========================================
+// 2. lib/screens/auth/register_screen.dart
+// ========================================
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../../providers/auth_provider.dart';
 import 'login_screen.dart';
 
@@ -18,12 +20,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
 
-  // Маска для номера телефона
-  final _phoneMask = MaskTextInputFormatter(
-    mask: '+7 (###) ###-##-##',
-    filter: {'#': RegExp(r'[0-9]')},
-    type: MaskAutoCompletionType.lazy,
-  );
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +151,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
-                  inputFormatters: [_phoneMask],
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(11),
+                  ],
                   decoration: InputDecoration(
                     labelText: 'Номер телефона *',
                     prefixIcon: Icon(Icons.phone, color: Colors.blue),
@@ -158,7 +165,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: Colors.blue, width: 2),
                     ),
-                    hintText: '+7 (999) 123-45-67',
+                    hintText: '79141234567',
                     filled: true,
                     fillColor: Colors.grey[50],
                     contentPadding:
@@ -177,7 +184,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     }
 
                     if (!cleanPhone.startsWith('7')) {
-                      return 'Номер должен начинаться с +7';
+                      return 'Номер должен начинаться с 7';
                     }
 
                     return null;
@@ -227,33 +234,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.blue[200]!),
                   ),
-                  child: Column(
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          Icon(Icons.security, color: Colors.blue, size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            'Безопасная регистрация',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blue[800],
-                            ),
+                      Icon(Icons.info_outline, color: Colors.blue),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'На указанный номер будет отправлен SMS с кодом подтверждения',
+                          style: TextStyle(
+                            color: Colors.blue[800],
+                            fontSize: 14,
                           ),
-                        ],
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Ваши данные сохраняются локально на устройстве и защищены шифрованием. Доступ подтверждается через SMS.',
-                        style: TextStyle(
-                          color: Colors.blue[700],
-                          fontSize: 13,
                         ),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(height: 32),
+                SizedBox(height: 24),
 
                 // Кнопка регистрации
                 Consumer<AuthProvider>(
@@ -350,7 +347,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       onPressed: () {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (_) => LoginScreen()),
+                          MaterialPageRoute(
+                            builder: (context) => LoginScreen(),
+                          ),
                         );
                       },
                       child: Text(
@@ -365,45 +364,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                 ),
 
-                SizedBox(height: 16),
-
-                // Информация о проекте
-                Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green[50],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.green[200]!),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.info_outline,
-                              color: Colors.green, size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            'Северная корзина',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.green[800],
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Коллективные закупки для жителей Усть-Неры. Объединяем заказы и получаем скидки до 70%. Предоплата 90%, остальное при получении.',
-                        style: TextStyle(
-                          color: Colors.green[700],
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                SizedBox(height: 40),
+                SizedBox(height: 20),
               ],
             ),
           ),
@@ -418,27 +379,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     authProvider.clearError();
 
-    // Получаем данные из формы
+    // Получаем данные из полей
     final firstName = _firstNameController.text.trim();
     final lastName = _lastNameController.text.trim();
-    final cleanPhone = _phoneController.text.replaceAll(RegExp(r'[^\d]'), '');
-    final formattedPhone = '+$cleanPhone';
+    final phone = _phoneController.text.trim();
     final email = _emailController.text.trim();
 
-    // Регистрируем пользователя
+    // Форматируем номер телефона
+    final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+    final formattedPhone = '+$cleanPhone';
+
+    print('📝 Попытка регистрации:');
+    print('Имя: $firstName');
+    print('Фамилия: $lastName');
+    print('Телефон: $formattedPhone');
+    print('Email: $email');
+
+    // Пробуем зарегистрировать через API
     final success = await authProvider.register(
       formattedPhone,
       firstName,
-      '', // Пустой пароль для SMS авторизации
-      lastName: lastName.isEmpty ? null : lastName,
+      'password', // Пароль не используется в нашей системе
+      lastName: lastName.isNotEmpty ? lastName : null,
     );
 
     if (success) {
-      // Сохраняем email если был введен
-      if (email.isNotEmpty && authProvider.currentUser != null) {
-        await authProvider.updateUserProfile(email: email);
-      }
-
       // Показываем сообщение об успехе
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -446,7 +411,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               Icon(Icons.check_circle, color: Colors.white),
               SizedBox(width: 8),
-              Text('Регистрация успешна! Теперь войдите в систему'),
+              Text('Регистрация прошла успешно!'),
             ],
           ),
           backgroundColor: Colors.green,
@@ -454,21 +419,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       );
 
-      // Переходим к экрану входа
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => LoginScreen()),
+      // Переходим на главный экран (авторизация уже произошла)
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/main',
+        (route) => false,
       );
+    } else {
+      // Ошибка уже отображается через Consumer<AuthProvider>
+      print('❌ Ошибка регистрации: ${authProvider.lastError}');
     }
-    // Ошибки отображаются через Consumer выше
-  }
-
-  @override
-  void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
-    super.dispose();
   }
 }

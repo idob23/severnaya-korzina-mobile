@@ -1,8 +1,12 @@
-// lib/providers/auth_provider.dart - ОБНОВЛЕННАЯ ВЕРСИЯ ДЛЯ РАБОТЫ С API
+// ========================================
+// 1. lib/providers/auth_provider.dart
+// ========================================
+
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/user.dart';
 import '../services/sms_service.dart';
-import '../services/local_storage_service.dart';
 import '../services/api_service.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -12,7 +16,6 @@ class AuthProvider with ChangeNotifier {
   String? _lastError;
 
   final SMSService _smsService = SMSService();
-  final LocalStorageService _storage = LocalStorageService.instance;
   final ApiService _apiService = ApiService();
 
   User? get currentUser => _currentUser;
@@ -20,9 +23,13 @@ class AuthProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get lastError => _lastError;
 
+  // Ключи для SharedPreferences
+  static const String _authTokenKey = 'auth_token';
+  static const String _userDataKey = 'user_data';
+  static const String _autoLoginPhoneKey = 'auto_login_phone';
+
   /// Инициализация провайдера
   Future<void> init() async {
-    await _storage.init();
     await checkAuthStatus();
   }
 
@@ -33,51 +40,36 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Проверяем автологин
-      final autoLoginPhone = await _storage.getAutoLoginPhone();
-      if (autoLoginPhone != null) {
-        final user = await _storage.getUserByPhone(autoLoginPhone);
-        if (user != null) {
-          _currentUser = user;
+      final prefs = await SharedPreferences.getInstance();
+
+      // Проверяем сохраненного пользователя
+      final userJson = prefs.getString(_userDataKey);
+      final token = prefs.getString(_authTokenKey);
+
+      if (userJson != null && token != null) {
+        try {
+          final userData = jsonDecode(userJson);
+          _currentUser = User.fromJson(userData);
           _isAuthenticated = true;
-
-          // Восстанавливаем токен
-          final token = await _storage.getAuthToken();
-          if (token != null) {
-            _apiService.setAuthToken(token);
-          }
-
-          if (kDebugMode) {
-            print('Автологин успешен для: $autoLoginPhone');
-          }
-        } else {
-          await _storage.removeAutoLoginInfo();
-        }
-      }
-
-      // Если автологин не сработал, проверяем токен
-      if (!_isAuthenticated) {
-        final token = await _storage.getAuthToken();
-        if (token != null) {
           _apiService.setAuthToken(token);
 
-          // Проверяем токен на сервере
-          final profileResult = await _apiService.getProfile();
-          if (profileResult['success']) {
-            final userData = profileResult['user'];
-            _currentUser = User.fromJson(userData);
-            _isAuthenticated = true;
-            await _storage.saveUser(_currentUser!);
-          } else {
-            await _storage.removeAuthToken();
-            _apiService.clearAuthToken();
+          if (kDebugMode) {
+            print(
+                '✅ Пользователь восстановлен из локального хранилища: ${_currentUser?.fullName}');
           }
+        } catch (e) {
+          if (kDebugMode) {
+            print('❌ Ошибка восстановления пользователя: $e');
+          }
+          // Очищаем поврежденные данные
+          await prefs.remove(_userDataKey);
+          await prefs.remove(_authTokenKey);
         }
       }
     } catch (e) {
       _lastError = 'Ошибка при проверке авторизации: $e';
       if (kDebugMode) {
-        print('Auth check error: $e');
+        print('❌ Auth check error: $e');
       }
     } finally {
       _isLoading = false;
@@ -99,7 +91,9 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
 
-      print('Отправляем SMS код на: $formattedPhone');
+      if (kDebugMode) {
+        print('📱 Отправляем SMS код на: $formattedPhone');
+      }
 
       // Проверяем подключение к серверу
       final isConnected = await _apiService.checkConnection();
@@ -119,6 +113,9 @@ class AuthProvider with ChangeNotifier {
       return success;
     } catch (e) {
       _lastError = 'Ошибка при отправке SMS: $e';
+      if (kDebugMode) {
+        print('❌ Ошибка отправки SMS: $e');
+      }
       return false;
     } finally {
       _isLoading = false;
@@ -136,6 +133,10 @@ class AuthProvider with ChangeNotifier {
     try {
       final formattedPhone = _smsService.formatPhoneNumber(phone);
 
+      if (kDebugMode) {
+        print('🔐 Начинаем верификацию для: $formattedPhone');
+      }
+
       // Проверяем код локально
       final isCodeValid = _smsService.verifyCode(formattedPhone, code);
 
@@ -144,44 +145,88 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
 
+      if (kDebugMode) {
+        print('✅ SMS код валиден, отправляем запрос на сервер');
+      }
+
       // Авторизуемся через API
       final loginResult = await _apiService.login(
         phone: formattedPhone,
         smsCode: code,
       );
 
-      if (loginResult['success']) {
+      if (kDebugMode) {
+        print('📡 Ответ от сервера: ${loginResult['success']}');
+      }
+
+      if (loginResult['success'] == true) {
         final userData = loginResult['user'];
         final token = loginResult['token'];
 
-        _currentUser = User.fromJson(userData);
-        _isAuthenticated = true;
+        if (userData != null) {
+          try {
+            if (kDebugMode) {
+              print('🔧 Создаем пользователя из данных сервера...');
+            }
 
-        // Сохраняем токен
-        if (token != null) {
-          await _storage.saveAuthToken(token);
-          _apiService.setAuthToken(token);
+            _currentUser = User.fromJson(userData);
+            _isAuthenticated = true;
+
+            if (kDebugMode) {
+              print('✅ Пользователь создан: ${_currentUser?.fullName}');
+            }
+
+            // Сохраняем токен
+            if (token != null) {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString(_authTokenKey, token);
+              _apiService.setAuthToken(token);
+
+              if (kDebugMode) {
+                print('✅ Токен сохранен');
+              }
+            }
+
+            // Сохраняем пользователя локально
+            await _saveUserToPrefs(_currentUser!);
+
+            // Автологин
+            if (rememberMe) {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString(_autoLoginPhoneKey, formattedPhone);
+
+              if (kDebugMode) {
+                print('✅ Автологин настроен');
+              }
+            }
+
+            if (kDebugMode) {
+              print(
+                  '🎉 Успешная авторизация завершена: ${_currentUser?.fullName}');
+            }
+
+            return true;
+          } catch (e) {
+            if (kDebugMode) {
+              print('❌ Ошибка при обработке пользователя: $e');
+              print('📊 UserData: $userData');
+            }
+            _lastError = 'Ошибка обработки данных пользователя: $e';
+            return false;
+          }
+        } else {
+          _lastError = 'Некорректные данные от сервера';
+          return false;
         }
-
-        // Сохраняем пользователя локально
-        await _storage.saveUser(_currentUser!);
-
-        // Автологин
-        if (rememberMe) {
-          await _storage.saveAutoLoginInfo(formattedPhone, daysValid: 30);
-        }
-
-        if (kDebugMode) {
-          print('Успешная авторизация через API: ${_currentUser!.fullName}');
-        }
-
-        return true;
       } else {
         _lastError = loginResult['error'] ?? 'Ошибка авторизации';
         return false;
       }
     } catch (e) {
       _lastError = 'Ошибка при входе: $e';
+      if (kDebugMode) {
+        print('❌ Критическая ошибка verifySMSAndLogin: $e');
+      }
       return false;
     } finally {
       _isLoading = false;
@@ -204,6 +249,10 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
 
+      if (kDebugMode) {
+        print('📝 Регистрация пользователя: $formattedPhone');
+      }
+
       // Регистрируемся через API
       final registerResult = await _apiService.register(
         phone: formattedPhone,
@@ -211,38 +260,77 @@ class AuthProvider with ChangeNotifier {
         lastName: lastName?.trim(),
       );
 
-      if (registerResult['success']) {
+      if (kDebugMode) {
+        print('📡 Ответ регистрации: ${registerResult['success']}');
+      }
+
+      if (registerResult['success'] == true) {
         final userData = registerResult['user'];
         final token = registerResult['token'];
 
-        _currentUser = User.fromJson(userData);
-        _isAuthenticated = true;
+        if (userData != null) {
+          try {
+            _currentUser = User.fromJson(userData);
+            _isAuthenticated = true;
 
-        // Сохраняем токен
-        if (token != null) {
-          await _storage.saveAuthToken(token);
-          _apiService.setAuthToken(token);
+            // Сохраняем токен
+            if (token != null) {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString(_authTokenKey, token);
+              _apiService.setAuthToken(token);
+            }
+
+            // Сохраняем пользователя локально
+            await _saveUserToPrefs(_currentUser!);
+
+            if (kDebugMode) {
+              print(
+                  '✅ Пользователь зарегистрирован: ${_currentUser?.fullName}');
+            }
+
+            return true;
+          } catch (e) {
+            if (kDebugMode) {
+              print('❌ Ошибка при создании пользователя после регистрации: $e');
+            }
+            _lastError = 'Ошибка обработки данных пользователя';
+            return false;
+          }
+        } else {
+          _lastError = 'Некорректные данные от сервера';
+          return false;
         }
-
-        // Сохраняем пользователя локально
-        await _storage.saveUser(_currentUser!);
-
-        if (kDebugMode) {
-          print(
-              'Пользователь зарегистрирован через API: ${_currentUser!.fullName}');
-        }
-
-        return true;
       } else {
         _lastError = registerResult['error'] ?? 'Ошибка регистрации';
         return false;
       }
     } catch (e) {
       _lastError = 'Ошибка при регистрации: $e';
+      if (kDebugMode) {
+        print('❌ Ошибка register: $e');
+      }
       return false;
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  /// Сохраняет пользователя в SharedPreferences
+  Future<void> _saveUserToPrefs(User user) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = jsonEncode(user.toJson());
+      await prefs.setString(_userDataKey, userJson);
+
+      if (kDebugMode) {
+        print('✅ Пользователь сохранен в локальное хранилище');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Ошибка сохранения пользователя: $e');
+      }
+      // Не критичная ошибка, не прерываем процесс авторизации
     }
   }
 
@@ -252,8 +340,13 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      await _storage.removeAuthToken();
-      await _storage.removeAutoLoginInfo();
+      final prefs = await SharedPreferences.getInstance();
+
+      // Удаляем все данные
+      await prefs.remove(_authTokenKey);
+      await prefs.remove(_userDataKey);
+      await prefs.remove(_autoLoginPhoneKey);
+
       _apiService.clearAuthToken();
 
       _currentUser = null;
@@ -261,11 +354,11 @@ class AuthProvider with ChangeNotifier {
       _lastError = null;
 
       if (kDebugMode) {
-        print('Пользователь вышел из системы');
+        print('✅ Пользователь вышел из системы');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Ошибка при выходе: $e');
+        print('❌ Ошибка при выходе: $e');
       }
     } finally {
       _isLoading = false;
@@ -292,12 +385,19 @@ class AuthProvider with ChangeNotifier {
         updatedAt: DateTime.now(),
       );
 
-      await _storage.saveUser(updatedUser);
+      await _saveUserToPrefs(updatedUser);
       _currentUser = updatedUser;
+
+      if (kDebugMode) {
+        print('✅ Профиль обновлен: ${_currentUser?.fullName}');
+      }
 
       return true;
     } catch (e) {
       _lastError = 'Ошибка при обновлении профиля: $e';
+      if (kDebugMode) {
+        print('❌ Ошибка updateUserProfile: $e');
+      }
       return false;
     } finally {
       _isLoading = false;
@@ -313,8 +413,21 @@ class AuthProvider with ChangeNotifier {
 
   /// Проверяет автологин
   Future<bool> canAutoLogin(String phone) async {
-    final formattedPhone = _smsService.formatPhoneNumber(phone);
-    final autoLoginPhone = await _storage.getAutoLoginPhone();
-    return autoLoginPhone == formattedPhone;
+    try {
+      final formattedPhone = _smsService.formatPhoneNumber(phone);
+      final prefs = await SharedPreferences.getInstance();
+      final autoLoginPhone = prefs.getString(_autoLoginPhoneKey);
+      return autoLoginPhone == formattedPhone;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Ошибка проверки автологина: $e');
+      }
+      return false;
+    }
+  }
+
+  /// Обновляет пользователя принудительно
+  void forceUpdate() {
+    notifyListeners();
   }
 }
