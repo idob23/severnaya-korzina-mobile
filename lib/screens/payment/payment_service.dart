@@ -1,3 +1,4 @@
+// lib/screens/payment/payment_service.dart - ПРОДАКШЕН ВЕРСИЯ
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -6,14 +7,15 @@ class PaymentService {
   // ЮKassa API настройки
   static const String _baseUrl = 'https://api.yookassa.ru/v3';
 
-  // ВАЖНО: Получите эти данные в личном кабинете ЮKassa
-  static const String _shopId = '123456'; // Замените на ваш shopId
+  // ВАЖНО: Замените на ваши реальные данные из личного кабинета ЮKassa
+  // Получите их здесь: https://yookassa.ru/my/
+  static const String _shopId = 'ваш_shop_id_здесь'; // Например: '123456'
   static const String _secretKey =
-      'test_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'; // Замените на ваш секретный ключ
+      'ваш_secret_key_здесь'; // Например: 'test_ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'
 
-  // Для тестирования используйте тестовые ключи, для продакшена - боевые
+  // Для начала используйте тестовые ключи, затем замените на боевые
 
-  /// Создание платежа через ЮKassa
+  /// Создание платежа через ЮKassa для карт МИР
   Future<PaymentResult> createMirPayment({
     required double amount,
     required String orderId,
@@ -22,6 +24,7 @@ class PaymentService {
   }) async {
     try {
       print('💳 Создаем платеж на сумму: $amount руб.');
+      print('📞 Телефон клиента: $customerPhone');
 
       final String basicAuth =
           base64Encode(utf8.encode('$_shopId:$_secretKey'));
@@ -80,6 +83,7 @@ class PaymentService {
       );
 
       print('📥 Ответ ЮKassa: ${response.statusCode}');
+      print('📥 Тело ответа: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -176,6 +180,67 @@ class PaymentService {
     }
   }
 
+  /// Отмена платежа
+  Future<bool> cancelPayment(String paymentId) async {
+    try {
+      print('❌ Отменяем платеж: $paymentId');
+
+      final String basicAuth =
+          base64Encode(utf8.encode('$_shopId:$_secretKey'));
+      final String idempotenceKey =
+          'cancel_${paymentId}_${DateTime.now().millisecondsSinceEpoch}';
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/payments/$paymentId/cancel'),
+        headers: {
+          'Authorization': 'Basic $basicAuth',
+          'Content-Type': 'application/json',
+          'Idempotence-Key': idempotenceKey,
+        },
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('💥 Ошибка отмены платежа: $e');
+      return false;
+    }
+  }
+
+  /// Возврат платежа
+  Future<bool> refundPayment(String paymentId, double amount) async {
+    try {
+      print('💰 Возврат платежа: $paymentId, сумма: $amount');
+
+      final String basicAuth =
+          base64Encode(utf8.encode('$_shopId:$_secretKey'));
+      final String idempotenceKey =
+          'refund_${paymentId}_${DateTime.now().millisecondsSinceEpoch}';
+
+      final requestBody = {
+        'amount': {
+          'value': amount.toStringAsFixed(2),
+          'currency': 'RUB',
+        },
+        'payment_id': paymentId,
+      };
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/refunds'),
+        headers: {
+          'Authorization': 'Basic $basicAuth',
+          'Content-Type': 'application/json',
+          'Idempotence-Key': idempotenceKey,
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      print('💥 Ошибка возврата платежа: $e');
+      return false;
+    }
+  }
+
   /// Получение тестовых данных карт для песочницы
   static Map<String, String> getTestCards() {
     return {
@@ -183,12 +248,22 @@ class PaymentService {
       'Недостаточно средств': '5555555555554477',
       'Отклонена банком': '5555555555554485',
       'Карта заблокирована': '5555555555554493',
+      'Карта МИР (тест)': '2200000000000004',
     };
   }
 
   /// Проверка, работаем ли в тестовом режиме
   static bool isTestMode() {
     return _secretKey.startsWith('test_');
+  }
+
+  /// Получение информации о магазине
+  static Map<String, String> getShopInfo() {
+    return {
+      'shop_id': _shopId,
+      'is_test': isTestMode().toString(),
+      'api_url': _baseUrl,
+    };
   }
 }
 
@@ -198,15 +273,20 @@ class PaymentResult {
   final String? paymentId;
   final String? status;
   final String? confirmationUrl;
-  final String message;
+  final String? message;
 
   PaymentResult({
     required this.success,
     this.paymentId,
     this.status,
     this.confirmationUrl,
-    required this.message,
+    this.message,
   });
+
+  @override
+  String toString() {
+    return 'PaymentResult(success: $success, paymentId: $paymentId, status: $status)';
+  }
 }
 
 /// Статус платежа
@@ -230,4 +310,9 @@ class PaymentStatus {
     required this.createdAt,
     this.paidAt,
   });
+
+  @override
+  String toString() {
+    return 'PaymentStatus(paymentId: $paymentId, status: $status, amount: $amount)';
+  }
 }

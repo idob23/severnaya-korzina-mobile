@@ -1,12 +1,18 @@
-// lib/screens/payment/payment_screen.dart
+// lib/screens/payment/payment_screen.dart - ФИНАЛЬНАЯ ВЕРСИЯ
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:severnaya_korzina/models/user.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/orders_provider.dart';
 import 'payment_service.dart';
 import 'payment_success_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
+  final Map<String, dynamic> orderData;
+
+  const PaymentScreen({Key? key, required this.orderData}) : super(key: key);
+
   @override
   _PaymentScreenState createState() => _PaymentScreenState();
 }
@@ -18,92 +24,64 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final prepaymentAmount = widget.orderData['prepaymentAmount'] as double;
+    final totalAmount = widget.orderData['totalAmount'] as double;
+    final remainingAmount = totalAmount - prepaymentAmount;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Оплата заказа'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
-      body: Consumer2<CartProvider, AuthProvider>(
-        builder: (context, cartProvider, authProvider, child) {
-          final user = authProvider.currentUser;
-          final total = cartProvider.totalAmount;
-          final prepayment = total * 0.9;
-          final remaining = total * 0.1;
+      body: Consumer<AuthProvider>(
+        builder: (context, authProvider, child) {
+          final user =
+              authProvider.currentUser; // ИСПРАВЛЕНО: currentUser вместо user
 
-          return Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Информация о заказе
-                      _buildOrderSummary(
-                          cartProvider, total, prepayment, remaining),
-                      SizedBox(height: 16),
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Информация о заказе
+                _buildOrderInfo(),
 
-                      // Информация о пользователе
-                      _buildUserInfo(user),
-                      SizedBox(height: 16),
+                SizedBox(height: 20),
 
-                      // Выбор способа оплаты
-                      _buildPaymentMethods(),
-                    ],
-                  ),
-                ),
-              ),
+                // Информация о покупателе
+                _buildCustomerInfo(user),
 
-              // Кнопка оплаты
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(16),
-                child: ElevatedButton(
-                  onPressed:
-                      _isProcessing ? null : () => _startPayment(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: _isProcessing
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Text('Обработка...'),
-                          ],
-                        )
-                      : Text(
-                          'Оплатить ${prepayment.toStringAsFixed(0)} ₽',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
-              ),
-            ],
+                SizedBox(height: 20),
+
+                // Способ оплаты
+                _buildPaymentMethod(),
+
+                SizedBox(height: 20),
+
+                // Сумма к оплате
+                _buildPaymentSummary(prepaymentAmount, remainingAmount),
+
+                SizedBox(height: 20),
+
+                // Тестовые карты (только в debug режиме)
+                if (PaymentService.isTestMode()) _buildTestCards(),
+
+                SizedBox(height: 30),
+
+                // Кнопка оплаты
+                _buildPaymentButton(prepaymentAmount, user),
+              ],
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildOrderSummary(CartProvider cartProvider, double total,
-      double prepayment, double remaining) {
+  Widget _buildOrderInfo() {
+    final items = widget.orderData['items'] as List;
+
     return Card(
       child: Padding(
         padding: EdgeInsets.all(16),
@@ -112,73 +90,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
           children: [
             Text(
               'Детали заказа',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 12),
-
-            // Список товаров - ИСПРАВЛЕНО
-            ...cartProvider.itemsList.map((item) => Padding(
-                  padding: EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text('${item.name} x${item.quantity}'),
-                      ),
-                      Text(
-                          '${(item.price * item.quantity).toStringAsFixed(0)} ₽'),
-                    ],
-                  ),
-                )),
-
-            Divider(),
-
-            // Общая стоимость
-            Row(
-              children: [
-                Expanded(child: Text('Общая стоимость:')),
-                Text(
-                  '${total.toStringAsFixed(0)} ₽',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            SizedBox(height: 8),
-
-            // Предоплата
-            Row(
-              children: [
-                Expanded(child: Text('Предоплата (90%):')),
-                Text(
-                  '${prepayment.toStringAsFixed(0)} ₽',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
-                  ),
-                ),
-              ],
-            ),
+            Text('📍 ${widget.orderData['address']}'),
             SizedBox(height: 4),
-
-            // Доплата при получении
-            Row(
-              children: [
-                Expanded(child: Text('Доплата при получении:')),
-                Text(
-                  '${remaining.toStringAsFixed(0)} ₽',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-              ],
-            ),
+            Text('🕐 ${widget.orderData['deliveryTime']}'),
+            SizedBox(height: 4),
+            Text('📦 Товаров: ${items.length} наименований'),
+            if (widget.orderData['notes'] != null) ...[
+              SizedBox(height: 4),
+              Text('💬 ${widget.orderData['notes']}'),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildUserInfo(user) {
+  Widget _buildCustomerInfo(User? user) {
     return Card(
       child: Padding(
         padding: EdgeInsets.all(16),
@@ -186,14 +116,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Контактная информация',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              'Покупатель',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 12),
-            _buildInfoRow(Icons.person, user?.fullName ?? 'Не указано'),
+            _buildInfoRow(Icons.person, user?.name ?? 'Не указано'),
             _buildInfoRow(Icons.phone, user?.phone ?? 'Не указан'),
             if (user?.email != null) _buildInfoRow(Icons.email, user!.email!),
           ],
@@ -215,7 +142,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Widget _buildPaymentMethods() {
+  Widget _buildPaymentMethod() {
     return Card(
       child: Padding(
         padding: EdgeInsets.all(16),
@@ -224,20 +151,65 @@ class _PaymentScreenState extends State<PaymentScreen> {
           children: [
             Text(
               'Способ оплаты',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 12),
-            ListTile(
-              leading: Icon(Icons.credit_card, color: Colors.blue),
-              title: Text('Банковская карта МИР'),
-              subtitle: Text('Безопасная оплата через ЮKassa'),
-              trailing: Radio<String>(
-                value: 'card',
-                groupValue: 'card',
-                onChanged: (value) {},
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.blue[200]!),
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.blue[50],
+              ),
+              child: Row(
+                children: [
+                  Image.asset(
+                    'assets/images/mir_logo.png',
+                    width: 40,
+                    height: 24,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 40,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'МИР',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Банковская карта МИР',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        Text(
+                          'Безопасная оплата через ЮKassa',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.security, color: Colors.green),
+                ],
               ),
             ),
           ],
@@ -246,29 +218,177 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Future<void> _startPayment(BuildContext context) async {
-    if (!mounted) return;
+  Widget _buildPaymentSummary(double prepaymentAmount, double remainingAmount) {
+    return Card(
+      color: Colors.green[50],
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'К оплате сейчас',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Предоплата (90%):'),
+                Text(
+                  '${prepaymentAmount.toStringAsFixed(0)} ₽',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green[700],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Доплата при получении:',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+                Text(
+                  '${remainingAmount.toStringAsFixed(0)} ₽',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green[100],
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '💡 Это предоплата. Остальную сумму доплачиваете при получении товара в пункте выдачи.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.green[800],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-    setState(() => _isProcessing = true);
+  Widget _buildTestCards() {
+    return Card(
+      color: Colors.orange[50],
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.info, color: Colors.orange),
+                SizedBox(width: 8),
+                Text(
+                  'Тестовый режим',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange[800],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Используйте тестовые карты:',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            SizedBox(height: 8),
+            ...PaymentService.getTestCards().entries.map((entry) {
+              return Padding(
+                padding: EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Text('• ${entry.key}: '),
+                    SelectableText(
+                      entry.value,
+                      style: TextStyle(fontFamily: 'monospace'),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            SizedBox(height: 8),
+            Text(
+              'CVV: любой трёхзначный код\nСрок: любая будущая дата',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentButton(double amount, User? user) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton.icon(
+        onPressed: _isProcessing ? null : () => _startPayment(amount, user),
+        icon: _isProcessing
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )
+            : Icon(Icons.payment, size: 24),
+        label: Text(
+          _isProcessing
+              ? 'Подготовка платежа...'
+              : 'Оплатить ${amount.toStringAsFixed(0)} ₽',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _startPayment(double amount, User? user) async {
+    if (_isProcessing) return;
+
+    setState(() {
+      _isProcessing = true;
+    });
 
     try {
-      // Безопасное получение провайдеров
-      final cartProvider = Provider.of<CartProvider>(context, listen: false);
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-      final user = authProvider.currentUser;
-      final total = cartProvider.totalAmount;
-      final prepayment = total * 0.9;
-
       print('💳 Начинаем процесс оплаты...');
-      print('Сумма к оплате: ${prepayment.toStringAsFixed(2)} ₽');
+      print('Сумма к оплате: ${amount.toStringAsFixed(2)} ₽');
 
-      // Создаем платеж через ЮKassa - ИСПРАВЛЕНО
+      // Генерируем уникальный ID заказа
+      final orderId = 'ORDER_${DateTime.now().millisecondsSinceEpoch}';
+
+      // Создаем платеж через ЮKassa
       final result = await _paymentService.createMirPayment(
-        amount: prepayment,
-        orderId: 'ORDER_${DateTime.now().millisecondsSinceEpoch}',
+        amount: amount,
+        orderId: orderId,
         customerPhone: user?.phone ?? '',
-        customerName: user?.fullName ?? '',
+        customerName: user?.name ?? '',
       );
 
       if (!mounted) return;
@@ -276,34 +396,72 @@ class _PaymentScreenState extends State<PaymentScreen> {
       if (result.success && result.confirmationUrl != null) {
         _currentPaymentId = result.paymentId;
 
-        // Открываем платежную форму
-        final opened =
-            await _paymentService.openPaymentForm(result.confirmationUrl!);
-
-        if (opened) {
-          // Показываем диалог ожидания
-          if (result.paymentId != null) {
-            _showPaymentPendingDialog(result.paymentId!);
-          }
-        } else {
-          _showError('Не удается открыть платежную форму');
-        }
+        // Показываем диалог с информацией
+        _showPaymentDialog(result.confirmationUrl!, result.paymentId!);
       } else {
-        _showError(result.message);
+        _showError(result.message ?? 'Ошибка создания платежа');
       }
     } catch (e) {
-      print('❌ Ошибка создания платежа: $e');
-      _showError('Ошибка создания платежа: $e');
+      print('❌ Ошибка платежа: $e');
+      _showError('Ошибка подключения к платежной системе');
     } finally {
       if (mounted) {
-        setState(() => _isProcessing = false);
+        setState(() {
+          _isProcessing = false;
+        });
       }
     }
   }
 
-  void _showPaymentPendingDialog(String paymentId) {
-    if (!mounted) return;
+  void _showPaymentDialog(String confirmationUrl, String paymentId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text('Переход к оплате'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.payment, size: 64, color: Colors.blue),
+            SizedBox(height: 16),
+            Text(
+              'Сейчас откроется страница оплаты ЮKassa.\n\nПосле успешной оплаты вернитесь в приложение.',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context); // Возвращаемся к корзине
+            },
+            child: Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
 
+              // Открываем платежную форму
+              final opened =
+                  await _paymentService.openPaymentForm(confirmationUrl);
+
+              if (opened) {
+                // Показываем диалог ожидания результата
+                _showPaymentPendingDialog(paymentId);
+              } else {
+                _showError('Не удалось открыть страницу оплаты');
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: Text('Перейти к оплате'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPaymentPendingDialog(String paymentId) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -315,20 +473,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
             CircularProgressIndicator(),
             SizedBox(height: 16),
             Text(
-                'Завершите оплату в открывшемся окне браузера и нажмите "Проверить оплату"'),
+              'Ожидаем подтверждение оплаты...\n\nЭто может занять несколько минут.',
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Отмена'),
+            onPressed: () => _checkPaymentStatus(paymentId),
+            child: Text('Проверить статус'),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () {
               Navigator.pop(context);
-              _checkPaymentStatus(paymentId);
+              Navigator.pop(context); // Возвращаемся к корзине
             },
-            child: Text('Проверить оплату'),
+            child: Text('Отмена'),
           ),
         ],
       ),
@@ -336,17 +496,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _checkPaymentStatus(String paymentId) async {
-    if (!mounted) return;
-
     try {
-      print('🔍 Проверяем статус платежа...');
+      print('🔍 Проверяем статус платежа: $paymentId');
 
       final status = await _paymentService.checkPaymentStatus(paymentId);
 
       if (!mounted) return;
 
+      Navigator.pop(context); // Закрываем диалог ожидания
+
       if (status.isPaid) {
-        print('✅ Платеж успешно завершен!');
+        print('✅ Платеж успешно завершен');
         _showPaymentSuccess(paymentId, status.amount);
       } else if (status.isCanceled) {
         _showError('Платеж был отменен');
@@ -355,6 +515,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
           SnackBar(
             content:
                 Text('Платеж еще обрабатывается. Статус: ${status.status}'),
+            action: SnackBarAction(
+              label: 'Проверить снова',
+              onPressed: () => _checkPaymentStatus(paymentId),
+            ),
           ),
         );
       }
@@ -368,9 +532,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (!mounted) return;
 
     try {
-      // Безопасное получение провайдера
-      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      // Создаем заказ в системе
+      _createOrderInSystem(paymentId);
 
+      // Переходим к экрану успеха
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -378,14 +543,36 @@ class _PaymentScreenState extends State<PaymentScreen> {
             orderId: paymentId,
             amount: amount,
             paymentMethod: 'Карта МИР',
+            orderData: widget.orderData,
           ),
         ),
       );
 
-      // Очищаем корзину - ИСПРАВЛЕНО
+      // Очищаем корзину
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
       cartProvider.clearCart();
     } catch (e) {
       print('❌ Ошибка при переходе к экрану успеха: $e');
+    }
+  }
+
+  Future<void> _createOrderInSystem(String paymentId) async {
+    try {
+      final ordersProvider =
+          Provider.of<OrdersProvider>(context, listen: false);
+
+      // Создаем заказ в нашей системе
+      await ordersProvider.createOrder(
+        addressId: 1, // ID адреса пункта выдачи
+        items: widget.orderData['items'] as List<Map<String, dynamic>>,
+        notes:
+            'Платеж ID: $paymentId\nВремя получения: ${widget.orderData['deliveryTime']}\n${widget.orderData['notes'] ?? ''}',
+      );
+
+      print('✅ Заказ создан в системе');
+    } catch (e) {
+      print('❌ Ошибка создания заказа в системе: $e');
+      // Не показываем ошибку пользователю, так как платеж прошел успешно
     }
   }
 
@@ -395,7 +582,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Ошибка оплаты'),
+        title: Row(
+          children: [
+            Icon(Icons.error, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Ошибка оплаты'),
+          ],
+        ),
         content: Text(message),
         actions: [
           TextButton(
