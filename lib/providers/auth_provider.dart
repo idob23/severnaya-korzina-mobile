@@ -96,12 +96,8 @@ class AuthProvider with ChangeNotifier {
       }
 
       // Проверяем подключение к серверу
-      final isConnected = await _apiService.checkConnection();
-      if (!isConnected) {
-        _lastError =
-            'Нет подключения к серверу. Проверьте интернет соединение.';
-        return false;
-      }
+      final healthResult = await _apiService.healthCheck();
+      final isConnected = healthResult['success'] == true;
 
       // Отправляем SMS
       final success = await _smsService.sendVerificationCode(formattedPhone);

@@ -1,5 +1,7 @@
-// lib/providers/cart_provider.dart - ПРОСТАЯ ВЕРСИЯ
+// lib/providers/cart_provider.dart - ИСПРАВЛЕННАЯ ВЕРСИЯ
 import 'package:flutter/foundation.dart';
+// Импортируем Product из products_provider
+import 'products_provider.dart';
 
 /// Модель элемента корзины
 class CartItem {
@@ -16,6 +18,23 @@ class CartItem {
     required this.unit,
     required this.quantity,
   });
+
+  /// Создает копию с изменениями
+  CartItem copyWith({
+    int? productId,
+    String? name,
+    double? price,
+    String? unit,
+    int? quantity,
+  }) {
+    return CartItem(
+      productId: productId ?? this.productId,
+      name: name ?? this.name,
+      price: price ?? this.price,
+      unit: unit ?? this.unit,
+      quantity: quantity ?? this.quantity,
+    );
+  }
 
   /// Общая стоимость позиции
   double get totalPrice => price * quantity;
@@ -92,6 +111,17 @@ class CartProvider with ChangeNotifier {
     }
   }
 
+  /// НОВЫЙ МЕТОД: Добавляет товар по объекту Product (нужен для CatalogScreen)
+  void addProduct(Product product, int quantity) {
+    addItem(
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      unit: product.unit,
+      quantity: quantity,
+    );
+  }
+
   /// Удаляет товар из корзины
   void removeItem(int productId) {
     if (_items.containsKey(productId)) {
@@ -119,6 +149,11 @@ class CartProvider with ChangeNotifier {
         }
       }
     }
+  }
+
+  /// НОВЫЙ МЕТОД: Обновляет количество товара (альтернативное название для CatalogScreen)
+  void updateProductQuantity(int productId, int quantity) {
+    updateQuantity(productId, quantity);
   }
 
   /// Увеличивает количество товара на 1

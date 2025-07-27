@@ -1,8 +1,8 @@
-// lib/providers/products_provider.dart - ПОЛНЫЙ ФАЙЛ
+// lib/providers/products_provider.dart - ИСПРАВЛЕННАЯ ВЕРСИЯ
 import 'package:flutter/foundation.dart';
 import '../services/api_service.dart';
 
-/// Модель товара
+/// Модель товара - исправленная версия
 class Product {
   final int id;
   final String name;
@@ -31,22 +31,57 @@ class Product {
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
-    return Product(
-      id: json['id'] ?? 0,
-      name: json['name'] ?? '',
-      description: json['description'],
-      imageUrl: json['imageUrl'],
-      price: (json['price'] ?? 0).toDouble(),
-      unit: json['unit'] ?? 'шт',
-      minQuantity: json['minQuantity'] ?? 1,
-      maxQuantity: json['maxQuantity'],
-      isActive: json['isActive'] ?? true,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : DateTime.now(),
-      category:
-          json['category'] != null ? Category.fromJson(json['category']) : null,
-    );
+    try {
+      return Product(
+        id: (json['id'] ?? 0) is int
+            ? json['id']
+            : int.parse(json['id'].toString()),
+        name: json['name']?.toString() ?? 'Без названия',
+        description: json['description']?.toString(),
+        imageUrl: json['imageUrl']?.toString(),
+        price: _parseDouble(json['price']),
+        unit: json['unit']?.toString() ?? 'шт',
+        minQuantity: (json['minQuantity'] ?? 1) is int
+            ? json['minQuantity']
+            : int.parse(json['minQuantity']?.toString() ?? '1'),
+        maxQuantity: json['maxQuantity'] != null
+            ? (json['maxQuantity'] is int
+                ? json['maxQuantity']
+                : int.parse(json['maxQuantity'].toString()))
+            : null,
+        isActive: json['isActive'] ?? true,
+        createdAt: json['createdAt'] != null
+            ? DateTime.parse(json['createdAt'].toString())
+            : DateTime.now(),
+        category: json['category'] != null
+            ? Category.fromJson(json['category'] as Map<String, dynamic>)
+            : null,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Ошибка парсинга Product: $e');
+        print('JSON: $json');
+      }
+      // Возвращаем товар с минимальными данными
+      return Product(
+        id: json['id'] ?? 0,
+        name: json['name']?.toString() ?? 'Товар без названия',
+        price: 0.0,
+        unit: 'шт',
+        createdAt: DateTime.now(),
+      );
+    }
+  }
+
+  // Вспомогательный метод для парсинга double
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
   }
 
   Map<String, dynamic> toJson() {
@@ -101,7 +136,7 @@ class Product {
   int get hashCode => id.hashCode;
 }
 
-/// Модель категории
+/// Модель категории - исправленная версия
 class Category {
   final int id;
   final String name;
@@ -120,14 +155,29 @@ class Category {
   });
 
   factory Category.fromJson(Map<String, dynamic> json) {
-    return Category(
-      id: json['id'] ?? 0,
-      name: json['name'] ?? '',
-      description: json['description'],
-      imageUrl: json['imageUrl'],
-      isActive: json['isActive'] ?? true,
-      productsCount: json['_count']?['products'] ?? json['productsCount'],
-    );
+    try {
+      return Category(
+        id: (json['id'] ?? 0) is int
+            ? json['id']
+            : int.parse(json['id'].toString()),
+        name: json['name']?.toString() ?? 'Без названия',
+        description: json['description']?.toString(),
+        imageUrl: json['imageUrl']?.toString(),
+        isActive: json['isActive'] ?? true,
+        productsCount: json['_count']?['products'] ??
+            json['productsCount'] ??
+            json['products_count'],
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Ошибка парсинга Category: $e');
+        print('JSON: $json');
+      }
+      return Category(
+        id: json['id'] ?? 0,
+        name: json['name']?.toString() ?? 'Категория',
+      );
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -166,7 +216,7 @@ class Category {
   int get hashCode => id.hashCode;
 }
 
-/// Провайдер для управления товарами и категориями
+/// Провайдер для управления товарами и категориями - исправленная версия
 class ProductsProvider with ChangeNotifier {
   // Приватные поля
   List<Product> _products = [];
@@ -188,6 +238,13 @@ class ProductsProvider with ChangeNotifier {
   int? get selectedCategoryId => _selectedCategoryId;
   String get searchQuery => _searchQuery;
 
+  // Удобные геттеры для UI
+  bool get hasSearchQuery => _searchQuery.isNotEmpty;
+  bool get hasSelectedCategory => _selectedCategoryId != null;
+  bool get hasProducts => _products.isNotEmpty;
+  bool get hasCategories => _categories.isNotEmpty;
+  bool get hasError => _error != null;
+
   /// Получает отфильтрованные товары
   List<Product> get filteredProducts {
     var filtered = _products;
@@ -201,17 +258,21 @@ class ProductsProvider with ChangeNotifier {
 
     // Поиск по названию
     if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
       filtered = filtered
           .where((product) =>
-              product.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              (product.description
-                      ?.toLowerCase()
-                      .contains(_searchQuery.toLowerCase()) ??
-                  false))
+              product.name.toLowerCase().contains(query) ||
+              (product.description?.toLowerCase().contains(query) ?? false))
           .toList();
     }
 
     return filtered;
+  }
+
+  /// Очищает ошибку
+  void clearError() {
+    _error = null;
+    notifyListeners();
   }
 
   /// Получает количество товаров в категории
@@ -241,6 +302,11 @@ class ProductsProvider with ChangeNotifier {
     }
 
     try {
+      if (kDebugMode) {
+        print(
+            'ProductsProvider: Загрузка товаров - categoryId: $categoryId, search: $search');
+      }
+
       final result = await _apiService.getProducts(
         categoryId: categoryId,
         search: search,
@@ -248,23 +314,46 @@ class ProductsProvider with ChangeNotifier {
         limit: limit,
       );
 
-      if (result['success']) {
-        final productsList = result['products'] as List;
-        _products = productsList.map((json) => Product.fromJson(json)).toList();
+      if (kDebugMode) {
+        print(
+            'ProductsProvider: Результат API - success: ${result['success']}');
+      }
 
-        if (kDebugMode) {
-          print('ProductsProvider: Загружено ${_products.length} товаров');
+      if (result['success'] == true) {
+        final productsData = result['products'];
+
+        if (productsData is List) {
+          _products = productsData
+              .map((json) => Product.fromJson(json as Map<String, dynamic>))
+              .toList();
+
+          if (kDebugMode) {
+            print('ProductsProvider: Загружено ${_products.length} товаров');
+            for (var product in _products.take(3)) {
+              print(
+                  'ProductsProvider: Товар - ${product.name} (${product.formattedPrice})');
+            }
+          }
+        } else {
+          if (kDebugMode) {
+            print(
+                'ProductsProvider: products не является списком: $productsData');
+          }
+          _products = [];
         }
+
+        _error = null;
       } else {
-        _error = result['error'] ?? 'Ошибка загрузки товаров';
+        _error = result['error']?.toString() ?? 'Ошибка загрузки товаров';
         if (kDebugMode) {
-          print('ProductsProvider: Ошибка - $_error');
+          print('ProductsProvider: Ошибка API - $_error');
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       _error = 'Ошибка подключения к серверу';
       if (kDebugMode) {
         print('ProductsProvider: Exception - $e');
+        print('StackTrace: $stackTrace');
       }
     } finally {
       if (!silent) {
@@ -282,15 +371,34 @@ class ProductsProvider with ChangeNotifier {
     }
 
     try {
+      if (kDebugMode) {
+        print('ProductsProvider: Загрузка категорий');
+      }
+
       final result = await _apiService.getCategories();
 
-      if (result['success']) {
-        final categoriesList = result['categories'] as List;
-        _categories =
-            categoriesList.map((json) => Category.fromJson(json)).toList();
+      if (kDebugMode) {
+        print(
+            'ProductsProvider: Результат категорий - success: ${result['success']}');
+      }
 
-        if (kDebugMode) {
-          print('ProductsProvider: Загружено ${_categories.length} категорий');
+      if (result['success'] == true) {
+        final categoriesData = result['categories'];
+
+        if (categoriesData is List) {
+          _categories = categoriesData
+              .map((json) => Category.fromJson(json as Map<String, dynamic>))
+              .toList();
+
+          if (kDebugMode) {
+            print(
+                'ProductsProvider: Загружено ${_categories.length} категорий');
+            for (var category in _categories) {
+              print('ProductsProvider: Категория - ${category.name}');
+            }
+          }
+        } else {
+          _categories = [];
         }
       } else {
         if (kDebugMode) {
@@ -298,9 +406,10 @@ class ProductsProvider with ChangeNotifier {
               'ProductsProvider: Ошибка загрузки категорий - ${result['error']}');
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (kDebugMode) {
         print('ProductsProvider: Exception при загрузке категорий - $e');
+        print('StackTrace: $stackTrace');
       }
     } finally {
       if (!silent) {
@@ -322,7 +431,7 @@ class ProductsProvider with ChangeNotifier {
       // Если не найден, загружаем с сервера
       final result = await _apiService.getProduct(productId);
 
-      if (result['success']) {
+      if (result['success'] == true) {
         final product = Product.fromJson(result['product']);
 
         // Добавляем в список, если его там нет
@@ -333,7 +442,7 @@ class ProductsProvider with ChangeNotifier {
 
         return product;
       } else {
-        _error = result['error'];
+        _error = result['error']?.toString();
         notifyListeners();
         return null;
       }
@@ -397,8 +506,17 @@ class ProductsProvider with ChangeNotifier {
 
   /// Инициализация провайдера
   Future<void> init() async {
+    if (kDebugMode) {
+      print('ProductsProvider: Инициализация');
+    }
+
     await loadCategories();
     await loadProducts();
+
+    if (kDebugMode) {
+      print(
+          'ProductsProvider: Инициализация завершена - товаров: ${_products.length}, категорий: ${_categories.length}');
+    }
   }
 
   /// Получает категорию по ID
@@ -468,45 +586,5 @@ class ProductsProvider with ChangeNotifier {
     }
 
     return null;
-  }
-
-  /// Получает статистику товаров
-  Map<String, int> getProductsStats() {
-    return {
-      'total': _products.length,
-      'active': _products.where((p) => p.isActive).length,
-      'categories': _categories.length,
-      'filtered': filteredProducts.length,
-    };
-  }
-
-  /// Проверяет, загружены ли данные
-  bool get hasData => _products.isNotEmpty || _categories.isNotEmpty;
-
-  /// Проверяет, есть ли выбранная категория
-  bool get hasSelectedCategory => _selectedCategoryId != null;
-
-  /// Проверяет, есть ли поисковый запрос
-  bool get hasSearchQuery => _searchQuery.isNotEmpty;
-
-  /// Проверяет, применены ли фильтры
-  bool get hasActiveFilters => hasSelectedCategory || hasSearchQuery;
-
-  /// Получает название выбранной категории
-  String? get selectedCategoryName {
-    if (_selectedCategoryId == null) return null;
-    final category = getCategoryById(_selectedCategoryId!);
-    return category?.name;
-  }
-
-  /// Очищает ошибки
-  void clearError() {
-    _error = null;
-    notifyListeners();
-  }
-
-  /// Принудительное обновление без сброса данных
-  void forceUpdate() {
-    notifyListeners();
   }
 }
