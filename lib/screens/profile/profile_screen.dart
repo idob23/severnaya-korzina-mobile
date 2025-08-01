@@ -18,7 +18,6 @@ class _ProfileScreenState extends State<ProfileScreen>
   late Animation<double> _progressAnimation;
   late Animation<double> _pulseAnimation;
 
-  // ЗАМЕНИТЬ ЭТИ СТРОКИ:
   // Старые тестовые данные заменяем на реальные
   final ApiService _apiService = ApiService(); // НОВАЯ СТРОКА
   Map<String, dynamic>? _batchData; // ИЗМЕНЕНО: теперь nullable
@@ -63,7 +62,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     _loadActiveBatch(); // Загружаем реальные данные
   }
 
-  // ДОБАВИТЬ ЭТОТ МЕТОД:
   /// Загружает данные активной закупки из API
   Future<void> _loadActiveBatch() async {
     setState(() {
@@ -97,14 +95,16 @@ class _ProfileScreenState extends State<ProfileScreen>
       }
     } catch (e) {
       setState(() {
-        _batchError = 'Ошибка загрузки: ${e.toString()}';
+        _batchData = null;
         _isLoadingBatch = false;
+        _batchError = 'Ошибка загрузки: $e';
       });
-      print('Ошибка загрузки закупки: $e');
     }
   }
 
-  // ДОБАВИТЬ ЭТИ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ:
+// 5. Добавьте эти вспомогательные методы:
+
+  /// Обновляет анимацию прогресса с реальными данными
   void _updateProgressAnimation() {
     if (_batchData != null) {
       final progress = _getProgress();
@@ -118,13 +118,15 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
+  /// Получает прогресс как число от 0.0 до 1.0
   double _getProgress() {
     if (_batchData == null) return 0.0;
 
-    final currentAmount = (_batchData!['currentAmount'] ?? 0.0).toDouble();
-    final targetAmount = (_batchData!['targetAmount'] ?? 1.0).toDouble();
+    final current = (_batchData!['currentAmount'] ?? 0).toDouble();
+    final target = (_batchData!['targetAmount'] ?? 1).toDouble();
 
-    return math.min(currentAmount / targetAmount, 1.0);
+    if (target <= 0) return 0.0;
+    return math.min(current / target, 1.0);
   }
 
   @override
@@ -281,7 +283,6 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // ================== ПАНЕЛЬ ЦЕЛЕВОЙ СУММЫ - ОБНОВЛЕННАЯ ==================
   Widget _buildBatchProgressCard() {
-    // ДОБАВИТЬ ОБРАБОТКУ СОСТОЯНИЙ ЗАГРУЗКИ:
     // Показать загрузку
     if (_isLoadingBatch) {
       return Container(
