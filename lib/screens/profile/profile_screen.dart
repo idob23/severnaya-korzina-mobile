@@ -1,7 +1,8 @@
-// lib/screens/profile/profile_screen.dart - С ПАНЕЛЬЮ ЦЕЛЕВОЙ СУММЫ
+// lib/screens/profile/profile_screen.dart - МИНИМАЛЬНЫЕ ИЗМЕНЕНИЯ
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart'; // ДОБАВИТЬ ЭТОТ ИМПОРТ
 import '../auth/auth_choice_screen.dart';
 import 'dart:math' as math;
 
@@ -17,17 +18,12 @@ class _ProfileScreenState extends State<ProfileScreen>
   late Animation<double> _progressAnimation;
   late Animation<double> _pulseAnimation;
 
-  // Моковые данные для демонстрации (в реальном проекте будут из API)
-  final Map<String, dynamic> _batchData = {
-    'id': 1,
-    'title': 'Молочные продукты - январь 2025',
-    'currentAmount': 2250000, // 2.25 млн
-    'targetAmount': 3000000, // 3 млн
-    'participantsCount': 187,
-    'daysLeft': 8,
-    'status': 'active',
-    'userContribution': 15000, // вклад текущего пользователя
-  };
+  // ЗАМЕНИТЬ ЭТИ СТРОКИ:
+  // Старые тестовые данные заменяем на реальные
+  final ApiService _apiService = ApiService(); // НОВАЯ СТРОКА
+  Map<String, dynamic>? _batchData; // ИЗМЕНЕНО: теперь nullable
+  bool _isLoadingBatch = true; // НОВАЯ СТРОКА
+  String? _batchError; // НОВАЯ СТРОКА
 
   @override
   void initState() {
@@ -45,9 +41,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       vsync: this,
     );
 
+    // ЗАМЕНИТЬ ЭТИ СТРОКИ:
+    // Инициализируем анимации с базовыми значениями
     _progressAnimation = Tween<double>(
       begin: 0.0,
-      end: _batchData['currentAmount'] / _batchData['targetAmount'],
+      end: 0.0, // Будет обновлено после загрузки данных
     ).animate(CurvedAnimation(
       parent: _progressAnimationController,
       curve: Curves.easeInOut,
@@ -61,13 +59,72 @@ class _ProfileScreenState extends State<ProfileScreen>
       curve: Curves.easeInOut,
     ));
 
-    // Запускаем анимации
-    _progressAnimationController.forward();
+    // ДОБАВИТЬ ЭТУ СТРОКУ:
+    _loadActiveBatch(); // Загружаем реальные данные
+  }
 
-    // Пульсация при высоком прогрессе
-    if (_progressAnimation.value > 0.8) {
-      _pulseAnimationController.repeat(reverse: true);
+  // ДОБАВИТЬ ЭТОТ МЕТОД:
+  /// Загружает данные активной закупки из API
+  Future<void> _loadActiveBatch() async {
+    setState(() {
+      _isLoadingBatch = true;
+      _batchError = null;
+    });
+
+    try {
+      final response = await _apiService.getActiveBatch();
+
+      if (response['success'] == true && response['batch'] != null) {
+        setState(() {
+          _batchData = response['batch'];
+          _isLoadingBatch = false;
+        });
+
+        // Обновляем анимацию с реальными данными
+        _updateProgressAnimation();
+
+        // Запускаем анимации
+        _progressAnimationController.forward();
+        if (_getProgress() > 0.8) {
+          _pulseAnimationController.repeat(reverse: true);
+        }
+      } else {
+        setState(() {
+          _batchData = null;
+          _isLoadingBatch = false;
+          _batchError = response['message'] ?? 'Нет активных закупок';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _batchError = 'Ошибка загрузки: ${e.toString()}';
+        _isLoadingBatch = false;
+      });
+      print('Ошибка загрузки закупки: $e');
     }
+  }
+
+  // ДОБАВИТЬ ЭТИ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ:
+  void _updateProgressAnimation() {
+    if (_batchData != null) {
+      final progress = _getProgress();
+      _progressAnimation = Tween<double>(
+        begin: 0.0,
+        end: progress,
+      ).animate(CurvedAnimation(
+        parent: _progressAnimationController,
+        curve: Curves.easeInOut,
+      ));
+    }
+  }
+
+  double _getProgress() {
+    if (_batchData == null) return 0.0;
+
+    final currentAmount = (_batchData!['currentAmount'] ?? 0.0).toDouble();
+    final targetAmount = (_batchData!['targetAmount'] ?? 1.0).toDouble();
+
+    return math.min(currentAmount / targetAmount, 1.0);
   }
 
   @override
@@ -222,9 +279,77 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ================== ПАНЕЛЬ ЦЕЛЕВОЙ СУММЫ ==================
+  // ================== ПАНЕЛЬ ЦЕЛЕВОЙ СУММЫ - ОБНОВЛЕННАЯ ==================
   Widget _buildBatchProgressCard() {
-    final progress = _batchData['currentAmount'] / _batchData['targetAmount'];
+    // ДОБАВИТЬ ОБРАБОТКУ СОСТОЯНИЙ ЗАГРУЗКИ:
+    // Показать загрузку
+    if (_isLoadingBatch) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                'Загрузка данных закупки...',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Показать ошибку
+    if (_batchError != null) {
+      return Container(
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.orange[50],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.orange[200]!),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.info_outline,
+              size: 48,
+              color: Colors.orange,
+            ),
+            SizedBox(height: 16),
+            Text(
+              _batchError!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[700],
+              ),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _loadActiveBatch,
+              icon: Icon(Icons.refresh),
+              label: Text('Обновить'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Если нет данных
+    if (_batchData == null) {
+      return SizedBox.shrink();
+    }
+
+    // ОСТАЛЬНОЙ КОД ОСТАЕТСЯ ТАК ЖЕ, ТОЛЬКО ЗАМЕНИТЬ _batchData НА _batchData!:
+    final progress = _getProgress(); // ИСПОЛЬЗОВАТЬ НОВЫЙ МЕТОД
     final progressPercent = (progress * 100).round();
 
     // Определяем цвет в зависимости от прогресса
@@ -300,7 +425,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                               ),
                             ),
                             Text(
-                              _batchData['title'],
+                              _batchData!['title'] ??
+                                  'Активная закупка', // ЗАМЕНИТЬ
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -325,7 +451,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '${_formatCurrency(_batchData['currentAmount'])}',
+                                '${_formatCurrency((_batchData!['currentAmount'] ?? 0).toInt())}', // ЗАМЕНИТЬ
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -372,7 +498,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 ),
                               ),
                               Text(
-                                'Цель: ${_formatCurrency(_batchData['targetAmount'])}',
+                                'Цель: ${_formatCurrency((_batchData!['targetAmount'] ?? 0).toInt())}', // ЗАМЕНИТЬ
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey[600],
@@ -413,7 +539,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                         child: _buildStatItem(
                           icon: Icons.people,
                           label: 'Участников',
-                          value: '${_batchData['participantsCount']}',
+                          value:
+                              '${_batchData!['participantsCount'] ?? 0}', // ЗАМЕНИТЬ
                           color: Colors.blue,
                         ),
                       ),
@@ -426,8 +553,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                         child: _buildStatItem(
                           icon: Icons.account_balance_wallet,
                           label: 'Ваш вклад',
-                          value:
-                              _formatCurrency(_batchData['userContribution']),
+                          value: _formatCurrency(
+                              (_batchData!['userContribution'] ?? 0)
+                                  .toInt()), // ЗАМЕНИТЬ
                           color: Colors.green,
                         ),
                       ),
@@ -517,7 +645,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ================== ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ ==================
+  // ================== ВСЕ ОСТАЛЬНЫЕ МЕТОДЫ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ ==================
   Widget _buildUserInfoCard(user) {
     return Card(
       elevation: 2,
@@ -603,7 +731,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ================== НАСТРОЙКИ ==================
   Widget _buildSettingsCard(BuildContext context, AuthProvider authProvider) {
     return Card(
       elevation: 2,
@@ -630,6 +757,18 @@ class _ProfileScreenState extends State<ProfileScreen>
               ],
             ),
             SizedBox(height: 16),
+            // ДОБАВИТЬ КНОПКУ ОБНОВЛЕНИЯ ДАННЫХ:
+            _buildSettingItem(
+              icon: Icons.refresh,
+              title: 'Обновить данные',
+              subtitle: 'Перезагрузить информацию о закупке',
+              onTap: () {
+                _loadActiveBatch();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Данные обновлены')),
+                );
+              },
+            ),
             _buildSettingItem(
               icon: Icons.edit,
               title: 'Редактировать профиль',
@@ -704,7 +843,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ================== КНОПКА ВЫХОДА ==================
   Widget _buildLogoutButton(BuildContext context, AuthProvider authProvider) {
     return SizedBox(
       width: double.infinity,
@@ -749,8 +887,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ================== ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ ==================
-
   String _formatCurrency(int amount) {
     if (amount >= 1000000) {
       return '${(amount / 1000000).toStringAsFixed(1)} млн ₽';
@@ -762,6 +898,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _showBatchDetails() {
+    // ОБНОВИТЬ ЭТОТ МЕТОД ДЛЯ РАБОТЫ С РЕАЛЬНЫМИ ДАННЫМИ:
+    if (_batchData == null) return;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -800,15 +939,18 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               SizedBox(height: 20),
 
-              // Информация о закупке
-              _buildDetailItem('Название', _batchData['title']),
+              // Информация о закупке - ОБНОВЛЕННЫЕ ДАННЫЕ
+              _buildDetailItem(
+                  'Название', _batchData!['title'] ?? 'Не указано'),
               _buildDetailItem('Статус', 'Активная'),
               _buildDetailItem('Собрано',
-                  '${_formatCurrency(_batchData['currentAmount'])} из ${_formatCurrency(_batchData['targetAmount'])}'),
+                  '${_formatCurrency((_batchData!['currentAmount'] ?? 0).toInt())} из ${_formatCurrency((_batchData!['targetAmount'] ?? 0).toInt())}'),
+              _buildDetailItem('Участников',
+                  '${_batchData!['participantsCount'] ?? 0} человек'),
               _buildDetailItem(
-                  'Участников', '${_batchData['participantsCount']} человек'),
-              _buildDetailItem(
-                  'Ваш вклад', _formatCurrency(_batchData['userContribution'])),
+                  'Ваш вклад',
+                  _formatCurrency(
+                      (_batchData!['userContribution'] ?? 0).toInt())),
 
               SizedBox(height: 20),
 

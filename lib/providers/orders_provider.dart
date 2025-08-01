@@ -1,6 +1,7 @@
 // lib/providers/orders_provider.dart - ИСПРАВЛЕННАЯ ВЕРСИЯ
 import 'package:flutter/foundation.dart';
 import '../services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Модель заказа
 class Order {
@@ -220,6 +221,8 @@ class OrdersProvider with ChangeNotifier {
     return _orders.where((order) => order.status == _selectedStatus).toList();
   }
 
+  // И УЛУЧШИТЬ МЕТОД loadOrders() ДЛЯ ЛУЧШЕЙ ДИАГНОСТИКИ:
+
   /// Загружает заказы с сервера
   Future<void> loadOrders({
     String? status,
@@ -234,29 +237,40 @@ class OrdersProvider with ChangeNotifier {
     }
 
     try {
+      if (kDebugMode) {
+        print('🔄 OrdersProvider: Загружаем заказы...');
+      }
+
       final result = await _apiService.getOrders(
         status: status,
         page: page,
         limit: limit,
       );
 
-      if (result['success']) {
-        final ordersList = result['orders'] as List;
+      if (kDebugMode) {
+        print('📡 OrdersProvider: Ответ от API: ${result['success']}');
+        if (result['error'] != null) {
+          print('❌ OrdersProvider: Ошибка API: ${result['error']}');
+        }
+      }
+
+      if (result['success'] == true) {
+        final ordersList = result['orders'] as List? ?? [];
         _orders = ordersList.map((json) => Order.fromJson(json)).toList();
 
         if (kDebugMode) {
-          print('OrdersProvider: Загружено ${_orders.length} заказов');
+          print('✅ OrdersProvider: Загружено ${_orders.length} заказов');
         }
       } else {
         _error = result['error'] ?? 'Ошибка загрузки заказов';
         if (kDebugMode) {
-          print('OrdersProvider: Ошибка - $_error');
+          print('❌ OrdersProvider: Ошибка - $_error');
         }
       }
     } catch (e) {
       _error = 'Ошибка подключения к серверу';
       if (kDebugMode) {
-        print('OrdersProvider: Exception - $e');
+        print('❌ OrdersProvider: Exception - $e');
       }
     } finally {
       if (!silent) {
@@ -400,7 +414,34 @@ class OrdersProvider with ChangeNotifier {
 
   /// Инициализация провайдера
   Future<void> init() async {
+    if (kDebugMode) {
+      print('🔄 OrdersProvider: Инициализация...');
+    }
     await loadOrders();
+  }
+
+  // ДОБАВИТЬ ЭТОТ НОВЫЙ МЕТОД:
+  /// Инициализирует токен в ApiService
+  Future<void> _initializeApiToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      if (token != null) {
+        _apiService.setAuthToken(token);
+        if (kDebugMode) {
+          print('✅ Токен установлен в ApiService для OrdersProvider');
+        }
+      } else {
+        if (kDebugMode) {
+          print('❌ Токен не найден в SharedPreferences для OrdersProvider');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Ошибка инициализации токена в OrdersProvider: $e');
+      }
+    }
   }
 
   /// Проверяет, есть ли заказы

@@ -356,6 +356,12 @@ class ApiService {
       'items': items,
     });
   }
+  // === НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ АКТИВНОЙ ЗАКУПКИ ===
+
+  /// Получить активную закупку для информационной панели
+  Future<Map<String, dynamic>> getActiveBatch() async {
+    return await _makeRequest('GET', '/batches/active');
+  }
 
   // === ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===
 

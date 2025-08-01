@@ -51,11 +51,15 @@ class AuthProvider with ChangeNotifier {
           final userData = jsonDecode(userJson);
           _currentUser = User.fromJson(userData);
           _isAuthenticated = true;
+
+          // ВАЖНО: Устанавливаем токен в ApiService сразу после восстановления
           _apiService.setAuthToken(token);
 
           if (kDebugMode) {
             print(
                 '✅ Пользователь восстановлен из локального хранилища: ${_currentUser?.fullName}');
+            print(
+                '✅ Токен установлен в ApiService: ${token.substring(0, 10)}...');
           }
         } catch (e) {
           if (kDebugMode) {
@@ -64,6 +68,11 @@ class AuthProvider with ChangeNotifier {
           // Очищаем поврежденные данные
           await prefs.remove(_userDataKey);
           await prefs.remove(_authTokenKey);
+          _apiService.clearAuthToken();
+        }
+      } else {
+        if (kDebugMode) {
+          print('ℹ️ Пользователь не найден в локальном хранилище');
         }
       }
     } catch (e) {
