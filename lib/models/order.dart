@@ -1,63 +1,197 @@
-import 'package:json_annotation/json_annotation.dart';
-import 'product.dart';
+// lib/models/order.dart - ПОЛНАЯ МОДЕЛЬ БЕЗ КОНФЛИКТОВ
 
-part 'order.g.dart';
-
-enum OrderStatus { pending, paid, processing, ready, completed, cancelled }
-
-@JsonSerializable()
+/// Модель заказа для API
 class Order {
   final int id;
   final int userId;
-  final OrderStatus status;
-  final double totalApproximate;
-  final double? totalActual;
-  final double prepaymentAmount;
-  final bool prepaymentPaid;
+  final int addressId;
+  final int? batchId;
+  final String status;
+  final double totalAmount;
+  final String? notes;
   final DateTime createdAt;
-  final DateTime? deliveryDate;
-  final List<OrderItem> items;
+  final DateTime? updatedAt;
+
+  // Связанные данные
+  final Map<String, dynamic>? user;
+  final Map<String, dynamic>? address;
+  final Map<String, dynamic>? batch;
+  final List<OrderItem>? orderItems;
 
   Order({
     required this.id,
     required this.userId,
+    required this.addressId,
+    this.batchId,
     required this.status,
-    required this.totalApproximate,
-    this.totalActual,
-    required this.prepaymentAmount,
-    required this.prepaymentPaid,
+    required this.totalAmount,
+    this.notes,
     required this.createdAt,
-    this.deliveryDate,
-    required this.items,
+    this.updatedAt,
+    this.user,
+    this.address,
+    this.batch,
+    this.orderItems,
   });
 
-  double get finalPayment =>
-      (totalActual ?? totalApproximate) - prepaymentAmount;
+  factory Order.fromJson(Map<String, dynamic> json) {
+    return Order(
+      id: json['id'] ?? 0,
+      userId: json['userId'] ?? 0,
+      addressId: json['addressId'] ?? 0,
+      batchId: json['batchId'],
+      status: json['status'] ?? 'pending',
+      totalAmount:
+          double.tryParse(json['totalAmount']?.toString() ?? '0') ?? 0.0,
+      notes: json['notes'],
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
+      updatedAt:
+          json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      user: json['user'],
+      address: json['address'],
+      batch: json['batch'],
+      orderItems: json['orderItems'] != null
+          ? (json['orderItems'] as List)
+              .map((item) => OrderItem.fromJson(item))
+              .toList()
+          : null,
+    );
+  }
 
-  factory Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
-  Map<String, dynamic> toJson() => _$OrderToJson(this);
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'userId': userId,
+      'addressId': addressId,
+      'batchId': batchId,
+      'status': status,
+      'totalAmount': totalAmount,
+      'notes': notes,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+    };
+  }
+
+  /// Форматированная сумма
+  String get formattedAmount {
+    return '${totalAmount.toStringAsFixed(0)} ₽';
+  }
+
+  /// Количество товаров в заказе
+  int get itemsCount {
+    return orderItems?.length ?? 0;
+  }
+
+  /// Общее количество единиц товара
+  int get totalItems {
+    if (orderItems == null) return 0;
+    return orderItems!.fold(0, (sum, item) => sum + item.quantity);
+  }
+
+  /// Статус на русском
+  String get statusText {
+    switch (status) {
+      case 'pending':
+        return 'Ожидает';
+      case 'confirmed':
+        return 'Подтвержден';
+      case 'paid':
+        return 'Оплачен';
+      case 'shipped':
+        return 'Отправлен';
+      case 'delivered':
+        return 'Доставлен';
+      case 'cancelled':
+        return 'Отменен';
+      default:
+        return status;
+    }
+  }
+
+  /// Цвет статуса
+  String get statusColor {
+    switch (status) {
+      case 'pending':
+        return 'orange';
+      case 'confirmed':
+        return 'blue';
+      case 'paid':
+        return 'green';
+      case 'shipped':
+        return 'purple';
+      case 'delivered':
+        return 'green';
+      case 'cancelled':
+        return 'red';
+      default:
+        return 'grey';
+    }
+  }
+
+  @override
+  String toString() {
+    return 'Order(id: $id, status: $status, amount: $formattedAmount)';
+  }
 }
 
-@JsonSerializable()
+/// Модель позиции заказа
 class OrderItem {
   final int id;
+  final int orderId;
   final int productId;
-  final Product product;
   final int quantity;
-  final double approximatePrice;
-  final double? actualPrice;
+  final double price;
+  final Map<String, dynamic>? product;
 
   OrderItem({
     required this.id,
+    required this.orderId,
     required this.productId,
-    required this.product,
     required this.quantity,
-    required this.approximatePrice,
-    this.actualPrice,
+    required this.price,
+    this.product,
   });
 
-  factory OrderItem.fromJson(Map<String, dynamic> json) =>
-      _$OrderItemFromJson(json);
-  Map<String, dynamic> toJson() => _$OrderItemToJson(this);
+  factory OrderItem.fromJson(Map<String, dynamic> json) {
+    return OrderItem(
+      id: json['id'] ?? 0,
+      orderId: json['orderId'] ?? 0,
+      productId: json['productId'] ?? 0,
+      quantity: json['quantity'] ?? 0,
+      price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+      product: json['product'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'orderId': orderId,
+      'productId': productId,
+      'quantity': quantity,
+      'price': price,
+    };
+  }
+
+  /// Общая стоимость позиции
+  double get totalPrice {
+    return price * quantity;
+  }
+
+  /// Форматированная общая стоимость
+  String get formattedTotalPrice {
+    return '${totalPrice.toStringAsFixed(0)} ₽';
+  }
+
+  /// Название товара
+  String get productName {
+    return product?['name'] ?? 'Товар #$productId';
+  }
+
+  /// Единица измерения
+  String get unit {
+    return product?['unit'] ?? 'шт';
+  }
 }
-// Generated file test

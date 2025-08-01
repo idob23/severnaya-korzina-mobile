@@ -1,202 +1,8 @@
-// lib/providers/orders_provider.dart - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// lib/providers/orders_provider.dart - ЧИСТАЯ ВЕРСИЯ БЕЗ ДУБЛИРОВАНИЯ
 import 'package:flutter/foundation.dart';
-import '../services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-/// Модель заказа
-class Order {
-  final int id;
-  final int userId;
-  final int addressId;
-  final int? batchId;
-  final String status;
-  final double totalAmount;
-  final String? notes;
-  final DateTime createdAt;
-  final DateTime? updatedAt;
-
-  // Связанные данные
-  final Map<String, dynamic>? user;
-  final Map<String, dynamic>? address;
-  final Map<String, dynamic>? batch;
-  final List<OrderItem>? orderItems;
-
-  Order({
-    required this.id,
-    required this.userId,
-    required this.addressId,
-    this.batchId,
-    required this.status,
-    required this.totalAmount,
-    this.notes,
-    required this.createdAt,
-    this.updatedAt,
-    this.user,
-    this.address,
-    this.batch,
-    this.orderItems,
-  });
-
-  factory Order.fromJson(Map<String, dynamic> json) {
-    return Order(
-      id: json['id'] ?? 0,
-      userId: json['userId'] ?? 0,
-      addressId: json['addressId'] ?? 0,
-      batchId: json['batchId'],
-      status: json['status'] ?? 'pending',
-      totalAmount: (json['totalAmount'] ?? 0).toDouble(),
-      notes: json['notes'],
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : DateTime.now(),
-      updatedAt:
-          json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
-      user: json['user'],
-      address: json['address'],
-      batch: json['batch'],
-      orderItems: json['orderItems'] != null
-          ? (json['orderItems'] as List)
-              .map((item) => OrderItem.fromJson(item))
-              .toList()
-          : null,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'userId': userId,
-      'addressId': addressId,
-      'batchId': batchId,
-      'status': status,
-      'totalAmount': totalAmount,
-      'notes': notes,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
-    };
-  }
-
-  /// Форматированная сумма
-  String get formattedAmount {
-    return '${totalAmount.toStringAsFixed(0)} ₽';
-  }
-
-  /// Количество товаров в заказе
-  int get itemsCount {
-    return orderItems?.length ?? 0;
-  }
-
-  /// Общее количество единиц товара
-  int get totalItems {
-    if (orderItems == null) return 0;
-    return orderItems!.fold(0, (sum, item) => sum + item.quantity);
-  }
-
-  /// Статус на русском
-  String get statusText {
-    switch (status) {
-      case 'pending':
-        return 'Ожидает';
-      case 'confirmed':
-        return 'Подтвержден';
-      case 'paid':
-        return 'Оплачен';
-      case 'shipped':
-        return 'Отправлен';
-      case 'delivered':
-        return 'Доставлен';
-      case 'cancelled':
-        return 'Отменен';
-      default:
-        return status;
-    }
-  }
-
-  /// Цвет статуса
-  String get statusColor {
-    switch (status) {
-      case 'pending':
-        return 'orange';
-      case 'confirmed':
-        return 'blue';
-      case 'paid':
-        return 'green';
-      case 'shipped':
-        return 'purple';
-      case 'delivered':
-        return 'green';
-      case 'cancelled':
-        return 'red';
-      default:
-        return 'grey';
-    }
-  }
-
-  @override
-  String toString() {
-    return 'Order(id: $id, status: $status, amount: $formattedAmount)';
-  }
-}
-
-/// Модель позиции заказа
-class OrderItem {
-  final int id;
-  final int orderId;
-  final int productId;
-  final int quantity;
-  final double price;
-  final Map<String, dynamic>? product;
-
-  OrderItem({
-    required this.id,
-    required this.orderId,
-    required this.productId,
-    required this.quantity,
-    required this.price,
-    this.product,
-  });
-
-  factory OrderItem.fromJson(Map<String, dynamic> json) {
-    return OrderItem(
-      id: json['id'] ?? 0,
-      orderId: json['orderId'] ?? 0,
-      productId: json['productId'] ?? 0,
-      quantity: json['quantity'] ?? 0,
-      price: (json['price'] ?? 0).toDouble(),
-      product: json['product'],
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'orderId': orderId,
-      'productId': productId,
-      'quantity': quantity,
-      'price': price,
-    };
-  }
-
-  /// Общая стоимость позиции
-  double get totalPrice {
-    return price * quantity;
-  }
-
-  /// Форматированная общая стоимость
-  String get formattedTotalPrice {
-    return '${totalPrice.toStringAsFixed(0)} ₽';
-  }
-
-  /// Название товара
-  String get productName {
-    return product?['name'] ?? 'Товар #$productId';
-  }
-
-  /// Единица измерения
-  String get unit {
-    return product?['unit'] ?? 'шт';
-  }
-}
+import '../services/api_service.dart';
+import '../models/order.dart';
 
 /// Провайдер для управления заказами
 class OrdersProvider with ChangeNotifier {
@@ -221,7 +27,41 @@ class OrdersProvider with ChangeNotifier {
     return _orders.where((order) => order.status == _selectedStatus).toList();
   }
 
-  // И УЛУЧШИТЬ МЕТОД loadOrders() ДЛЯ ЛУЧШЕЙ ДИАГНОСТИКИ:
+  /// Инициализация провайдера
+  Future<void> init() async {
+    if (kDebugMode) {
+      print('🔄 OrdersProvider: Инициализация...');
+    }
+
+    // ВАЖНО: Сначала инициализируем токен!
+    await _initializeApiToken();
+
+    // Затем загружаем заказы
+    await loadOrders();
+  }
+
+  /// Инициализирует токен в ApiService
+  Future<void> _initializeApiToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      if (token != null) {
+        _apiService.setAuthToken(token);
+        if (kDebugMode) {
+          print('✅ Токен установлен в ApiService для OrdersProvider');
+        }
+      } else {
+        if (kDebugMode) {
+          print('❌ Токен не найден в SharedPreferences для OrdersProvider');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Ошибка инициализации токена в OrdersProvider: $e');
+      }
+    }
+  }
 
   /// Загружает заказы с сервера
   Future<void> loadOrders({
@@ -334,11 +174,6 @@ class OrdersProvider with ChangeNotifier {
       if (existingOrders.isNotEmpty) {
         return existingOrders.first;
       }
-
-      // Если не найден, загружаем с сервера (когда API будет поддерживать)
-      // final result = await _apiService.getOrder(orderId);
-      // ...
-
       return null;
     } catch (e) {
       _error = 'Ошибка получения заказа';
@@ -410,38 +245,6 @@ class OrdersProvider with ChangeNotifier {
   /// Обновляет данные
   Future<void> refresh() async {
     await loadOrders(status: _selectedStatus == 'all' ? null : _selectedStatus);
-  }
-
-  /// Инициализация провайдера
-  Future<void> init() async {
-    if (kDebugMode) {
-      print('🔄 OrdersProvider: Инициализация...');
-    }
-    await loadOrders();
-  }
-
-  // ДОБАВИТЬ ЭТОТ НОВЫЙ МЕТОД:
-  /// Инициализирует токен в ApiService
-  Future<void> _initializeApiToken() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-
-      if (token != null) {
-        _apiService.setAuthToken(token);
-        if (kDebugMode) {
-          print('✅ Токен установлен в ApiService для OrdersProvider');
-        }
-      } else {
-        if (kDebugMode) {
-          print('❌ Токен не найден в SharedPreferences для OrdersProvider');
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Ошибка инициализации токена в OrdersProvider: $e');
-      }
-    }
   }
 
   /// Проверяет, есть ли заказы

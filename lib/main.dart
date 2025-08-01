@@ -1,15 +1,15 @@
+// lib/main.dart - ПОЛНАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:severnaya_korzina/providers/cart_provider.dart';
 import 'package:severnaya_korzina/providers/auth_provider.dart';
-import 'package:severnaya_korzina/providers/products_provider.dart'; // НОВЫЙ
-import 'package:severnaya_korzina/providers/orders_provider.dart'; // НОВЫЙ
+import 'package:severnaya_korzina/providers/products_provider.dart';
+import 'package:severnaya_korzina/providers/orders_provider.dart';
 import 'screens/catalog/catalog_screen.dart';
 import 'screens/cart/cart_screen.dart';
 import 'screens/orders/orders_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'package:severnaya_korzina/screens/auth/auth_choice_screen.dart';
-import 'screens/home/home_screen.dart';
 
 void main() {
   runApp(MyApp());
@@ -23,15 +23,15 @@ class MyApp extends StatelessWidget {
         // Авторизация
         ChangeNotifierProvider<AuthProvider>(
             create: (context) => AuthProvider()..init()),
-        
+
         // Товары и каталог
         ChangeNotifierProvider<ProductsProvider>(
             create: (context) => ProductsProvider()),
-        
-        // Заказы
+
+        // Заказы - ИСПРАВЛЕНО: инициализируем сразу при создании
         ChangeNotifierProvider<OrdersProvider>(
-            create: (context) => OrdersProvider()),
-        
+            create: (context) => OrdersProvider()..init()),
+
         // Корзина
         ChangeNotifierProvider<CartProvider>(
             create: (context) => CartProvider()),
@@ -41,9 +41,77 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.blue,
         ),
-        home: AuthChoiceScreen(),
+        home: AppInitializer(),
         debugShowCheckedModeBanner: false,
       ),
+    );
+  }
+}
+
+/// Виджет для инициализации приложения
+class AppInitializer extends StatefulWidget {
+  @override
+  _AppInitializerState createState() => _AppInitializerState();
+}
+
+class _AppInitializerState extends State<AppInitializer> {
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    try {
+      // Ждем инициализации AuthProvider
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.checkAuthStatus();
+
+      // Если пользователь авторизован, инициализируем OrdersProvider
+      if (authProvider.isAuthenticated) {
+        final ordersProvider =
+            Provider.of<OrdersProvider>(context, listen: false);
+        await ordersProvider.init();
+      }
+
+      setState(() {
+        _isInitialized = true;
+      });
+    } catch (e) {
+      print('Ошибка инициализации приложения: $e');
+      setState(() {
+        _isInitialized = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Инициализация приложения...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        if (authProvider.isAuthenticated) {
+          return HomeScreen();
+        } else {
+          return AuthChoiceScreen();
+        }
+      },
     );
   }
 }

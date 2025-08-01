@@ -1,8 +1,9 @@
-// lib/screens/orders/orders_screen.dart - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// lib/screens/orders/orders_screen.dart - ПОЛНАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/orders_provider.dart';
+import '../../models/order.dart';
 import '../auth/auth_choice_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
@@ -18,16 +19,6 @@ class _OrdersScreenState extends State<OrdersScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-
-    // Загружаем заказы при инициализации, если пользователь авторизован
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      if (authProvider.isAuthenticated) {
-        final ordersProvider =
-            Provider.of<OrdersProvider>(context, listen: false);
-        ordersProvider.init();
-      }
-    });
   }
 
   @override
@@ -155,7 +146,11 @@ class _OrdersScreenState extends State<OrdersScreen>
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
-                Text(ordersProvider.error!),
+                Text(
+                  ordersProvider.error!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
                 SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () => ordersProvider.refresh(),
@@ -204,13 +199,16 @@ class _OrdersScreenState extends State<OrdersScreen>
           );
         }
 
-        return ListView.builder(
-          padding: EdgeInsets.all(16),
-          itemCount: inTransitOrders.length,
-          itemBuilder: (context, index) {
-            final order = inTransitOrders[index];
-            return _buildOrderCard(order);
-          },
+        return RefreshIndicator(
+          onRefresh: () => ordersProvider.refresh(),
+          child: ListView.builder(
+            padding: EdgeInsets.all(16),
+            itemCount: inTransitOrders.length,
+            itemBuilder: (context, index) {
+              final order = inTransitOrders[index];
+              return _buildOrderCard(order);
+            },
+          ),
         );
       },
     );
@@ -229,13 +227,16 @@ class _OrdersScreenState extends State<OrdersScreen>
           );
         }
 
-        return ListView.builder(
-          padding: EdgeInsets.all(16),
-          itemCount: readyOrders.length,
-          itemBuilder: (context, index) {
-            final order = readyOrders[index];
-            return _buildOrderCard(order);
-          },
+        return RefreshIndicator(
+          onRefresh: () => ordersProvider.refresh(),
+          child: ListView.builder(
+            padding: EdgeInsets.all(16),
+            itemCount: readyOrders.length,
+            itemBuilder: (context, index) {
+              final order = readyOrders[index];
+              return _buildOrderCard(order);
+            },
+          ),
         );
       },
     );
@@ -254,13 +255,16 @@ class _OrdersScreenState extends State<OrdersScreen>
           );
         }
 
-        return ListView.builder(
-          padding: EdgeInsets.all(16),
-          itemCount: allOrders.length,
-          itemBuilder: (context, index) {
-            final order = allOrders[index];
-            return _buildOrderCard(order);
-          },
+        return RefreshIndicator(
+          onRefresh: () => ordersProvider.refresh(),
+          child: ListView.builder(
+            padding: EdgeInsets.all(16),
+            itemCount: allOrders.length,
+            itemBuilder: (context, index) {
+              final order = allOrders[index];
+              return _buildOrderCard(order);
+            },
+          ),
         );
       },
     );
@@ -278,14 +282,15 @@ class _OrdersScreenState extends State<OrdersScreen>
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
             ),
           ),
           SizedBox(height: 8),
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey[500]),
+            style: TextStyle(
+              color: Colors.grey[600],
+            ),
           ),
         ],
       ),
@@ -294,13 +299,12 @@ class _OrdersScreenState extends State<OrdersScreen>
 
   Widget _buildOrderCard(Order order) {
     return Card(
-      margin: EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 16),
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Заголовок заказа
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -311,240 +315,86 @@ class _OrdersScreenState extends State<OrdersScreen>
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                _buildStatusChip(order.status),
-              ],
-            ),
-
-            SizedBox(height: 12),
-
-            // Информация о заказе
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Сумма: ${order.formattedAmount}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green[700],
-                      ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(order.status),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    order.statusText,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
                     ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Товаров: ${order.totalItems} шт.',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      _formatDate(order.createdAt),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      _formatTime(order.createdAt),
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
-
-            if (order.notes != null && order.notes!.isNotEmpty) ...[
-              SizedBox(height: 12),
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.note, size: 16, color: Colors.grey[600]),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        order.notes!,
-                        style: TextStyle(color: Colors.grey[700]),
-                      ),
-                    ),
-                  ],
+            SizedBox(height: 8),
+            Text(
+              'Сумма: ${order.formattedAmount}',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Дата: ${_formatDate(order.createdAt)}',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+            if (order.address != null) ...[
+              SizedBox(height: 4),
+              Text(
+                'Адрес: ${order.address!['address']}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
                 ),
               ),
             ],
-
-            SizedBox(height: 12),
-
-            // Кнопки действий
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      _showOrderDetails(order);
-                    },
-                    child: Text('Подробнее'),
-                  ),
+            if (order.notes != null && order.notes!.isNotEmpty) ...[
+              SizedBox(height: 8),
+              Text(
+                'Комментарий: ${order.notes}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey[600],
                 ),
-                if (order.status == 'pending') ...[
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        _cancelOrder(order);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: Text('Отменить'),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusChip(String status) {
-    Color color;
+  Color _getStatusColor(String status) {
     switch (status) {
       case 'pending':
-        color = Colors.orange;
-        break;
+        return Colors.orange;
       case 'confirmed':
-        color = Colors.blue;
-        break;
+        return Colors.blue;
       case 'paid':
-        color = Colors.green;
-        break;
+        return Colors.green;
       case 'shipped':
-        color = Colors.purple;
-        break;
+        return Colors.purple;
       case 'delivered':
-        color = Colors.green;
-        break;
+        return Colors.green.shade700;
       case 'cancelled':
-        color = Colors.red;
-        break;
+        return Colors.red;
       default:
-        color = Colors.grey;
-    }
-
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Text(
-        _getStatusText(status),
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'pending':
-        return 'Ожидает';
-      case 'confirmed':
-        return 'Подтвержден';
-      case 'paid':
-        return 'Оплачен';
-      case 'shipped':
-        return 'Отправлен';
-      case 'delivered':
-        return 'Доставлен';
-      case 'cancelled':
-        return 'Отменен';
-      default:
-        return status;
+        return Colors.grey;
     }
   }
 
   String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
-  }
-
-  String _formatTime(DateTime date) {
-    return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  void _showOrderDetails(Order order) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Заказ #${order.id}'),
-        content: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Статус: ${_getStatusText(order.status)}'),
-            SizedBox(height: 8),
-            Text('Сумма: ${order.formattedAmount}'),
-            SizedBox(height: 8),
-            Text(
-                'Дата: ${_formatDate(order.createdAt)} ${_formatTime(order.createdAt)}'),
-            if (order.notes != null && order.notes!.isNotEmpty) ...[
-              SizedBox(height: 8),
-              Text('Примечания: ${order.notes}'),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Закрыть'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _cancelOrder(Order order) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Отменить заказ'),
-        content: Text('Вы уверены, что хотите отменить заказ #${order.id}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Нет'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Реализовать отмену заказа через API
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Отмена заказа - в разработке'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text('Да, отменить'),
-          ),
-        ],
-      ),
-    );
+    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 }
