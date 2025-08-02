@@ -7,8 +7,9 @@ import 'package:flutter/foundation.dart';
 class SMSService {
   // SMS AERO API настройки
   static const String _baseUrl = 'https://gate.smsaero.ru/v2';
-  static const String _login = 'ВАШ_EMAIL@example.com'; // Email от SMS Aero
-  static const String _apiKey = 'ВАШ_API_КЛЮЧ'; // API ключ из личного кабинета
+  static const String _login = 'idob230491@gmail.com'; // Email от SMS Aero
+  static const String _apiKey =
+      'J1WD5J__f3ztsHpi5sBWrVef5jlVRo9J'; // API ключ из личного кабинета
 
   final Dio _dio = Dio(BaseOptions(
     connectTimeout: Duration(seconds: 30),
@@ -40,29 +41,28 @@ class SMSService {
     try {
       final code = _generateCode();
 
-      print('=== SMS ОТПРАВКА (ТЕСТОВЫЙ РЕЖИМ) ===');
-      print('Телефон: $phone');
-      print('Сгенерированный код: $code');
-      print('🧪 ТЕСТОВЫЙ РЕЖИМ: Используйте код 1234 для входа');
+      // print('=== SMS ОТПРАВКА (ТЕСТОВЫЙ РЕЖИМ) ===');
+      // print('Телефон: $phone');
+      // print('Сгенерированный код: $code');
+      // print('🧪 ТЕСТОВЫЙ РЕЖИМ: Используйте код 1234 для входа');
 
-      // В тестовом режиме всегда сохраняем код и возвращаем success
-      _tempCodes[phone] = code;
+      // // В тестовом режиме всегда сохраняем код и возвращаем success
+      // _tempCodes[phone] = code;
 
-      // Имитируем задержку отправки SMS
-      await Future.delayed(Duration(seconds: 1));
+      // // Имитируем задержку отправки SMS
+      // await Future.delayed(Duration(seconds: 1));
 
-      print('✅ SMS "отправлено" (тестовый режим)');
-      print('💡 Для входа используйте код: 1234');
+      // print('✅ SMS "отправлено" (тестовый режим)');
+      // print('💡 Для входа используйте код: 1234');
 
-      return true;
+      // return true;
 
-      /* 
       // РАСКОММЕНТИРУЙТЕ ДЛЯ РЕАЛЬНОЙ ОТПРАВКИ SMS ЧЕРЕЗ SMS AERO:
-      
+
       // Очищаем номер телефона (только цифры)
       final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
       print('Очищенный номер: $cleanPhone');
-      
+
       // Отправляем POST запрос к SMS Aero API
       final response = await _dio.post(
         '$_baseUrl/sms/send',
@@ -72,13 +72,13 @@ class SMSService {
           'sign': 'SMS Aero',
         },
       );
-      
+
       print('HTTP Status: ${response.statusCode}');
       print('Ответ от SMS Aero: ${response.data}');
-      
+
       if (response.statusCode == 200) {
         final data = response.data;
-        
+
         if (data is Map && data['success'] == true) {
           // SMS отправлено успешно
           _tempCodes[phone] = code;
@@ -91,27 +91,22 @@ class SMSService {
           // Ошибка от SMS Aero API
           final errorMessage = data['message'] ?? 'Неизвестная ошибка';
           print('❌ Ошибка SMS Aero: $errorMessage');
-          
+
           // Если проблема с подписью, пробуем без неё
           if (errorMessage.toString().toLowerCase().contains('sign')) {
             return await _sendWithoutSign(cleanPhone, code);
           }
-          
+
           return false;
         }
       }
-      
+
       print('❌ Неожиданный HTTP статус: ${response.statusCode}');
       return false;
-      */
     } catch (e) {
-      print('❌ ОШИБКА В ТЕСТОВОМ РЕЖИМЕ: $e');
+      print('❌ Ошибка отправки SMS: $e');
 
-      // В тестовом режиме всё равно возвращаем success
-      final code = _generateCode();
-      _tempCodes[phone] = code;
-      print('💡 Fallback: используйте код 1234 для входа');
-      return true;
+      return false;
     }
   }
 
@@ -149,11 +144,11 @@ class SMSService {
     print('Номер телефона: $phone');
     print('Введенный код: $code');
 
-    // Тестовый код для разработки
-    if (code == '1234') {
-      print('✅ Использован тестовый код 1234 - вход разрешен!');
-      return true;
-    }
+    // // Тестовый код для разработки
+    // if (code == '1234') {
+    //   print('✅ Использован тестовый код 1234 - вход разрешен!');
+    //   return true;
+    // }
 
     print('Сохраненные коды: $_tempCodes');
 

@@ -354,84 +354,13 @@ class _SMSVerificationScreenState extends State<SMSVerificationScreen> {
                       SizedBox(height: 16),
                     ],
 
-                    // Демо информация с активным кодом
-                    Container(
-                      padding: EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.orange[50],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.orange[200]!),
+                    Text(
+                      'Мы отправили код подтверждения на номер ${widget.phone}',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 16,
                       ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.info_outline,
-                                  color: Colors.orange, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                'Режим разработки',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.orange[800],
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'В режиме разработки код отображается в консоли и в этом окне. Проверьте консоль разработчика или используйте код ниже.',
-                            style: TextStyle(
-                              color: Colors.orange[700],
-                              fontSize: 13,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          // Показываем активный код для удобства
-                          Consumer<AuthProvider>(
-                            builder: (context, authProvider, child) {
-                              return Container(
-                                padding: EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange[100],
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'Для быстрого тестирования:',
-                                      style: TextStyle(
-                                        color: Colors.orange[800],
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'Универсальный код: 1234',
-                                      style: TextStyle(
-                                        color: Colors.orange[800],
-                                        fontSize: 14,
-                                        fontFamily: 'monospace',
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'Или проверьте консоль разработчика',
-                                      style: TextStyle(
-                                        color: Colors.orange[700],
-                                        fontSize: 11,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
