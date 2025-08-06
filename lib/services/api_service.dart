@@ -5,18 +5,18 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
 class ApiService {
-  // URL сервера - исправлено для всех платформ
+  // URL вашего сервера в Yandex Cloud
   static String get baseUrl {
     if (kDebugMode) {
       // Для Android эмулятора используем 10.0.2.2 вместо localhost
       if (Platform.isAndroid) {
         return 'http://10.0.2.2:3000/api';
       }
-      // Для iOS симулятора и других платформ
+      // Для iOS симулятора и других платформ в разработке
       return 'http://localhost:3000/api';
     }
-    // Для продакшена
-    return 'https://your-cloud-server.com/api';
+    // Для продакшена - ваш реальный сервер Yandex Cloud
+    return 'http://84.201.149.245:3000/api';
   }
 
   // Singleton паттерн
