@@ -41,35 +41,44 @@ class SMSService {
     try {
       final code = _generateCode();
 
-      // print('=== SMS ОТПРАВКА (ТЕСТОВЫЙ РЕЖИМ) ===');
-      // print('Телефон: $phone');
-      // print('Сгенерированный код: $code');
-      // print('🧪 ТЕСТОВЫЙ РЕЖИМ: Используйте код 1234 для входа');
+      // Форматируем номер для SMS Aero (только цифры, начинается с 7)
+      String cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
 
-      // // В тестовом режиме всегда сохраняем код и возвращаем success
-      // _tempCodes[phone] = code;
+      // Убираем префикс 8 или +7, оставляем только номер с 7
+      if (cleanPhone.startsWith('8') && cleanPhone.length == 11) {
+        cleanPhone = '7' + cleanPhone.substring(1);
+      } else if (cleanPhone.startsWith('+7')) {
+        cleanPhone = cleanPhone.substring(1);
+      } else if (!cleanPhone.startsWith('7')) {
+        // Если номер не начинается с 7, добавляем
+        cleanPhone = '7' + cleanPhone;
+      }
 
-      // // Имитируем задержку отправки SMS
-      // await Future.delayed(Duration(seconds: 1));
+      print('=== ОТПРАВКА SMS ===');
+      print('📱 Оригинальный номер: $phone');
+      print('📱 Форматированный номер: $cleanPhone');
+      print('🔑 Сгенерированный код: $code');
 
-      // print('✅ SMS "отправлено" (тестовый режим)');
-      // print('💡 Для входа используйте код: 1234');
+      // Сначала проверим баланс
+      final balanceCheck = await checkBalance();
+      if (balanceCheck['success'] == true) {
+        print('💰 Баланс: ${balanceCheck['balance']} руб');
+        if ((balanceCheck['balance'] as num) < 2) {
+          print('❌ Недостаточно средств на балансе SMS Aero');
+          return false;
+        }
+      }
 
-      // return true;
-
-      // РАСКОММЕНТИРУЙТЕ ДЛЯ РЕАЛЬНОЙ ОТПРАВКИ SMS ЧЕРЕЗ SMS AERO:
-
-      // Очищаем номер телефона (только цифры)
-      final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
-      print('Очищенный номер: $cleanPhone');
-
-      // Отправляем POST запрос к SMS Aero API
+      // Отправляем SMS через SMS Aero - используем правильный формат
+      // Текст с указанием сервиса для прохождения фильтров МТС
       final response = await _dio.post(
         '$_baseUrl/sms/send',
         data: {
           'number': cleanPhone,
-          'text': 'Код подтверждения: $code',
-          'sign': 'SMS Aero',
+          'text':
+              'Северная Корзина: Ваш код авторизации $code для входа в приложение',
+          'sign': 'SMS Aero', // Обязательный параметр!
+          'channel': 'DIRECT' // Используем прямой канал
         },
       );
 
@@ -80,21 +89,33 @@ class SMSService {
         final data = response.data;
 
         if (data is Map && data['success'] == true) {
-          // SMS отправлено успешно
+          // Сохраняем код для проверки (для обоих форматов номера)
           _tempCodes[phone] = code;
+          _tempCodes[cleanPhone] = code;
+          _tempCodes['+$cleanPhone'] = code;
+
           final smsId = data['data']?['id'];
-          print('✅ SMS успешно отправлено через SMS Aero!');
-          print('ID сообщения: $smsId');
-          print('Код $code сохранен для номера $phone');
+          print('✅ SMS успешно отправлено!');
+          print('📨 ID сообщения: $smsId');
+          print('💾 Код сохранен для верификации');
+
+          // Проверяем статус доставки через 2 секунды
+          Future.delayed(Duration(seconds: 2), () async {
+            if (smsId != null) {
+              await checkSmsStatus(smsId.toString());
+            }
+          });
+
           return true;
         } else {
           // Ошибка от SMS Aero API
           final errorMessage = data['message'] ?? 'Неизвестная ошибка';
           print('❌ Ошибка SMS Aero: $errorMessage');
 
-          // Если проблема с подписью, пробуем без неё
-          if (errorMessage.toString().toLowerCase().contains('sign')) {
-            return await _sendWithoutSign(cleanPhone, code);
+          // Если ошибка связана с форматом номера, пробуем альтернативный формат
+          if (errorMessage.toString().toLowerCase().contains('number') ||
+              errorMessage.toString().toLowerCase().contains('формат')) {
+            return await _sendWithAlternativeFormat(phone, code);
           }
 
           return false;
@@ -104,36 +125,88 @@ class SMSService {
       print('❌ Неожиданный HTTP статус: ${response.statusCode}');
       return false;
     } catch (e) {
-      print('❌ Ошибка отправки SMS: $e');
+      print('❌ Критическая ошибка отправки SMS: $e');
+
+      // Если ошибка сети, пробуем альтернативный метод
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('TimeoutException')) {
+        print('🔄 Пробуем альтернативный метод отправки...');
+        return await _sendViaGet(phone);
+      }
 
       return false;
     }
   }
 
-  /// Пробует отправить SMS без подписи при ошибке
-  Future<bool> _sendWithoutSign(String cleanPhone, String code) async {
+  /// Альтернативный метод отправки через GET запрос
+  Future<bool> _sendViaGet(String phone) async {
     try {
-      print('📱 Пробуем отправить без подписи...');
+      final code = _generateCode();
+      String cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
 
-      final response = await _dio.post(
+      if (cleanPhone.startsWith('8') && cleanPhone.length == 11) {
+        cleanPhone = '7' + cleanPhone.substring(1);
+      }
+
+      print('🔄 Используем GET метод для отправки SMS');
+
+      final response = await _dio.get(
         '$_baseUrl/sms/send',
-        data: {
+        queryParameters: {
           'number': cleanPhone,
-          'text': 'Код: $code',
+          'text': 'Северная Корзина: код $code',
+          'sign': 'SMS Aero', // Обязательный параметр
+          'channel': 'DIRECT'
         },
       );
 
-      print('Ответ без подписи: ${response.data}');
-
       if (response.statusCode == 200 && response.data['success'] == true) {
+        _tempCodes[phone] = code;
         _tempCodes[cleanPhone] = code;
-        print('✅ SMS отправлено без подписи!');
+        print('✅ SMS отправлено через GET метод!');
         return true;
       }
 
       return false;
     } catch (e) {
-      print('❌ Ошибка отправки без подписи: $e');
+      print('❌ Ошибка GET метода: $e');
+      return false;
+    }
+  }
+
+  /// Пробует отправить с альтернативным форматом номера
+  Future<bool> _sendWithAlternativeFormat(
+      String originalPhone, String code) async {
+    try {
+      print('🔄 Пробуем альтернативный формат номера...');
+
+      // Пробуем с префиксом +7
+      String altPhone = originalPhone.replaceAll(RegExp(r'[^\d]'), '');
+      if (!altPhone.startsWith('7')) {
+        altPhone = '7' + altPhone;
+      }
+      altPhone = '+' + altPhone;
+
+      final response = await _dio.post(
+        '$_baseUrl/sms/send',
+        data: {
+          'number': altPhone,
+          'text': 'Северная Корзина: код авторизации $code',
+          'sign': 'SMS Aero', // Обязательный параметр
+          'channel': 'INTERNATIONAL' // Пробуем международный канал
+        },
+      );
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        _tempCodes[originalPhone] = code;
+        _tempCodes[altPhone] = code;
+        print('✅ SMS отправлено с альтернативным форматом!');
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      print('❌ Ошибка альтернативного формата: $e');
       return false;
     }
   }
@@ -144,17 +217,25 @@ class SMSService {
     print('Номер телефона: $phone');
     print('Введенный код: $code');
 
-    // // Тестовый код для разработки
-    // if (code == '1234') {
-    //   print('✅ Использован тестовый код 1234 - вход разрешен!');
-    //   return true;
-    // }
+    // Форматируем номер так же как при отправке
+    String cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+    if (cleanPhone.startsWith('8') && cleanPhone.length == 11) {
+      cleanPhone = '7' + cleanPhone.substring(1);
+    }
 
+    print('Проверяем коды для форматов: $phone, $cleanPhone, +$cleanPhone');
     print('Сохраненные коды: $_tempCodes');
 
-    final savedCode = _tempCodes[phone];
+    // Проверяем для всех возможных форматов номера
+    final savedCode = _tempCodes[phone] ??
+        _tempCodes[cleanPhone] ??
+        _tempCodes['+$cleanPhone'];
+
     if (savedCode != null && savedCode == code) {
+      // Удаляем код для всех форматов
       _tempCodes.remove(phone);
+      _tempCodes.remove(cleanPhone);
+      _tempCodes.remove('+$cleanPhone');
       print('✅ Код подтвержден успешно!');
       return true;
     }
@@ -172,13 +253,13 @@ class SMSService {
   /// Проверяет баланс SMS Aero
   Future<Map<String, dynamic>> checkBalance() async {
     try {
-      print('Проверяем баланс SMS Aero...');
+      print('💰 Проверяем баланс SMS Aero...');
 
       final response = await _dio.get('$_baseUrl/balance');
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         final balance = response.data['data']['balance'];
-        print('Баланс SMS Aero: $balance руб');
+        print('💰 Баланс SMS Aero: $balance руб');
 
         return {
           'success': true,
@@ -189,7 +270,27 @@ class SMSService {
 
       return {'success': false, 'error': 'Не удалось получить баланс'};
     } catch (e) {
-      print('Ошибка получения баланса SMS Aero: $e');
+      print('❌ Ошибка получения баланса: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Проверяет статус отправленного SMS
+  Future<Map<String, dynamic>> checkSmsStatus(String smsId) async {
+    try {
+      print('📊 Проверяем статус SMS: $smsId');
+
+      final response = await _dio
+          .get('$_baseUrl/sms/status', queryParameters: {'id': smsId});
+
+      if (response.statusCode == 200) {
+        print('📊 Статус SMS: ${response.data}');
+        return response.data;
+      }
+
+      return {'success': false};
+    } catch (e) {
+      print('❌ Ошибка проверки статуса: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
