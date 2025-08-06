@@ -7,15 +7,7 @@ import 'package:flutter/foundation.dart';
 class ApiService {
   // URL вашего сервера в Yandex Cloud
   static String get baseUrl {
-    if (kDebugMode) {
-      // Для Android эмулятора используем 10.0.2.2 вместо localhost
-      if (Platform.isAndroid) {
-        return 'http://10.0.2.2:3000/api';
-      }
-      // Для iOS симулятора и других платформ в разработке
-      return 'http://localhost:3000/api';
-    }
-    // Для продакшена - ваш реальный сервер Yandex Cloud
+    // ВСЕГДА используем продакшен сервер
     return 'http://84.201.149.245:3000/api';
   }
 
