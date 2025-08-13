@@ -227,14 +227,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'К оплате сейчас',
+              'К оплате',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Предоплата (90%):'),
+                Text('Итого к оплате:'),
                 Text(
                   '${prepaymentAmount.toStringAsFixed(0)} ₽',
                   style: TextStyle(
@@ -242,20 +242,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     fontWeight: FontWeight.bold,
                     color: Colors.green[700],
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Доплата при получении:',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-                Text(
-                  '${remainingAmount.toStringAsFixed(0)} ₽',
-                  style: TextStyle(color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -268,7 +254,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                '💡 Это предоплата. Остальную сумму доплачиваете при получении товара в пункте выдачи.',
+                '💡 Полная оплата заказа. Товары будут готовы к получению после доставки.',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.green[800],

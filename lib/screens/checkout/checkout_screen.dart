@@ -73,7 +73,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       SizedBox(height: 20),
 
                       // Время получения
-                      _buildTimeSection(),
+                      // _buildTimeSection(),
 
                       SizedBox(height: 20),
 
@@ -83,7 +83,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       SizedBox(height: 20),
 
                       // Комментарий к заказу
-                      _buildNotesSection(),
+                      // _buildNotesSection(),
 
                       SizedBox(height: 20),
 
@@ -172,14 +172,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ],
                   ),
                   SizedBox(height: 8),
-                  Text(
-                    'Режим работы: Пн-Пт 9:00-19:00, Сб 10:00-16:00',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  ),
-                  Text(
-                    'Телефон: +7 (914) 123-45-67',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  ),
+                  // Text(
+                  //   'Режим работы: Пн-Пт 9:00-19:00, Сб 10:00-16:00',
+                  //   style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  // ),
+                  // Text(
+                  //   'Телефон: +7 (914) 123-45-67',
+                  //   style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  // ),
                 ],
               ),
             ),
@@ -189,47 +189,47 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildTimeSection() {
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Время получения',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              value: _selectedDeliveryTime,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.schedule),
-              ),
-              items: [
-                'В любое время',
-                '9:00 - 12:00',
-                '12:00 - 15:00',
-                '15:00 - 18:00',
-                '18:00 - 19:00',
-              ]
-                  .map((time) => DropdownMenuItem(
-                        value: time,
-                        child: Text(time),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedDeliveryTime = value!;
-                });
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Widget _buildTimeSection() {
+  //   return Card(
+  //     child: Padding(
+  //       padding: EdgeInsets.all(16),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Text(
+  //             'Время получения',
+  //             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+  //           ),
+  //           SizedBox(height: 12),
+  //           DropdownButtonFormField<String>(
+  //             value: _selectedDeliveryTime,
+  //             decoration: InputDecoration(
+  //               border: OutlineInputBorder(),
+  //               prefixIcon: Icon(Icons.schedule),
+  //             ),
+  //             items: [
+  //               'В любое время',
+  //               '9:00 - 12:00',
+  //               '12:00 - 15:00',
+  //               '15:00 - 18:00',
+  //               '18:00 - 19:00',
+  //             ]
+  //                 .map((time) => DropdownMenuItem(
+  //                       value: time,
+  //                       child: Text(time),
+  //                     ))
+  //                 .toList(),
+  //             onChanged: (value) {
+  //               setState(() {
+  //                 _selectedDeliveryTime = value!;
+  //               });
+  //             },
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildOrderItems(List<CartItem> items) {
     return Card(
@@ -286,39 +286,37 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildNotesSection() {
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Комментарий к заказу',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 12),
-            TextField(
-              controller: _notesController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Укажите дополнительные пожелания...',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) {
-                _notes = value;
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Widget _buildNotesSection() {
+  //   return Card(
+  //     child: Padding(
+  //       padding: EdgeInsets.all(16),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Text(
+  //             'Комментарий к заказу',
+  //             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+  //           ),
+  //           SizedBox(height: 12),
+  //           TextField(
+  //             controller: _notesController,
+  //             maxLines: 3,
+  //             decoration: InputDecoration(
+  //               hintText: 'Укажите дополнительные пожелания...',
+  //               border: OutlineInputBorder(),
+  //             ),
+  //             onChanged: (value) {
+  //               _notes = value;
+  //             },
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildOrderSummary(CartProvider cartProvider) {
     final totalAmount = cartProvider.totalAmount;
-    final prepaymentAmount = totalAmount * 0.9; // 90% предоплата
-    final remainingAmount = totalAmount - prepaymentAmount;
 
     return Card(
       color: Colors.blue[50],
@@ -336,24 +334,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             _buildSummaryRow(
                 'Общая сумма:', '${totalAmount.toStringAsFixed(0)} ₽'),
             Divider(),
-            _buildSummaryRow(
-              'Предоплата (90%):',
-              '${prepaymentAmount.toStringAsFixed(0)} ₽',
-              isHighlighted: true,
-            ),
-            _buildSummaryRow(
-              'Доплата при получении:',
-              '${remainingAmount.toStringAsFixed(0)} ₽',
-            ),
             SizedBox(height: 8),
-            Text(
-              '💡 Вы доплачиваете только 10% при получении товара',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.green[700],
-                fontStyle: FontStyle.italic,
-              ),
-            ),
           ],
         ),
       ),
@@ -422,7 +403,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               label: Text(
                 _isProcessing
                     ? 'Обработка...'
-                    : 'Оплатить ${(cartProvider.totalAmount * 0.9).toStringAsFixed(0)} ₽',
+                    : 'Оплатить ${(cartProvider.totalAmount).toStringAsFixed(0)} ₽',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(

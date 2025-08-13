@@ -7,6 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import 'login_screen.dart';
+import 'sms_verification_screen.dart';
+import 'package:flutter/foundation.dart'; // Добавьте этот импорт вверху файла
+import '../home/home_screen.dart'; // Добавьте этот импорт
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -404,6 +407,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
 
     if (success) {
+      if (kDebugMode) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => HomeScreen()),
+          (route) => false,
+        );
+      }
       // Показываем сообщение об успехе
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -411,22 +420,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               Icon(Icons.check_circle, color: Colors.white),
               SizedBox(width: 8),
-              Text('Регистрация прошла успешно!'),
+              Text('Регистрация успешна! Отправляем SMS...'),
             ],
           ),
           backgroundColor: Colors.green,
-          duration: Duration(seconds: 3),
+          duration: Duration(seconds: 2),
         ),
       );
 
-      // Переходим на главный экран (авторизация уже произошла)
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/main',
-        (route) => false,
-      );
-    } else {
-      // Ошибка уже отображается через Consumer<AuthProvider>
-      print('❌ Ошибка регистрации: ${authProvider.lastError}');
+      // Отправляем SMS код на телефон
+      final smsSuccess = await authProvider.sendSMSCode(formattedPhone);
+
+      if (smsSuccess) {
+        // Переходим на экран верификации SMS
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => SMSVerificationScreen(
+              phone: formattedPhone,
+              rememberMe: true,
+            ),
+          ),
+        );
+      } else {
+        // Если SMS не отправилось, переходим на экран входа
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => LoginScreen(),
+          ),
+        );
+      }
     }
   }
 }

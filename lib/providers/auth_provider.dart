@@ -48,27 +48,45 @@ class AuthProvider with ChangeNotifier {
 
       if (userJson != null && token != null) {
         try {
-          final userData = jsonDecode(userJson);
-          _currentUser = User.fromJson(userData);
-          _isAuthenticated = true;
-
-          // ВАЖНО: Устанавливаем токен в ApiService сразу после восстановления
+          // Устанавливаем токен для проверки
           _apiService.setAuthToken(token);
 
-          if (kDebugMode) {
-            print(
-                '✅ Пользователь восстановлен из локального хранилища: ${_currentUser?.fullName}');
-            print(
-                '✅ Токен установлен в ApiService: ${token.substring(0, 10)}...');
+          // Проверяем, существует ли пользователь на сервере
+          final checkResult = await _apiService.getProfile();
+
+          if (checkResult['success'] == true && checkResult['user'] != null) {
+            // Пользователь существует, используем свежие данные с сервера
+            _currentUser = User.fromJson(checkResult['user']);
+            _isAuthenticated = true;
+
+            // Обновляем локальные данные свежими с сервера
+            await _saveUserToPrefs(_currentUser!);
+
+            if (kDebugMode) {
+              print(
+                  '✅ Пользователь подтвержден сервером: ${_currentUser?.fullName}');
+            }
+          } else {
+            // Пользователь не найден на сервере, очищаем локальные данные
+            if (kDebugMode) {
+              print('❌ Пользователь не найден на сервере, очищаем данные');
+            }
+            await prefs.remove(_userDataKey);
+            await prefs.remove(_authTokenKey);
+            _apiService.clearAuthToken();
+            _currentUser = null;
+            _isAuthenticated = false;
           }
         } catch (e) {
           if (kDebugMode) {
-            print('❌ Ошибка восстановления пользователя: $e');
+            print('❌ Ошибка проверки пользователя на сервере: $e');
           }
-          // Очищаем поврежденные данные
+          // Очищаем данные при ошибке
           await prefs.remove(_userDataKey);
           await prefs.remove(_authTokenKey);
           _apiService.clearAuthToken();
+          _currentUser = null;
+          _isAuthenticated = false;
         }
       } else {
         if (kDebugMode) {

@@ -564,48 +564,27 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
 
                   SizedBox(height: 16),
-
-                  // Кнопки действий
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            // Переход к каталогу
-                            DefaultTabController.of(context)?.animateTo(0);
-                          },
-                          icon: Icon(Icons.add_shopping_cart, size: 18),
-                          label: Text('Добавить заказ'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: getProgressColor(),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+// Кнопка действия по центру
+                  Center(
+                    child: SizedBox(
+                      width:
+                          200, // Фиксированная ширина для центрированной кнопки
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          _showBatchDetails();
+                        },
+                        icon: Icon(Icons.info_outline, size: 18),
+                        label: Text('Подробнее'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: getProgressColor(),
+                          side: BorderSide(color: getProgressColor(), width: 2),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            _showBatchDetails();
-                          },
-                          icon: Icon(Icons.info_outline, size: 18),
-                          label: Text('Подробнее'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: getProgressColor(),
-                            side: BorderSide(color: getProgressColor()),
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -770,36 +749,36 @@ class _ProfileScreenState extends State<ProfileScreen>
                 );
               },
             ),
-            _buildSettingItem(
-              icon: Icons.edit,
-              title: 'Редактировать профиль',
-              subtitle: 'Изменить имя, email',
-              onTap: () => _showEditProfileDialog(context, authProvider),
-            ),
-            _buildSettingItem(
-              icon: Icons.location_on,
-              title: 'Адреса доставки',
-              subtitle: 'Управление адресами',
-              onTap: () {
-                // Переход к управлению адресами
-              },
-            ),
-            _buildSettingItem(
-              icon: Icons.notifications,
-              title: 'Уведомления',
-              subtitle: 'Push, Email, SMS',
-              onTap: () {
-                // Настройки уведомлений
-              },
-            ),
-            _buildSettingItem(
-              icon: Icons.help,
-              title: 'Помощь и поддержка',
-              subtitle: 'FAQ, контакты',
-              onTap: () {
-                // Поддержка
-              },
-            ),
+            // _buildSettingItem(
+            //   icon: Icons.edit,
+            //   title: 'Редактировать профиль',
+            //   subtitle: 'Изменить имя, email',
+            //   onTap: () => _showEditProfileDialog(context, authProvider),
+            // ),
+            // _buildSettingItem(
+            //   icon: Icons.location_on,
+            //   title: 'Адреса доставки',
+            //   subtitle: 'Управление адресами',
+            //   onTap: () {
+            //     // Переход к управлению адресами
+            //   },
+            // ),
+            // _buildSettingItem(
+            //   icon: Icons.notifications,
+            //   title: 'Уведомления',
+            //   subtitle: 'Push, Email, SMS',
+            //   onTap: () {
+            //     // Настройки уведомлений
+            //   },
+            // ),
+            // _buildSettingItem(
+            //   icon: Icons.help,
+            //   title: 'Помощь и поддержка',
+            //   subtitle: 'FAQ, контакты',
+            //   onTap: () {
+            //     // Поддержка
+            //   },
+            // ),
           ],
         ),
       ),
@@ -993,35 +972,35 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               Spacer(),
 
-              // Кнопки
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        // Поделиться закупкой
-                      },
-                      child: Text('Поделиться'),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        // Переход к каталогу
-                        DefaultTabController.of(context)?.animateTo(0);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: Text('Добавить заказ'),
-                    ),
-                  ),
-                ],
-              ),
+              // // Кнопки
+              // Row(
+              //   children: [
+              //     Expanded(
+              //       child: OutlinedButton(
+              //         onPressed: () {
+              //           Navigator.pop(context);
+              //           // Поделиться закупкой
+              //         },
+              //         child: Text('Поделиться'),
+              //       ),
+              //     ),
+              //     SizedBox(width: 12),
+              //     Expanded(
+              //       child: ElevatedButton(
+              //         onPressed: () {
+              //           Navigator.pop(context);
+              //           // Переход к каталогу
+              //           DefaultTabController.of(context)?.animateTo(0);
+              //         },
+              //         style: ElevatedButton.styleFrom(
+              //           backgroundColor: Colors.blue,
+              //           foregroundColor: Colors.white,
+              //         ),
+              //         child: Text('Добавить заказ'),
+              //       ),
+              //     ),
+              //   ],
+              // ),
             ],
           ),
         ),

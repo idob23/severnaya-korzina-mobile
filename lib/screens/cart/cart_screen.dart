@@ -75,13 +75,13 @@ class CartScreen extends StatelessWidget {
             ),
           ),
           SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {
-              // Переходим на первую вкладку (каталог)
-              DefaultTabController.of(context)?.animateTo(0);
-            },
-            child: Text('Перейти в каталог'),
-          ),
+          // ElevatedButton(
+          //   onPressed: () {
+          //     // Переходим на первую вкладку (каталог)
+          //     DefaultTabController.of(context)?.animateTo(0);
+          //   },
+          //   child: Text('Перейти в каталог'),
+          // ),
         ],
       ),
     );
@@ -126,26 +126,6 @@ class CartScreen extends StatelessWidget {
             ],
           ),
           SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Предоплата (90%):',
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: Colors.orange[700],
-                ),
-              ),
-              Text(
-                '${(cartProvider.totalAmount * 0.9).toStringAsFixed(0)} ₽',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange[700],
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -300,15 +280,6 @@ class CartScreen extends StatelessWidget {
               children: [
                 Icon(Icons.info, color: Colors.green[700], size: 20),
                 SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Вы доплачиваете только 10% при получении товара',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.green[700],
-                    ),
-                  ),
-                ),
               ],
             ),
           ),

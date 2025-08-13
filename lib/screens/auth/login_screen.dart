@@ -15,7 +15,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
-  bool _rememberMe = false;
+  bool _rememberMe = true;
 
   // Маска для номера телефона
   final _phoneMask = MaskTextInputFormatter(
@@ -150,65 +150,65 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   SizedBox(height: 20),
 
-                  // Чекбокс "Запомнить меня"
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue[200]!),
-                    ),
-                    padding: EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: _rememberMe,
-                              onChanged: (value) {
-                                setState(() {
-                                  _rememberMe = value ?? false;
-                                });
-                              },
-                              activeColor: Colors.blue,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                'Оставаться в системе',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.blue[800],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (_rememberMe) ...[
-                          SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Icon(Icons.info_outline,
-                                  color: Colors.blue[600], size: 20),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Вы останетесь в системе на 30 дней. SMS не будет запрашиваться при следующих входах.',
-                                  style: TextStyle(
-                                    color: Colors.blue[700],
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 32),
+                  // // Чекбокс "Запомнить меня"
+                  // Container(
+                  //   decoration: BoxDecoration(
+                  //     color: Colors.blue[50],
+                  //     borderRadius: BorderRadius.circular(12),
+                  //     border: Border.all(color: Colors.blue[200]!),
+                  //   ),
+                  //   padding: EdgeInsets.all(16),
+                  //   child: Column(
+                  //     children: [
+                  //       Row(
+                  //         children: [
+                  //           Checkbox(
+                  //             value: _rememberMe,
+                  //             onChanged: (value) {
+                  //               setState(() {
+                  //                 _rememberMe = value ?? false;
+                  //               });
+                  //             },
+                  //             activeColor: Colors.blue,
+                  //             shape: RoundedRectangleBorder(
+                  //               borderRadius: BorderRadius.circular(4),
+                  //             ),
+                  //           ),
+                  //           Expanded(
+                  //             child: Text(
+                  //               'Оставаться в системе',
+                  //               style: TextStyle(
+                  //                 fontSize: 16,
+                  //                 fontWeight: FontWeight.w500,
+                  //                 color: Colors.blue[800],
+                  //               ),
+                  //             ),
+                  //           ),
+                  //         ],
+                  //       ),
+                  //       if (_rememberMe) ...[
+                  //         SizedBox(height: 8),
+                  //         Row(
+                  //           children: [
+                  //             Icon(Icons.info_outline,
+                  //                 color: Colors.blue[600], size: 20),
+                  //             SizedBox(width: 8),
+                  //             Expanded(
+                  //               child: Text(
+                  //                 'Вы останетесь в системе на 30 дней. SMS не будет запрашиваться при следующих входах.',
+                  //                 style: TextStyle(
+                  //                   color: Colors.blue[700],
+                  //                   fontSize: 13,
+                  //                 ),
+                  //               ),
+                  //             ),
+                  //           ],
+                  //         ),
+                  //       ],
+                  //     ],
+                  //   ),
+                  // ),
+                  // SizedBox(height: 32),
 
                   // Кнопка входа
                   Consumer<AuthProvider>(

@@ -58,7 +58,7 @@ class PaymentService {
           },
           'items': [
             {
-              'description': 'Предоплата за товары (коллективная закупка)',
+              'description': 'Оплата за товары (коллективная закупка)',
               'quantity': '1.00',
               'amount': {
                 'value': amount.toStringAsFixed(2),

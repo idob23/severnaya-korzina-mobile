@@ -37,48 +37,48 @@ class _CatalogScreenState extends State<CatalogScreen> {
         title: Text('Каталог товаров'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
-        actions: [
-          Consumer<CartProvider>(
-            builder: (context, cartProvider, child) {
-              final itemsCount = cartProvider.totalItems;
-              return Stack(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.shopping_cart),
-                    onPressed: () {
-                      // Переходим на вкладку корзины
-                      DefaultTabController.of(context)?.animateTo(1);
-                    },
-                  ),
-                  if (itemsCount > 0)
-                    Positioned(
-                      right: 8,
-                      top: 8,
-                      child: Container(
-                        padding: EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        constraints: BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          '$itemsCount',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-        ],
+        // actions: [
+        //   Consumer<CartProvider>(
+        //     builder: (context, cartProvider, child) {
+        //       final itemsCount = cartProvider.totalItems;
+        //       return Stack(
+        //         children: [
+        //           IconButton(
+        //             icon: Icon(Icons.shopping_cart),
+        //             onPressed: () {
+        //               // Переходим на вкладку корзины
+        //               DefaultTabController.of(context)?.animateTo(1);
+        //             },
+        //           ),
+        //           if (itemsCount > 0)
+        //             Positioned(
+        //               right: 8,
+        //               top: 8,
+        //               child: Container(
+        //                 padding: EdgeInsets.all(2),
+        //                 decoration: BoxDecoration(
+        //                   color: Colors.red,
+        //                   borderRadius: BorderRadius.circular(10),
+        //                 ),
+        //                 constraints: BoxConstraints(
+        //                   minWidth: 16,
+        //                   minHeight: 16,
+        //                 ),
+        //                 child: Text(
+        //                   '$itemsCount',
+        //                   style: TextStyle(
+        //                     color: Colors.white,
+        //                     fontSize: 12,
+        //                   ),
+        //                   textAlign: TextAlign.center,
+        //                 ),
+        //               ),
+        //             ),
+        //         ],
+        //       );
+        //     },
+        //   ),
+        // ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -365,27 +365,27 @@ class _CatalogScreenState extends State<CatalogScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Изображение товара
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey[200],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: product.hasImage
-                      ? Image.network(
-                          product.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return _buildPlaceholderImage(product.name);
-                          },
-                        )
-                      : _buildPlaceholderImage(product.name),
-                ),
-              ),
+              // // Изображение товара
+              // Container(
+              //   width: 80,
+              //   height: 80,
+              //   decoration: BoxDecoration(
+              //     borderRadius: BorderRadius.circular(8),
+              //     color: Colors.grey[200],
+              //   ),
+              //   child: ClipRRect(
+              //     borderRadius: BorderRadius.circular(8),
+              //     child: product.hasImage
+              //         ? Image.network(
+              //             product.imageUrl!,
+              //             fit: BoxFit.cover,
+              //             errorBuilder: (context, error, stackTrace) {
+              //               return _buildPlaceholderImage(product.name);
+              //             },
+              //           )
+              //         : _buildPlaceholderImage(product.name),
+              //   ),
+              // ),
 
               SizedBox(width: 16),
 
@@ -630,27 +630,27 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Изображение
-                    Container(
-                      width: double.infinity,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: Colors.grey[200],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: product.hasImage
-                            ? Image.network(
-                                product.imageUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return _buildPlaceholderImage(product.name);
-                                },
-                              )
-                            : _buildPlaceholderImage(product.name),
-                      ),
-                    ),
+                    // // Изображение
+                    // Container(
+                    //   width: double.infinity,
+                    //   height: 200,
+                    //   decoration: BoxDecoration(
+                    //     borderRadius: BorderRadius.circular(12),
+                    //     color: Colors.grey[200],
+                    //   ),
+                    //   child: ClipRRect(
+                    //     borderRadius: BorderRadius.circular(12),
+                    //     child: product.hasImage
+                    //         ? Image.network(
+                    //             product.imageUrl!,
+                    //             fit: BoxFit.cover,
+                    //             errorBuilder: (context, error, stackTrace) {
+                    //               return _buildPlaceholderImage(product.name);
+                    //             },
+                    //           )
+                    //         : _buildPlaceholderImage(product.name),
+                    //   ),
+                    // ),
 
                     SizedBox(height: 20),
 
