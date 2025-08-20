@@ -58,8 +58,21 @@ class _ProfileScreenState extends State<ProfileScreen>
       curve: Curves.easeInOut,
     ));
 
+    // ДОБАВЛЯЕМ: Проверяем авторизацию при входе на экран
+    _checkAndRefreshAuth();
+
     // ДОБАВИТЬ ЭТУ СТРОКУ:
     _loadActiveBatch(); // Загружаем реальные данные
+  }
+
+  // НОВЫЙ МЕТОД - добавить после initState
+  Future<void> _checkAndRefreshAuth() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Если пользователь не авторизован, но есть сохраненные данные
+    if (!authProvider.isAuthenticated) {
+      await authProvider.checkAuthStatus();
+    }
   }
 
   /// Загружает данные активной закупки из API

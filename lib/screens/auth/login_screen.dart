@@ -345,12 +345,30 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
 
-      await Future.delayed(Duration(seconds: 1));
+      // ВАЖНО: Проверяем авторизацию перед переходом
+      await authProvider.checkAuthStatus();
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => HomeScreen()),
-      );
+      // Проверяем, что пользователь действительно авторизован
+      if (authProvider.isAuthenticated) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => HomeScreen()),
+        );
+      } else {
+        // Если авторизация не прошла - отправляем SMS
+        final success = await authProvider.sendSMSCode(formattedPhone);
+        if (success) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SMSVerificationScreen(
+                phone: formattedPhone,
+                rememberMe: _rememberMe,
+              ),
+            ),
+          );
+        }
+      }
       return;
     }
 
