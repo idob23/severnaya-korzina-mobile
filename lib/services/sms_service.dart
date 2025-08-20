@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 
 class SMSService {
   // SMS AERO API настройки
-  static const String _baseUrl = 'https://gate.smsaero.ru/v2';
+  static const String _baseUrl = 'http://84.201.149.245:3000/api';
   static const String _login = 'idob230491@gmail.com'; // Email от SMS Aero
   static const String _apiKey =
       'J1WD5J__f3ztsHpi5sBWrVef5jlVRo9J'; // API ключ из личного кабинета
@@ -22,9 +22,9 @@ class SMSService {
 
   SMSService() {
     // Настройка Basic Auth для SMS Aero
-    final credentials = base64Encode(utf8.encode('$_login:$_apiKey'));
+    // final credentials = base64Encode(utf8.encode('$_login:$_apiKey'));
 
-    _dio.options.headers['Authorization'] = 'Basic $credentials';
+    // _dio.options.headers['Authorization'] = 'Basic $credentials';
     _dio.options.headers['Content-Type'] = 'application/json';
     _dio.options.headers['Accept'] = 'application/json';
 
@@ -36,104 +36,136 @@ class SMSService {
     ));
   }
 
-  /// Отправляет SMS с кодом подтверждения через SMS Aero
+  // /// Отправляет SMS с кодом подтверждения через SMS Aero
+  // Future<bool> sendVerificationCode(String phone) async {
+  //   try {
+  //     final code = _generateCode();
+
+  //     // Форматируем номер для SMS Aero (только цифры, начинается с 7)
+  //     String cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+
+  //     // Убираем префикс 8 или +7, оставляем только номер с 7
+  //     if (cleanPhone.startsWith('8') && cleanPhone.length == 11) {
+  //       cleanPhone = '+7' + cleanPhone.substring(1);
+  //     } else if (cleanPhone.startsWith('+7')) {
+  //       cleanPhone = cleanPhone.substring(1);
+  //     } else if (!cleanPhone.startsWith('7')) {
+  //       // Если номер не начинается с 7, добавляем
+  //       cleanPhone = '+7' + cleanPhone;
+  //     }
+
+  //     print('=== ОТПРАВКА SMS ===');
+  //     print('📱 Оригинальный номер: $phone');
+  //     print('📱 Форматированный номер: $cleanPhone');
+  //     print('🔑 Сгенерированный код: $code');
+
+  //     // // Сначала проверим баланс
+  //     // final balanceCheck = await checkBalance();
+  //     // if (balanceCheck['success'] == true) {
+  //     //   print('💰 Баланс: ${balanceCheck['balance']} руб');
+  //     //   if ((balanceCheck['balance'] as num) < 2) {
+  //     //     print('❌ Недостаточно средств на балансе SMS Aero');
+  //     //     return false;
+  //     //   }
+  //     // }
+
+  //     // Новый код
+  //     final response = await _dio.post(
+  //       '$_baseUrl/sms/send',
+  //       data: {
+  //         'phone': cleanPhone,
+  //         'code': code,
+  //       },
+  //     );
+
+  //     print('HTTP Status: ${response.statusCode}');
+  //     print('Ответ от SMS Aero: ${response.data}');
+
+  //     if (response.statusCode == 200) {
+  //       final data = response.data;
+
+  //       if (data is Map && data['success'] == true) {
+  //         // Сохраняем код для проверки (для обоих форматов номера)
+  //         _tempCodes[phone] = code;
+  //         _tempCodes[cleanPhone] = code;
+  //         _tempCodes['+$cleanPhone'] = code;
+
+  //         final smsId = data['data']?['id'];
+  //         print('✅ SMS успешно отправлено!');
+  //         print('📨 ID сообщения: $smsId');
+  //         print('💾 Код сохранен для верификации');
+
+  //         // Проверяем статус доставки через 2 секунды
+  //         Future.delayed(Duration(seconds: 2), () async {
+  //           if (smsId != null) {
+  //             await checkSmsStatus(smsId.toString());
+  //           }
+  //         });
+
+  //         return true;
+  //       } else {
+  //         // Ошибка от SMS Aero API
+  //         final errorMessage = data['message'] ?? 'Неизвестная ошибка';
+  //         print('❌ Ошибка SMS Aero: $errorMessage');
+
+  //         // Если ошибка связана с форматом номера, пробуем альтернативный формат
+  //         if (errorMessage.toString().toLowerCase().contains('number') ||
+  //             errorMessage.toString().toLowerCase().contains('формат')) {
+  //           return await _sendWithAlternativeFormat(phone, code);
+  //         }
+
+  //         return false;
+  //       }
+  //     }
+
+  //     print('❌ Неожиданный HTTP статус: ${response.statusCode}');
+  //     return false;
+  //   } catch (e) {
+  //     print('❌ Критическая ошибка отправки SMS: $e');
+
+  //     // Если ошибка сети, пробуем альтернативный метод
+  //     if (e.toString().contains('SocketException') ||
+  //         e.toString().contains('TimeoutException')) {
+  //       print('🔄 Пробуем альтернативный метод отправки...');
+  //       return await _sendViaGet(phone);
+  //     }
+
+  //     return false;
+  //   }
+  // }
+
   Future<bool> sendVerificationCode(String phone) async {
     try {
       final code = _generateCode();
-
-      // Форматируем номер для SMS Aero (только цифры, начинается с 7)
       String cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
 
-      // Убираем префикс 8 или +7, оставляем только номер с 7
       if (cleanPhone.startsWith('8') && cleanPhone.length == 11) {
         cleanPhone = '7' + cleanPhone.substring(1);
-      } else if (cleanPhone.startsWith('+7')) {
-        cleanPhone = cleanPhone.substring(1);
       } else if (!cleanPhone.startsWith('7')) {
-        // Если номер не начинается с 7, добавляем
         cleanPhone = '7' + cleanPhone;
       }
 
-      print('=== ОТПРАВКА SMS ===');
-      print('📱 Оригинальный номер: $phone');
-      print('📱 Форматированный номер: $cleanPhone');
-      print('🔑 Сгенерированный код: $code');
+      print('📱 Отправляем SMS на: $cleanPhone');
+      print('🔑 Код: $code');
 
-      // Сначала проверим баланс
-      final balanceCheck = await checkBalance();
-      if (balanceCheck['success'] == true) {
-        print('💰 Баланс: ${balanceCheck['balance']} руб');
-        if ((balanceCheck['balance'] as num) < 2) {
-          print('❌ Недостаточно средств на балансе SMS Aero');
-          return false;
-        }
-      }
-
-      // Отправляем SMS через SMS Aero - используем правильный формат
-      // Текст с указанием сервиса для прохождения фильтров МТС
       final response = await _dio.post(
         '$_baseUrl/sms/send',
         data: {
-          'number': cleanPhone,
-          'text':
-              'Северная Корзина: Ваш код авторизации $code для входа в приложение',
-          'sign': 'SMS Aero', // Обязательный параметр!
-          'channel': 'DIRECT' // Используем прямой канал
+          'phone': cleanPhone,
+          'code': code,
         },
       );
 
-      print('HTTP Status: ${response.statusCode}');
-      print('Ответ от SMS Aero: ${response.data}');
-
       if (response.statusCode == 200) {
-        final data = response.data;
-
-        if (data is Map && data['success'] == true) {
-          // Сохраняем код для проверки (для обоих форматов номера)
-          _tempCodes[phone] = code;
-          _tempCodes[cleanPhone] = code;
-          _tempCodes['+$cleanPhone'] = code;
-
-          final smsId = data['data']?['id'];
-          print('✅ SMS успешно отправлено!');
-          print('📨 ID сообщения: $smsId');
-          print('💾 Код сохранен для верификации');
-
-          // Проверяем статус доставки через 2 секунды
-          Future.delayed(Duration(seconds: 2), () async {
-            if (smsId != null) {
-              await checkSmsStatus(smsId.toString());
-            }
-          });
-
-          return true;
-        } else {
-          // Ошибка от SMS Aero API
-          final errorMessage = data['message'] ?? 'Неизвестная ошибка';
-          print('❌ Ошибка SMS Aero: $errorMessage');
-
-          // Если ошибка связана с форматом номера, пробуем альтернативный формат
-          if (errorMessage.toString().toLowerCase().contains('number') ||
-              errorMessage.toString().toLowerCase().contains('формат')) {
-            return await _sendWithAlternativeFormat(phone, code);
-          }
-
-          return false;
-        }
+        _tempCodes[phone] = code;
+        _tempCodes[cleanPhone] = code;
+        print('✅ SMS отправлено!');
+        return true;
       }
 
-      print('❌ Неожиданный HTTP статус: ${response.statusCode}');
       return false;
     } catch (e) {
-      print('❌ Критическая ошибка отправки SMS: $e');
-
-      // Если ошибка сети, пробуем альтернативный метод
-      if (e.toString().contains('SocketException') ||
-          e.toString().contains('TimeoutException')) {
-        print('🔄 Пробуем альтернативный метод отправки...');
-        return await _sendViaGet(phone);
-      }
-
+      print('❌ Ошибка: $e');
       return false;
     }
   }
@@ -250,30 +282,30 @@ class SMSService {
     return (1000 + random.nextInt(9000)).toString();
   }
 
-  /// Проверяет баланс SMS Aero
-  Future<Map<String, dynamic>> checkBalance() async {
-    try {
-      print('💰 Проверяем баланс SMS Aero...');
+  // /// Проверяет баланс SMS Aero
+  // Future<Map<String, dynamic>> checkBalance() async {
+  //   try {
+  //     print('💰 Проверяем баланс SMS Aero...');
 
-      final response = await _dio.get('$_baseUrl/balance');
+  //     final response = await _dio.get('$_baseUrl/balance');
 
-      if (response.statusCode == 200 && response.data['success'] == true) {
-        final balance = response.data['data']['balance'];
-        print('💰 Баланс SMS Aero: $balance руб');
+  //     if (response.statusCode == 200 && response.data['success'] == true) {
+  //       final balance = response.data['data']['balance'];
+  //       print('💰 Баланс SMS Aero: $balance руб');
 
-        return {
-          'success': true,
-          'balance': balance,
-          'currency': 'RUB',
-        };
-      }
+  //       return {
+  //         'success': true,
+  //         'balance': balance,
+  //         'currency': 'RUB',
+  //       };
+  //     }
 
-      return {'success': false, 'error': 'Не удалось получить баланс'};
-    } catch (e) {
-      print('❌ Ошибка получения баланса: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
+  //     return {'success': false, 'error': 'Не удалось получить баланс'};
+  //   } catch (e) {
+  //     print('❌ Ошибка получения баланса: $e');
+  //     return {'success': false, 'error': e.toString()};
+  //   }
+  // }
 
   /// Проверяет статус отправленного SMS
   Future<Map<String, dynamic>> checkSmsStatus(String smsId) async {

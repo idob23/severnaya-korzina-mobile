@@ -7,6 +7,8 @@ import '../../providers/auth_provider.dart';
 import '../home/home_screen.dart';
 import 'sms_verification_screen.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 class LoginScreen extends StatefulWidget {
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -333,46 +335,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final cleanPhone = _phoneController.text.replaceAll(RegExp(r'[^\d]'), '');
     final formattedPhone = '+$cleanPhone';
 
-    // Проверяем автологин для этого номера
-    final canAutoLogin = await authProvider.canAutoLogin(formattedPhone);
-    if (canAutoLogin && _rememberMe) {
-      // Пользователь может войти автоматически
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Выполняется автоматический вход...'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
+    // УДАЛЯЕМ ВЕСЬ БЛОК АВТОЛОГИНА - он вызывает проблему
+    // Просто отправляем SMS всегда
 
-      // ВАЖНО: Проверяем авторизацию перед переходом
-      await authProvider.checkAuthStatus();
-
-      // Проверяем, что пользователь действительно авторизован
-      if (authProvider.isAuthenticated) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => HomeScreen()),
-        );
-      } else {
-        // Если авторизация не прошла - отправляем SMS
-        final success = await authProvider.sendSMSCode(formattedPhone);
-        if (success) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => SMSVerificationScreen(
-                phone: formattedPhone,
-                rememberMe: _rememberMe,
-              ),
-            ),
-          );
-        }
-      }
-      return;
-    }
-
-    // Отправляем SMS
     final success = await authProvider.sendSMSCode(formattedPhone);
 
     if (success) {

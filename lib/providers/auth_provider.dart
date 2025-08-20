@@ -319,6 +319,9 @@ class AuthProvider with ChangeNotifier {
             final prefs = await SharedPreferences.getInstance();
             await prefs.setBool(_pendingSmsVerificationKey, true);
 
+            // Очищаем токен из ApiService
+            _apiService.clearAuthToken();
+
             // // Можно сохранить токен и данные для будущего использования
             // if (token != null) {
             //   await prefs.setString(_authTokenKey, token);

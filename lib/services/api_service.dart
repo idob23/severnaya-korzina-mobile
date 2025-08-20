@@ -186,6 +186,9 @@ class ApiService {
     String? lastName,
     String? email,
   }) async {
+    // ОЧИЩАЕМ токен перед регистрацией
+    _authToken = null;
+
     final body = <String, dynamic>{
       'phone': phone,
       'firstName': firstName,
@@ -200,9 +203,9 @@ class ApiService {
 
     final result = await _makeRequest('POST', '/auth/register', body: body);
 
-    if (result['success'] && result['token'] != null) {
-      setAuthToken(result['token']);
-    }
+    // if (result['success'] && result['token'] != null) {
+    //   setAuthToken(result['token']);
+    // }
 
     return result;
   }
