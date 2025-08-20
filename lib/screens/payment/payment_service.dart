@@ -9,9 +9,9 @@ class PaymentService {
 
   // ВАЖНО: Замените на ваши реальные данные из личного кабинета ЮKassa
   // Получите их здесь: https://yookassa.ru/my/
-  static const String _shopId = 'ваш_shop_id_здесь'; // Например: '123456'
+  static const String _shopId = '1148812'; // Например: '123456'
   static const String _secretKey =
-      'ваш_secret_key_здесь'; // Например: 'test_ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'
+      'test_jSLEuLPMPW58_iRfez3W_ToHsrMv2XS_cgqIYpNMa5A'; // Например: 'test_ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'
 
   // Для начала используйте тестовые ключи, затем замените на боевые
 
@@ -39,7 +39,7 @@ class PaymentService {
         'confirmation': {
           'type': 'redirect',
           'return_url':
-              'https://your-app.com/payment-success', // Замените на ваш URL
+              'http://app.sevkorzina.ru/payment-success', // Замените на ваш URL
         },
         'capture': true,
         'description': 'Предоплата заказа $orderId в Северной корзине',

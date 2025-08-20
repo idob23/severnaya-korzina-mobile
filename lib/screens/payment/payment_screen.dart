@@ -525,12 +525,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => PaymentSuccessScreen(
-            orderId: paymentId,
-            amount: amount,
-            paymentMethod: 'Карта МИР',
-            orderData: widget.orderData,
-          ),
+          builder: (_) => PaymentSuccessScreen(),
         ),
       );
 
@@ -560,6 +555,52 @@ class _PaymentScreenState extends State<PaymentScreen> {
       print('❌ Ошибка создания заказа в системе: $e');
       // Не показываем ошибку пользователю, так как платеж прошел успешно
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPaymentReturn();
+  }
+
+  void _checkPaymentReturn() {
+    // Проверяем URL параметры при загрузке экрана
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final uri = Uri.base;
+      if (uri.queryParameters.containsKey('payment_id')) {
+        final paymentId = uri.queryParameters['payment_id'];
+        _showSuccessDialog(paymentId);
+      }
+    });
+  }
+
+  void _showSuccessDialog(String? paymentId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text('Платеж завершен'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle, size: 60, color: Colors.green),
+            SizedBox(height: 16),
+            Text('Оплата прошла успешно!'),
+            if (paymentId != null) Text('ID: $paymentId'),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Закрыть диалог
+              Navigator.pushNamedAndRemoveUntil(
+                  context, '/', (route) => false); // На главную
+            },
+            child: Text('Перейти в каталог'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showError(String message) {

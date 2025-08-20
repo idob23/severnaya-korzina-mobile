@@ -10,6 +10,7 @@ import 'screens/cart/cart_screen.dart';
 import 'screens/orders/orders_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'package:severnaya_korzina/screens/auth/auth_choice_screen.dart';
+import 'screens/payment/payment_success_screen.dart';
 
 void main() {
   runApp(MyApp());
@@ -43,6 +44,10 @@ class MyApp extends StatelessWidget {
         ),
         home: AppInitializer(),
         debugShowCheckedModeBanner: false,
+        // ДОБАВЬТЕ ЭТО:
+        routes: {
+          '/payment-success': (context) => PaymentSuccessScreen(),
+        },
       ),
     );
   }
