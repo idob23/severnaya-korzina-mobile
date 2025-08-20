@@ -407,12 +407,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
 
     if (success) {
-      if (kDebugMode) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => HomeScreen()),
-          (route) => false,
-        );
-      }
       // Показываем сообщение об успехе
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -427,6 +421,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           duration: Duration(seconds: 2),
         ),
       );
+
+      // Небольшая задержка для отображения сообщения
+      await Future.delayed(Duration(seconds: 1));
 
       // Отправляем SMS код на телефон
       final smsSuccess = await authProvider.sendSMSCode(formattedPhone);

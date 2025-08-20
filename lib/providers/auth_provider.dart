@@ -15,6 +15,7 @@ class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _lastError;
 
+  static const String _pendingSmsVerificationKey = 'pending_sms_verification';
   final SMSService _smsService = SMSService();
   final ApiService _apiService = ApiService();
 
@@ -42,7 +43,21 @@ class AuthProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // Проверяем сохраненного пользователя
+      // ПЕРВЫМ ДЕЛОМ проверяем флаг ожидания верификации
+      final pendingVerification =
+          prefs.getBool(_pendingSmsVerificationKey) ?? false;
+      if (pendingVerification) {
+        if (kDebugMode) {
+          print('⏳ Ожидается верификация SMS, пропускаем автологин');
+        }
+        _currentUser = null;
+        _isAuthenticated = false;
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      // Теперь проверяем сохраненного пользователя
       final userJson = prefs.getString(_userDataKey);
       final token = prefs.getString(_authTokenKey);
 
@@ -73,6 +88,7 @@ class AuthProvider with ChangeNotifier {
             }
             await prefs.remove(_userDataKey);
             await prefs.remove(_authTokenKey);
+            await prefs.remove(_pendingSmsVerificationKey);
             _apiService.clearAuthToken();
             _currentUser = null;
             _isAuthenticated = false;
@@ -84,6 +100,7 @@ class AuthProvider with ChangeNotifier {
           // Очищаем данные при ошибке
           await prefs.remove(_userDataKey);
           await prefs.remove(_authTokenKey);
+          await prefs.remove(_pendingSmsVerificationKey);
           _apiService.clearAuthToken();
           _currentUser = null;
           _isAuthenticated = false;
@@ -192,6 +209,9 @@ class AuthProvider with ChangeNotifier {
               print('🔧 Создаем пользователя из данных сервера...');
             }
 
+// Убираем флаг ожидания верификации
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.remove(_pendingSmsVerificationKey);
             _currentUser = User.fromJson(userData);
             _isAuthenticated = true;
 
@@ -294,17 +314,29 @@ class AuthProvider with ChangeNotifier {
         if (userData != null) {
           try {
             _currentUser = User.fromJson(userData);
-            _isAuthenticated = true;
 
-            // Сохраняем токен
-            if (token != null) {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setString(_authTokenKey, token);
-              _apiService.setAuthToken(token);
-            }
+            // Сохраняем флаг, что ожидается верификация
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool(_pendingSmsVerificationKey, true);
 
-            // Сохраняем пользователя локально
-            await _saveUserToPrefs(_currentUser!);
+            // // Можно сохранить токен и данные для будущего использования
+            // if (token != null) {
+            //   await prefs.setString(_authTokenKey, token);
+            //   _apiService.setAuthToken(token);
+            // }
+            // await _saveUserToPrefs(_currentUser!);
+
+            // _isAuthenticated = true;
+
+            // // Сохраняем токен
+            // if (token != null) {
+            //   final prefs = await SharedPreferences.getInstance();
+            //   await prefs.setString(_authTokenKey, token);
+            //   _apiService.setAuthToken(token);
+            // }
+
+            // // Сохраняем пользователя локально
+            // await _saveUserToPrefs(_currentUser!);
 
             if (kDebugMode) {
               print(
