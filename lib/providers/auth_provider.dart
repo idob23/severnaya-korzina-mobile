@@ -177,8 +177,9 @@ class AuthProvider with ChangeNotifier {
         print('🔐 Начинаем верификацию для: $formattedPhone');
       }
 
-      // Проверяем код локально
-      final isCodeValid = _smsService.verifyCode(formattedPhone, code);
+      // ОБНОВЛЕНО: Используем асинхронную проверку кода через backend
+      final isCodeValid =
+          await _smsService.verifyCodeAsync(formattedPhone, code);
 
       if (!isCodeValid) {
         _lastError = 'Неверный код подтверждения';
@@ -209,7 +210,7 @@ class AuthProvider with ChangeNotifier {
               print('🔧 Создаем пользователя из данных сервера...');
             }
 
-// Убираем флаг ожидания верификации
+            // Убираем флаг ожидания верификации
             final prefs = await SharedPreferences.getInstance();
             await prefs.remove(_pendingSmsVerificationKey);
             _currentUser = User.fromJson(userData);
