@@ -3,8 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/orders_provider.dart';
+import '../orders/orders_screen.dart';
 
 class PaymentSuccessScreen extends StatefulWidget {
+  final Map<String, dynamic>? orderData; // ДОБАВИТЬ
+
+  const PaymentSuccessScreen({Key? key, this.orderData}) : super(key: key);
+
   @override
   _PaymentSuccessScreenState createState() => _PaymentSuccessScreenState();
 }
@@ -98,7 +103,14 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
               ),
               SizedBox(height: 16),
               TextButton(
-                onPressed: () => Navigator.pushNamed(context, '/orders'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OrdersScreen(),
+                    ),
+                  );
+                },
                 child: Text(
                   'Посмотреть мои заказы',
                   style: TextStyle(

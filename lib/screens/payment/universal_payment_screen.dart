@@ -11,11 +11,13 @@ import '../../providers/auth_provider.dart';
 class UniversalPaymentScreen extends StatefulWidget {
   final String paymentUrl;
   final String paymentId;
+  final Map<String, dynamic>? orderData; // ДОБАВИТЬ
 
   const UniversalPaymentScreen({
     Key? key,
     required this.paymentUrl,
     required this.paymentId,
+    this.orderData, // ДОБАВИТЬ
   }) : super(key: key);
 
   @override
@@ -130,7 +132,9 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => PaymentSuccessScreen(),
+        builder: (context) => PaymentSuccessScreen(
+          orderData: widget.orderData, // ПЕРЕДАТЬ orderData
+        ),
       ),
     );
   }

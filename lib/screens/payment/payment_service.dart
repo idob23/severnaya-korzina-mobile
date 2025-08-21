@@ -338,6 +338,8 @@ class PaymentService {
     required String customerPhone,
     required String customerName,
     String? token,
+    List<Map<String, dynamic>>? orderItems, // ДОБАВИТЬ
+    String? notes, // ДОБАВИТЬ
   }) async {
     if (kIsWeb) {
       // Для веб-версии используем бэкенд
@@ -347,6 +349,8 @@ class PaymentService {
         customerPhone: customerPhone,
         customerName: customerName,
         token: token,
+        orderItems: orderItems, // ДОБАВИТЬ
+        notes: notes, // ДОБАВИТЬ
       );
     } else {
       // Для мобильных платформ используем прямые запросы к ЮKassa
@@ -366,6 +370,8 @@ class PaymentService {
     required String customerPhone,
     required String customerName,
     String? token,
+    List<Map<String, dynamic>>? orderItems, // ДОБАВИТЬ
+    String? notes, // ДОБАВИТЬ
   }) async {
     try {
       final headers = {
@@ -384,6 +390,10 @@ class PaymentService {
           'orderId': orderId,
           'customerPhone': customerPhone,
           'customerName': customerName,
+          // ДОБАВИТЬ данные заказа:
+          'addressId': 1,
+          'items': orderItems ?? [], // ДОБАВИТЬ
+          'notes': notes,
         }),
       );
 

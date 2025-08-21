@@ -240,6 +240,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         customerPhone: user?.phone ?? '',
         customerName: user?.name ?? '',
         token: token, // ПЕРЕДАЕМ ТОКЕН
+        orderItems: widget.orderData['items'], // ДОБАВИТЬ
+        notes: widget.orderData['notes'], // ДОБАВИТЬ
       );
 
       if (!mounted) return;
@@ -298,6 +300,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         builder: (context) => UniversalPaymentScreen(
           paymentUrl: confirmationUrl,
           paymentId: paymentId,
+          orderData: widget.orderData, // ДОБАВИТЬ
         ),
       ),
     );
