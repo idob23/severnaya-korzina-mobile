@@ -1,7 +1,30 @@
 // lib/screens/payment/payment_success_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/cart_provider.dart';
+import '../../providers/orders_provider.dart';
 
-class PaymentSuccessScreen extends StatelessWidget {
+class PaymentSuccessScreen extends StatefulWidget {
+  @override
+  _PaymentSuccessScreenState createState() => _PaymentSuccessScreenState();
+}
+
+class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _handlePaymentSuccess();
+  }
+
+  Future<void> _handlePaymentSuccess() async {
+    // Очищаем корзину
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    cartProvider.clearCart();
+
+    // Здесь можно добавить создание заказа в системе
+    // await _createOrderInSystem();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -2,15 +2,103 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class PaymentService {
-  static const String _baseUrl = 'https://api.yookassa.ru/v3';
+  // Используем ваш бэкенд вместо прямых запросов к ЮKassa
+  static const String _baseUrl =
+      'http://84.201.149.245:3000'; // Замените на ваш API URL
+
+  // Старые константы ЮKassa оставляем для мобильных платформ (fallback)
+  static const String _yooKassaBaseUrl = 'https://api.yookassa.ru/v3';
   static const String _shopId = '1148812';
   static const String _secretKey =
       'test_jSLEuLPMPW58_iRfez3W_ToHsrMv2XS_cgqIYpNMa5A';
 
-  /// Создание платежа через ЮKassa
+  /// Создание платежа (универсальный метод)
   Future<PaymentResult> createPayment({
+    required double amount,
+    required String orderId,
+    required String customerPhone,
+    required String customerName,
+  }) async {
+    if (kIsWeb) {
+      // Для веб-версии используем бэкенд
+      return _createPaymentViaBackend(
+        amount: amount,
+        orderId: orderId,
+        customerPhone: customerPhone,
+        customerName: customerName,
+      );
+    } else {
+      // Для мобильных платформ используем прямые запросы к ЮKassa
+      return _createPaymentDirectly(
+        amount: amount,
+        orderId: orderId,
+        customerPhone: customerPhone,
+        customerName: customerName,
+      );
+    }
+  }
+
+  /// Создание платежа через ваш бэкенд (для веб)
+  Future<PaymentResult> _createPaymentViaBackend({
+    required double amount,
+    required String orderId,
+    required String customerPhone,
+    required String customerName,
+  }) async {
+    try {
+      // Здесь нужно получить токен авторизации
+      // final token = await AuthService.getToken();
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/payments/create'),
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': 'Bearer $token', // Добавить когда будет авторизация
+        },
+        body: jsonEncode({
+          'amount': amount,
+          'orderId': orderId,
+          'customerPhone': customerPhone,
+          'customerName': customerName,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success']) {
+          return PaymentResult(
+            success: true,
+            paymentId: data['paymentId'],
+            status: data['status'],
+            confirmationUrl: data['confirmationUrl'],
+            message: data['message'],
+          );
+        } else {
+          return PaymentResult(
+            success: false,
+            message: data['error'] ?? 'Ошибка создания платежа',
+          );
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        return PaymentResult(
+          success: false,
+          message: errorData['error'] ?? 'Ошибка сервера',
+        );
+      }
+    } catch (e) {
+      return PaymentResult(
+        success: false,
+        message: 'Ошибка подключения к серверу: $e',
+      );
+    }
+  }
+
+  /// Создание платежа напрямую через ЮKassa (для мобильных)
+  Future<PaymentResult> _createPaymentDirectly({
     required double amount,
     required String orderId,
     required String customerPhone,
@@ -28,7 +116,7 @@ class PaymentService {
         },
         'confirmation': {
           'type': 'redirect',
-          'return_url': 'http://app.sevkorzina.ru/payment-success',
+          'return_url': 'https://sevkorzina.ru/payment-success?status=success',
         },
         'capture': true,
         'description': 'Оплата заказа $orderId в Северной корзине',
@@ -56,7 +144,7 @@ class PaymentService {
       };
 
       final response = await http.post(
-        Uri.parse('$_baseUrl/payments'),
+        Uri.parse('$_yooKassaBaseUrl/payments'),
         headers: {
           'Authorization': 'Basic $basicAuth',
           'Content-Type': 'application/json',
@@ -89,13 +177,55 @@ class PaymentService {
     }
   }
 
-  /// Проверка статуса платежа
+  /// Проверка статуса платежа (универсальный метод)
   Future<PaymentStatus> checkPaymentStatus(String paymentId) async {
+    if (kIsWeb) {
+      return _checkPaymentStatusViaBackend(paymentId);
+    } else {
+      return _checkPaymentStatusDirectly(paymentId);
+    }
+  }
+
+  /// Проверка статуса через бэкенд (для веб)
+  Future<PaymentStatus> _checkPaymentStatusViaBackend(String paymentId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/payments/status/$paymentId'),
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': 'Bearer $token', // Добавить когда будет авторизация
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success']) {
+          return PaymentStatus(
+            paymentId: data['paymentId'],
+            status: data['status'],
+            isPaid: data['isPaid'],
+            isCanceled: data['isCanceled'],
+            isPending: data['isPending'],
+            amount: data['amount'],
+            createdAt: DateTime.parse(data['createdAt']),
+            paidAt:
+                data['paidAt'] != null ? DateTime.parse(data['paidAt']) : null,
+          );
+        }
+      }
+      throw Exception('Ошибка проверки статуса через бэкенд');
+    } catch (e) {
+      throw Exception('Ошибка подключения при проверке статуса');
+    }
+  }
+
+  /// Проверка статуса напрямую (для мобильных)
+  Future<PaymentStatus> _checkPaymentStatusDirectly(String paymentId) async {
     try {
       final basicAuth = base64Encode(utf8.encode('$_shopId:$_secretKey'));
 
       final response = await http.get(
-        Uri.parse('$_baseUrl/payments/$paymentId'),
+        Uri.parse('$_yooKassaBaseUrl/payments/$paymentId'),
         headers: {
           'Authorization': 'Basic $basicAuth',
           'Content-Type': 'application/json',
