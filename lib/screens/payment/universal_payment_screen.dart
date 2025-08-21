@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 import 'payment_service.dart';
 import 'payment_success_screen.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 
 class UniversalPaymentScreen extends StatefulWidget {
   final String paymentUrl;
@@ -93,7 +95,14 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
     });
 
     try {
-      final status = await _paymentService.checkPaymentStatus(widget.paymentId);
+      // ПОЛУЧАЕМ ТОКЕН ИЗ AuthProvider:
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = authProvider.token;
+
+      final status = await _paymentService.checkPaymentStatus(
+        widget.paymentId,
+        token: token, // ПЕРЕДАЕМ ТОКЕН
+      );
 
       if (!mounted) return;
 

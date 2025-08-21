@@ -24,6 +24,9 @@ class AuthProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get lastError => _lastError;
 
+  /// Получить текущий токен авторизации
+  String? get token => _apiService.getToken();
+
   // Ключи для SharedPreferences
   static const String _authTokenKey = 'auth_token';
   static const String _userDataKey = 'user_data';

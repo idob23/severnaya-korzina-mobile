@@ -43,6 +43,10 @@ class ApiService {
     }
   }
 
+  String? getToken() {
+    return _authToken;
+  }
+
   /// Универсальный метод для выполнения HTTP запросов
   Future<Map<String, dynamic>> _makeRequest(
     String method,
