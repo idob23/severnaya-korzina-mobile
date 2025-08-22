@@ -274,10 +274,10 @@ class OrdersProvider with ChangeNotifier {
   }
 
   /// Получает активные заказы
+  // Обновленные геттеры для OrdersProvider (заменить соответствующие методы)
   List<Order> get activeOrders {
     return _orders
-        .where((order) =>
-            ['pending', 'confirmed', 'paid', 'shipped'].contains(order.status))
+        .where((order) => ['pending', 'paid', 'shipped'].contains(order.status))
         .toList();
   }
 
@@ -291,11 +291,12 @@ class OrdersProvider with ChangeNotifier {
     return _orders.where((order) => order.status == 'cancelled').toList();
   }
 
-  /// Получает статистику заказов
+  // Обновленная статистика заказов (заменить в OrdersProvider)
   Map<String, dynamic> getOrdersStats() {
     final total = _orders.length;
     final pending = _orders.where((o) => o.status == 'pending').length;
-    final confirmed = _orders.where((o) => o.status == 'confirmed').length;
+    final paid = _orders.where((o) => o.status == 'paid').length;
+    final shipped = _orders.where((o) => o.status == 'shipped').length;
     final delivered = _orders.where((o) => o.status == 'delivered').length;
     final cancelled = _orders.where((o) => o.status == 'cancelled').length;
 
@@ -314,7 +315,8 @@ class OrdersProvider with ChangeNotifier {
     return {
       'total': total,
       'pending': pending,
-      'confirmed': confirmed,
+      'paid': paid,
+      'shipped': shipped,
       'delivered': delivered,
       'cancelled': cancelled,
       'total_revenue': totalRevenue,

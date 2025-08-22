@@ -1,4 +1,5 @@
-// lib/models/order.dart - ПОЛНАЯ МОДЕЛЬ БЕЗ КОНФЛИКТОВ
+// lib/models/order.dart - ОБНОВЛЕННАЯ ВЕРСИЯ С ПРАВИЛЬНЫМИ СТАТУСАМИ
+import '../constants/order_status.dart';
 
 /// Модель заказа для API
 class Order {
@@ -90,44 +91,14 @@ class Order {
     return orderItems!.fold(0, (sum, item) => sum + item.quantity);
   }
 
-  /// Статус на русском
+  /// Статус на русском - ИСПОЛЬЗУЕТ КОНСТАНТЫ
   String get statusText {
-    switch (status) {
-      case 'pending':
-        return 'Ожидает';
-      case 'confirmed':
-        return 'Подтвержден';
-      case 'paid':
-        return 'Оплачен';
-      case 'shipped':
-        return 'Отправлен';
-      case 'delivered':
-        return 'Доставлен';
-      case 'cancelled':
-        return 'Отменен';
-      default:
-        return status;
-    }
+    return statusTexts[status] ?? status;
   }
 
-  /// Цвет статуса
+  /// Цвет статуса - ИСПОЛЬЗУЕТ КОНСТАНТЫ
   String get statusColor {
-    switch (status) {
-      case 'pending':
-        return 'orange';
-      case 'confirmed':
-        return 'blue';
-      case 'paid':
-        return 'green';
-      case 'shipped':
-        return 'purple';
-      case 'delivered':
-        return 'green';
-      case 'cancelled':
-        return 'red';
-      default:
-        return 'grey';
-    }
+    return statusColors[status] ?? 'grey';
   }
 
   @override

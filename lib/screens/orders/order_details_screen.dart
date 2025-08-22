@@ -1,6 +1,7 @@
-// lib/screens/orders/order_details_screen.dart
+// lib/screens/orders/order_details_screen.dart - ОБНОВЛЕННАЯ ВЕРСИЯ
 import 'package:flutter/material.dart';
 import '../../models/order.dart';
+import '../../constants/order_status.dart';
 
 class OrderDetailsScreen extends StatelessWidget {
   final Order order;
@@ -126,35 +127,20 @@ class OrderDetailsScreen extends StatelessWidget {
   }
 
   Widget _buildProgressIndicator() {
+    // ИСПРАВЛЕННЫЙ порядок статусов согласно константам
     final statuses = [
-      {'name': 'Создан', 'status': 'pending', 'completed': true},
-      {
-        'name': 'Оплачен',
-        'status': 'paid',
-        'completed': _isStatusCompleted('paid')
-      },
-      {
-        'name': 'Подтвержден',
-        'status': 'confirmed',
-        'completed': _isStatusCompleted('confirmed')
-      },
-      {
-        'name': 'Отправлен',
-        'status': 'shipped',
-        'completed': _isStatusCompleted('shipped')
-      },
-      {
-        'name': 'Доставлен',
-        'status': 'delivered',
-        'completed': _isStatusCompleted('delivered')
-      },
+      {'name': 'Ожидает оплаты', 'status': 'pending'},
+      {'name': 'Оплачен', 'status': 'paid'},
+      {'name': 'Отправлен', 'status': 'shipped'},
+      {'name': 'Доставлен', 'status': 'delivered'},
     ];
 
     return Column(
       children: statuses
           .map((status) => _buildProgressStep(
                 status['name'] as String,
-                status['completed'] as bool,
+                OrderStatusUtils.isStatusCompleted(
+                    order.status, status['status'] as String),
                 statuses.indexOf(status) == statuses.length - 1,
               ))
           .toList(),
@@ -202,6 +188,30 @@ class OrderDetailsScreen extends StatelessWidget {
   }
 
   Widget _buildStatusSpecificInfo() {
+    // Отмененные заказы показываем отдельно
+    if (order.status == 'cancelled') {
+      return Container(
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red[50],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.red[200]!),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.cancel, color: Colors.red[700]),
+            SizedBox(width: 8),
+            Text(
+              'Заказ отменен',
+              style: TextStyle(
+                  color: Colors.red[700], fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Для остальных статусов
     switch (order.status) {
       case 'pending':
         return Container(
@@ -216,7 +226,7 @@ class OrderDetailsScreen extends StatelessWidget {
               Icon(Icons.hourglass_empty, color: Colors.orange[700]),
               SizedBox(width: 8),
               Text(
-                'Ожидает обработки',
+                'Ожидает оплаты',
                 style: TextStyle(
                     color: Colors.orange[700], fontWeight: FontWeight.bold),
               ),
@@ -293,6 +303,15 @@ class OrderDetailsScreen extends StatelessWidget {
   }
 
   Widget _buildItemsList() {
+    if (order.orderItems == null || order.orderItems!.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('Товары не найдены'),
+        ),
+      );
+    }
+
     return Card(
       child: Padding(
         padding: EdgeInsets.all(16),
@@ -307,10 +326,7 @@ class OrderDetailsScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 16),
-            if (order.orderItems != null && order.orderItems!.isNotEmpty)
-              ...order.orderItems!.map((item) => _buildOrderItem(item)).toList()
-            else
-              Text('Информация о товарах недоступна'),
+            ...order.orderItems!.map((item) => _buildOrderItem(item)).toList(),
           ],
         ),
       ),
@@ -319,8 +335,9 @@ class OrderDetailsScreen extends StatelessWidget {
 
   Widget _buildOrderItem(OrderItem item) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.only(bottom: 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: Column(
@@ -328,8 +345,9 @@ class OrderDetailsScreen extends StatelessWidget {
               children: [
                 Text(
                   item.productName,
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
+                SizedBox(height: 4),
                 Text(
                   '${item.quantity} ${item.unit} × ${item.price.toStringAsFixed(0)} ₽',
                   style: TextStyle(color: Colors.grey[600]),
@@ -338,7 +356,7 @@ class OrderDetailsScreen extends StatelessWidget {
             ),
           ),
           Text(
-            '${item.totalPrice.toStringAsFixed(0)} ₽',
+            item.formattedTotalPrice,
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
@@ -393,29 +411,26 @@ class OrderDetailsScreen extends StatelessWidget {
   }
 
   Color _getStatusColor() {
-    switch (order.status) {
-      case 'pending':
+    // ИСПОЛЬЗУЕТ КОНСТАНТЫ
+    switch (order.statusColor) {
+      case 'orange':
         return Colors.orange;
-      case 'confirmed':
-        return Colors.blue;
-      case 'paid':
+      case 'green':
         return Colors.green;
-      case 'shipped':
-        return Colors.purple;
-      case 'delivered':
-        return Colors.green.shade700;
-      case 'cancelled':
+      case 'blue':
+        return Colors.blue;
+      case 'red':
         return Colors.red;
       default:
         return Colors.grey;
     }
   }
 
+  // ТАКЖЕ ЗАМЕНИТЬ метод _isStatusCompleted():
   bool _isStatusCompleted(String statusToCheck) {
     final statusOrder = [
       'pending',
-      'paid',
-      'confirmed',
+      'paid', // УБРАЛИ 'confirmed'
       'shipped',
       'delivered'
     ];

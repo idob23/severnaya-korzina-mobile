@@ -5,6 +5,7 @@ import 'package:severnaya_korzina/screens/payment/payment_screen.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/user.dart'; // ДОБАВЛЕНО: импорт User
+import '../../services/api_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
   @override
@@ -12,7 +13,11 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  String _selectedAddress = 'Пункт выдачи: ул. Ленина, 15';
+  // ДОБАВИТЬ эти переменные:
+  UserAddress? _selectedAddress;
+  List<UserAddress> _addresses = [];
+  bool _isLoadingAddresses = true;
+  final ApiService _apiService = ApiService();
   String _selectedDeliveryTime = 'В любое время';
   String _notes = '';
   bool _isProcessing = false;
@@ -23,6 +28,44 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void dispose() {
     _notesController.dispose();
     super.dispose();
+  }
+
+  // 3. ДОБАВИТЬ initState (если его нет):
+  @override
+  void initState() {
+    super.initState();
+    _loadAddresses();
+  }
+
+  // 4. ДОБАВИТЬ этот метод:
+  Future<void> _loadAddresses() async {
+    try {
+      final result = await _apiService.getAddresses();
+
+      if (result['success'] && mounted) {
+        final addressesList = result['addresses'] as List;
+        setState(() {
+          _addresses =
+              addressesList.map((json) => UserAddress.fromJson(json)).toList();
+
+          // Ищем дефолтный адрес
+          try {
+            _selectedAddress = _addresses.firstWhere((addr) => addr.isDefault);
+          } catch (e) {
+            // Если нет дефолтного, берем первый или null
+            _selectedAddress = _addresses.isNotEmpty ? _addresses.first : null;
+          }
+
+          _isLoadingAddresses = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingAddresses = false;
+        });
+      }
+    }
   }
 
   @override
@@ -136,6 +179,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
+  // 5. ЗАМЕНИТЬ метод _buildDeliverySection():
   Widget _buildDeliverySection() {
     return Card(
       child: Padding(
@@ -148,41 +192,53 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.blue[50],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.location_on, color: Colors.blue, size: 20),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _selectedAddress,
-                          style: TextStyle(fontWeight: FontWeight.w500),
+            if (_isLoadingAddresses)
+              Center(child: CircularProgressIndicator())
+            else if (_addresses.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey[50],
+                ),
+                child: Text('Адрес не настроен'),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.blue[50],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.location_on, color: Colors.blue, size: 20),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _selectedAddress?.title ?? 'Адрес не выбран',
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
                         ),
+                      ],
+                    ),
+                    if (_selectedAddress != null) ...[
+                      SizedBox(height: 4),
+                      Text(
+                        _selectedAddress!.address,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  // Text(
-                  //   'Режим работы: Пн-Пт 9:00-19:00, Сб 10:00-16:00',
-                  //   style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  // ),
-                  // Text(
-                  //   'Телефон: +7 (914) 123-45-67',
-                  //   style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  // ),
-                ],
+                    ]
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -440,11 +496,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       // Подготавливаем данные заказа
       final orderData = {
         'items': cartProvider.getOrderItems(),
-        'address': _selectedAddress,
+        'addressId': _selectedAddress?.id ?? 1, // ДОБАВЛЕНО
+        'address':
+            _selectedAddress?.toString() ?? 'Адрес не выбран', // ИЗМЕНЕНО
         'deliveryTime': _selectedDeliveryTime,
         'notes': _notes.isNotEmpty ? _notes : null,
         'totalAmount': cartProvider.totalAmount,
-        'prepaymentAmount': cartProvider.totalAmount * 0.9,
+        'prepaymentAmount': cartProvider.totalAmount,
       };
       // cartProvider.debugOrderData();
       // print('Order data being sent: $orderData');
