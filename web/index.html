@@ -1,24 +1,26 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
   <base href="$FLUTTER_BASE_HREF">
-  
+
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  
+
   <!-- SEO мета-теги -->
-  <meta name="description" content="Северная Корзина - коллективные закупки для жителей поселка. Заказывайте продукты онлайн с доставкой.">
+  <meta name="description"
+    content="Северная Корзина - коллективные закупки для жителей поселка. Заказывайте продукты онлайн с доставкой.">
   <meta name="keywords" content="коллективные закупки, продукты, доставка, поселок, северная корзина">
   <meta name="author" content="Северная Корзина">
-  
+
   <!-- Open Graph для социальных сетей -->
   <meta property="og:title" content="Северная Корзина - Коллективные закупки">
   <meta property="og:description" content="Заказывайте продукты онлайн с доставкой в ваш поселок">
   <meta property="og:image" content="https://sevkorzina.ru/icons/og-image.png">
   <meta property="og:url" content="https://sevkorzina.ru">
   <meta property="og:type" content="website">
-  
+
   <!-- PWA мета-теги -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -27,36 +29,42 @@
   <meta name="application-name" content="Северная Корзина">
   <meta name="msapplication-TileColor" content="#000000">
   <meta name="msapplication-TileImage" content="icons/ms-icon-144x144.png">
-  
+
   <!-- Цвета темы -->
   <meta name="theme-color" content="#DC2626" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#DC2626" media="(prefers-color-scheme: dark)">
-  
+
   <title>Северная Корзина - Коллективные закупки</title>
-  
+
   <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
-  
+
   <!-- Иконки для разных устройств -->
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
   <link rel="shortcut icon" href="favicon.ico">
-  
+
   <!-- Apple Touch иконки -->
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
   <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152x152.png">
   <link rel="apple-touch-icon" sizes="144x144" href="icons/icon-144x144.png">
   <link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120x120.png">
   <link rel="apple-touch-icon" sizes="76x76" href="icons/icon-76x76.png">
-  
+
   <!-- iOS Splash Screens -->
-  <link rel="apple-touch-startup-image" href="splash/iphone5_splash.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash/iphone6_splash.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash/iphoneplus_splash.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash/iphonex_splash.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash/iphonexr_splash.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash/iphonexsmax_splash.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-  
+  <link rel="apple-touch-startup-image" href="splash/iphone5_splash.png"
+    media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/iphone6_splash.png"
+    media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/iphoneplus_splash.png"
+    media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/iphonex_splash.png"
+    media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/iphonexr_splash.png"
+    media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/iphonexsmax_splash.png"
+    media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+
   <style>
     /* Экран загрузки с красно-черным стилем */
     body {
@@ -65,7 +73,7 @@
       background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
       overflow: hidden;
     }
-    
+
     .loading-container {
       position: fixed;
       top: 0;
@@ -79,7 +87,7 @@
       background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
       z-index: 9999;
     }
-    
+
     .loading-logo {
       width: 120px;
       height: 120px;
@@ -92,13 +100,13 @@
       box-shadow: 0 8px 32px rgba(220, 38, 38, 0.3);
       animation: pulse 2s infinite;
     }
-    
+
     .loading-logo svg {
       width: 60px;
       height: 60px;
       fill: white;
     }
-    
+
     .loading-text {
       color: #DC2626;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -107,7 +115,7 @@
       margin-bottom: 10px;
       text-align: center;
     }
-    
+
     .loading-subtitle {
       color: #666;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -115,7 +123,7 @@
       text-align: center;
       margin-bottom: 30px;
     }
-    
+
     .loading-spinner {
       width: 40px;
       height: 40px;
@@ -124,42 +132,56 @@
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
-    
+
     @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
     }
-    
+
     @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
     }
-    
+
     /* Скрыть после загрузки */
     .loaded .loading-container {
       opacity: 0;
       visibility: hidden;
       transition: opacity 0.5s ease, visibility 0.5s ease;
     }
-    
+
     /* Основной контейнер приложения */
     #app {
       opacity: 0;
       transition: opacity 0.5s ease;
     }
-    
+
     .loaded #app {
       opacity: 1;
     }
   </style>
 </head>
+
 <body>
   <!-- Экран загрузки -->
   <div class="loading-container" id="loading">
     <div class="loading-logo">
       <!-- SVG иконка корзины -->
       <svg viewBox="0 0 24 24">
-        <path d="M7 4V2C7 1.45 7.45 1 8 1H16C16.55 1 17 1.45 17 2V4H20C20.55 4 21 4.45 21 5S20.55 6 20 6H19V19C19 20.1 18.1 21 17 21H7C5.9 21 5 20.1 5 19V6H4C3.45 6 3 5.55 3 5S3.45 4 4 4H7ZM9 3V4H15V3H9ZM7 6V19H17V6H7Z"/>
+        <path
+          d="M7 4V2C7 1.45 7.45 1 8 1H16C16.55 1 17 1.45 17 2V4H20C20.55 4 21 4.45 21 5S20.55 6 20 6H19V19C19 20.1 18.1 21 17 21H7C5.9 21 5 20.1 5 19V6H4C3.45 6 3 5.55 3 5S3.45 4 4 4H7ZM9 3V4H15V3H9ZM7 6V19H17V6H7Z" />
       </svg>
     </div>
     <div class="loading-text">Северная Корзина</div>
@@ -173,12 +195,12 @@
   <script>
     // Регистрация Service Worker для PWA
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
+      window.addEventListener('load', function () {
         navigator.serviceWorker.register('/flutter_service_worker.js')
-          .then(function(registration) {
+          .then(function (registration) {
             console.log('✅ Service Worker зарегистрирован:', registration.scope);
           })
-          .catch(function(error) {
+          .catch(function (error) {
             console.log('❌ Ошибка регистрации Service Worker:', error);
           });
       });
@@ -192,7 +214,7 @@
       console.log('💾 PWA готово к установке');
       e.preventDefault();
       deferredPrompt = e;
-      
+
       // Показать кнопку установки
       showInstallPrompt();
     });
@@ -243,7 +265,7 @@
     }
 
     // Скрыть экран загрузки после инициализации Flutter
-    window.addEventListener('flutter-first-frame', function() {
+    window.addEventListener('flutter-first-frame', function () {
       setTimeout(() => {
         document.body.classList.add('loaded');
         setTimeout(() => {
@@ -267,5 +289,50 @@
 
   <!-- Flutter Bootstrap -->
   <script src="flutter_bootstrap.js" async></script>
+  
+  <script>
+    // Функции для работы с уведомлениями
+    window.checkNotificationSupport = function () {
+      return 'Notification' in window;
+    };
+
+    window.requestPermissionJS = async function () {
+      if (!('Notification' in window)) {
+        return 'denied';
+      }
+
+      if (Notification.permission === 'default') {
+        return await Notification.requestPermission();
+      }
+
+      return Notification.permission;
+    };
+
+    window.showNotificationJS = function (title, body, icon, url) {
+      if (Notification.permission !== 'granted') {
+        return;
+      }
+
+      const notification = new Notification(title, {
+        body: body,
+        icon: icon,
+        tag: 'sevkorzina-order-update'
+      });
+
+      notification.onclick = function () {
+        window.focus();
+        notification.close();
+        if (url) {
+          window.location.href = url;
+        }
+      };
+
+      // Автоматически закрываем через 5 секунд
+      setTimeout(function () {
+        notification.close();
+      }, 5000);
+    };
+  </script>
 </body>
+
 </html>

@@ -208,6 +208,7 @@ class CartProvider with ChangeNotifier {
               'productId': item.productId,
               'quantity': item.quantity,
               'price': item.price,
+              'name': item.name, // для удобства отображения
             })
         .toList();
   }
@@ -242,4 +243,17 @@ class CartProvider with ChangeNotifier {
   void forceUpdate() {
     notifyListeners();
   }
+
+  // /// Отладочная информация для проверки данных заказа
+  // void debugOrderData() {
+  //   print('=== DEBUG ORDER DATA ===');
+  //   print('Total items: ${totalItems}');
+  //   print('Total amount: ${totalAmount}');
+  //   print('Order items:');
+  //   getOrderItems().forEach((item) {
+  //     print(
+  //         '  - ${item['name']}: ${item['quantity']} x ${item['price']} = ${item['quantity'] * item['price']}');
+  //   });
+  //   print('========================');
+  // }
 }

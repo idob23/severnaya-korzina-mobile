@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/orders_provider.dart';
 import '../../models/order.dart';
 import '../auth/auth_choice_screen.dart';
+import 'order_details_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   @override
@@ -298,78 +299,89 @@ class _OrdersScreenState extends State<OrdersScreen>
   }
 
   Widget _buildOrderCard(Order order) {
-    return Card(
-      margin: EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Заказ #${order.id}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(order.status),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    order.statusText,
+    return GestureDetector(
+      onTap: () {
+        // Переход к деталям заказа
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OrderDetailsScreen(order: order),
+          ),
+        );
+      },
+      child: Card(
+        margin: EdgeInsets.only(bottom: 16),
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Заказ #${order.id}',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Сумма: ${order.formattedAmount}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(order.status),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      order.statusText,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            SizedBox(height: 4),
-            Text(
-              'Дата: ${_formatDate(order.createdAt)}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-            if (order.address != null) ...[
-              SizedBox(height: 4),
-              Text(
-                'Адрес: ${order.address!['address']}',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-            if (order.notes != null && order.notes!.isNotEmpty) ...[
               SizedBox(height: 8),
               Text(
-                'Комментарий: ${order.notes}',
+                'Сумма: ${order.formattedAmount}',
                 style: TextStyle(
                   fontSize: 14,
-                  fontStyle: FontStyle.italic,
                   color: Colors.grey[600],
                 ),
               ),
+              SizedBox(height: 4),
+              Text(
+                'Дата: ${_formatDate(order.createdAt)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+              if (order.address != null) ...[
+                SizedBox(height: 4),
+                Text(
+                  'Адрес: ${order.address!['address']}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+              if (order.notes != null && order.notes!.isNotEmpty) ...[
+                SizedBox(height: 8),
+                Text(
+                  'Комментарий: ${order.notes}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

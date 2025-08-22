@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../models/order.dart';
+import '../services/notification_service.dart';
 
 /// Провайдер для управления заказами
 class OrdersProvider with ChangeNotifier {
@@ -70,6 +71,16 @@ class OrdersProvider with ChangeNotifier {
     int limit = 20,
     bool silent = false,
   }) async {
+    print('ТЕСТ: Создаем NotificationService');
+    final testService = NotificationService();
+    testService.showLocalNotification(
+      title: 'ТЕСТ loadOrders',
+      body: 'Проверка уведомлений',
+    );
+
+    print(
+        '🔔 TEST: loadOrders вызван, silent=$silent, текущих заказов=${_orders.length}');
+
     if (!silent) {
       _isLoading = true;
       _error = null;
@@ -96,7 +107,20 @@ class OrdersProvider with ChangeNotifier {
 
       if (result['success'] == true) {
         final ordersList = result['orders'] as List? ?? [];
-        _orders = ordersList.map((json) => Order.fromJson(json)).toList();
+        final newOrders =
+            ordersList.map((json) => Order.fromJson(json)).toList();
+        print(
+            '🔔 TEST: Проверяем изменения - старых заказов: ${_orders.length}, новых: ${newOrders.length}');
+
+        if (!silent && _orders.isNotEmpty) {
+          print('🔔 TEST: Вызываем _checkForStatusChanges');
+          _checkForStatusChanges(newOrders);
+        } else {
+          print(
+              '🔔 TEST: НЕ вызываем _checkForStatusChanges - silent=$silent, orders.isEmpty=${_orders.isEmpty}');
+        }
+
+        _orders = newOrders;
 
         if (kDebugMode) {
           print('✅ OrdersProvider: Загружено ${_orders.length} заказов');
@@ -116,6 +140,42 @@ class OrdersProvider with ChangeNotifier {
       if (!silent) {
         _isLoading = false;
         notifyListeners();
+      }
+    }
+  }
+
+  void _checkForStatusChanges(List<Order> newOrders) {
+    print(
+        '🔔 TEST: _checkForStatusChanges вызван, сравниваем ${newOrders.length} новых заказов с ${_orders.length} старыми');
+
+    final notificationService = NotificationService();
+
+    // Сравниваем со старым списком заказов
+    for (final newOrder in newOrders) {
+      final oldOrder = _orders.where((o) => o.id == newOrder.id).firstOrNull;
+
+      print(
+          '🔔 TEST: Заказ #${newOrder.id} - oldOrder: ${oldOrder != null ? "найден" : "НЕ найден"}, статус: ${newOrder.status}');
+
+      // Если заказ новый или статус изменился
+      if (oldOrder == null) {
+        print('🔔 TEST: Новый заказ #${newOrder.id}!');
+        // Новый заказ - показываем уведомление
+        notificationService.showLocalNotification(
+          title: '🎯 Новый заказ #${newOrder.id}',
+          body: 'Заказ создан на сумму ${newOrder.formattedAmount}',
+        );
+      } else if (oldOrder.status != newOrder.status) {
+        print(
+            '🔔 TEST: Статус заказа #${newOrder.id} изменился: ${oldOrder.status} → ${newOrder.status}');
+        // Статус изменился - показываем уведомление
+        notificationService.showOrderStatusNotification(
+          orderId: newOrder.id,
+          oldStatus: oldOrder.status,
+          newStatus: newOrder.status,
+        );
+      } else {
+        print('🔔 TEST: Заказ #${newOrder.id} без изменений');
       }
     }
   }
@@ -142,6 +202,26 @@ class OrdersProvider with ChangeNotifier {
       if (result['success']) {
         // Добавляем новый заказ в список
         final newOrder = Order.fromJson(result['order']);
+
+        // ПРОСТЕЙШИЙ ТЕСТ
+        print(
+            '🔔 ТЕСТ: Пытаемся показать уведомление для заказа ${newOrder.id}');
+        final notificationService = NotificationService();
+        print('🔔 ТЕСТ: NotificationService создан');
+
+        notificationService.showLocalNotification(
+          title: 'Новый заказ #${newOrder.id}',
+          body: 'Заказ создан на сумму ${newOrder.formattedAmount}',
+        );
+
+        print('🔔 ТЕСТ: showLocalNotification вызван');
+        // // ТЕСТ: показываем уведомление напрямую
+        // final notificationService = NotificationService();
+        // notificationService.showLocalNotification(
+        //   title: 'Новый заказ #${newOrder.id}',
+        //   body: 'Заказ создан на сумму ${newOrder.formattedAmount}',
+        // );
+
         _orders.insert(0, newOrder);
 
         if (kDebugMode) {

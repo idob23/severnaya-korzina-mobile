@@ -1,10 +1,10 @@
 // lib/screens/checkout/checkout_screen.dart - ИСПРАВЛЕННАЯ ВЕРСИЯ
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:severnaya_korzina/screens/payment/payment_screen.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/user.dart'; // ДОБАВЛЕНО: импорт User
-import '../payment/payment_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   @override
@@ -446,6 +446,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'totalAmount': cartProvider.totalAmount,
         'prepaymentAmount': cartProvider.totalAmount * 0.9,
       };
+      // cartProvider.debugOrderData();
+      // print('Order data being sent: $orderData');
+      // print('Order data: ${orderData['items']}');
 
       // Переходим к оплате
       Navigator.push(
