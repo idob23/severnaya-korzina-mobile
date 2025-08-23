@@ -47,10 +47,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
   }
 
   Future<void> _createOrderInSystem() async {
-    // print('PaymentSuccessScreen: orderData = ${widget.orderData}');
-    // if (widget.orderData != null) {
-    //   print('PaymentSuccessScreen: items = ${widget.orderData!['items']}');
-    // }
+    
     if (widget.orderData == null) {
       setState(() {
         _status = 'Заказ создан автоматически';
@@ -82,9 +79,6 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
       }
       _isCreatingOrder = false;
     });
-
-    // Обновляем список заказов
-    await ordersProvider.loadOrders();
   }
 
   @override

@@ -44,10 +44,10 @@ class MyApp extends StatelessWidget {
         ),
         home: AppInitializer(),
         debugShowCheckedModeBanner: false,
-        // ДОБАВЬТЕ ЭТО:
-        routes: {
-          '/payment-success': (context) => PaymentSuccessScreen(),
-        },
+        // // ДОБАВЬТЕ ЭТО:
+        // routes: {
+        //   '/payment-success': (context) => PaymentSuccessScreen(),
+        // },
       ),
     );
   }
