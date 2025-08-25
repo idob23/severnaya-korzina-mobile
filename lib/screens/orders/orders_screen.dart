@@ -122,6 +122,7 @@ class _OrdersScreenState extends State<OrdersScreen>
   Widget _buildActiveOrders() {
     return Consumer<OrdersProvider>(
       builder: (context, ordersProvider, child) {
+        //
         if (ordersProvider.isLoading) {
           return Center(
             child: Column(

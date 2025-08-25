@@ -14,9 +14,7 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   // ДОБАВИТЬ эти переменные:
-  UserAddress? _selectedAddress;
-  List<UserAddress> _addresses = [];
-  bool _isLoadingAddresses = true;
+
   final ApiService _apiService = ApiService();
   String _selectedDeliveryTime = 'В любое время';
   String _notes = '';
@@ -34,38 +32,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   void initState() {
     super.initState();
-    _loadAddresses();
-  }
-
-  // 4. ДОБАВИТЬ этот метод:
-  Future<void> _loadAddresses() async {
-    try {
-      final result = await _apiService.getAddresses();
-
-      if (result['success'] && mounted) {
-        final addressesList = result['addresses'] as List;
-        setState(() {
-          _addresses =
-              addressesList.map((json) => UserAddress.fromJson(json)).toList();
-
-          // Ищем дефолтный адрес
-          try {
-            _selectedAddress = _addresses.firstWhere((addr) => addr.isDefault);
-          } catch (e) {
-            // Если нет дефолтного, берем первый или null
-            _selectedAddress = _addresses.isNotEmpty ? _addresses.first : null;
-          }
-
-          _isLoadingAddresses = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingAddresses = false;
-        });
-      }
-    }
   }
 
   @override
@@ -73,7 +39,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Оформление заказа'),
-        backgroundColor: Colors.blue,
+        backgroundColor: Color(0xFFDC2626),
         foregroundColor: Colors.white,
       ),
       body: Consumer2<CartProvider, AuthProvider>(
@@ -107,26 +73,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     children: [
                       // Информация о пользователе - ИСПРАВЛЕНО
                       _buildUserInfo(authProvider.currentUser),
-
-                      SizedBox(height: 20),
-
-                      // Адрес доставки
-                      _buildDeliverySection(),
-
-                      SizedBox(height: 20),
-
-                      // Время получения
-                      // _buildTimeSection(),
-
                       SizedBox(height: 20),
 
                       // Товары в заказе
                       _buildOrderItems(cartProvider.itemsList),
-
-                      SizedBox(height: 20),
-
-                      // Комментарий к заказу
-                      // _buildNotesSection(),
 
                       SizedBox(height: 20),
 
@@ -160,7 +110,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.person, color: Colors.blue, size: 20),
+                Icon(Icons.person, color: Color(0xFFDC2626), size: 20),
                 SizedBox(width: 8),
                 Text(user?.name ?? 'Пользователь'),
               ],
@@ -168,7 +118,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.phone, color: Colors.blue, size: 20),
+                Icon(Icons.phone, color: Color(0xFFDC2626), size: 20),
                 SizedBox(width: 8),
                 Text(user?.phone ?? 'Не указан'),
               ],
@@ -178,114 +128,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
     );
   }
-
-  // 5. ЗАМЕНИТЬ метод _buildDeliverySection():
-  Widget _buildDeliverySection() {
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Адрес получения',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 12),
-            if (_isLoadingAddresses)
-              Center(child: CircularProgressIndicator())
-            else if (_addresses.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey[50],
-                ),
-                child: Text('Адрес не настроен'),
-              )
-            else
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.blue[50],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.location_on, color: Colors.blue, size: 20),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _selectedAddress?.title ?? 'Адрес не выбран',
-                            style: TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (_selectedAddress != null) ...[
-                      SizedBox(height: 4),
-                      Text(
-                        _selectedAddress!.address,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                      ),
-                    ]
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Widget _buildTimeSection() {
-  //   return Card(
-  //     child: Padding(
-  //       padding: EdgeInsets.all(16),
-  //       child: Column(
-  //         crossAxisAlignment: CrossAxisAlignment.start,
-  //         children: [
-  //           Text(
-  //             'Время получения',
-  //             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-  //           ),
-  //           SizedBox(height: 12),
-  //           DropdownButtonFormField<String>(
-  //             value: _selectedDeliveryTime,
-  //             decoration: InputDecoration(
-  //               border: OutlineInputBorder(),
-  //               prefixIcon: Icon(Icons.schedule),
-  //             ),
-  //             items: [
-  //               'В любое время',
-  //               '9:00 - 12:00',
-  //               '12:00 - 15:00',
-  //               '15:00 - 18:00',
-  //               '18:00 - 19:00',
-  //             ]
-  //                 .map((time) => DropdownMenuItem(
-  //                       value: time,
-  //                       child: Text(time),
-  //                     ))
-  //                 .toList(),
-  //             onChanged: (value) {
-  //               setState(() {
-  //                 _selectedDeliveryTime = value!;
-  //               });
-  //             },
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
 
   Widget _buildOrderItems(List<CartItem> items) {
     return Card(
@@ -342,40 +184,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  // Widget _buildNotesSection() {
-  //   return Card(
-  //     child: Padding(
-  //       padding: EdgeInsets.all(16),
-  //       child: Column(
-  //         crossAxisAlignment: CrossAxisAlignment.start,
-  //         children: [
-  //           Text(
-  //             'Комментарий к заказу',
-  //             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-  //           ),
-  //           SizedBox(height: 12),
-  //           TextField(
-  //             controller: _notesController,
-  //             maxLines: 3,
-  //             decoration: InputDecoration(
-  //               hintText: 'Укажите дополнительные пожелания...',
-  //               border: OutlineInputBorder(),
-  //             ),
-  //             onChanged: (value) {
-  //               _notes = value;
-  //             },
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
-
   Widget _buildOrderSummary(CartProvider cartProvider) {
     final totalAmount = cartProvider.totalAmount;
 
     return Card(
-      color: Colors.blue[50],
+      color: Color(0xFFDC2626),
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
@@ -496,17 +309,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       // Подготавливаем данные заказа
       final orderData = {
         'items': cartProvider.getOrderItems(),
-        'addressId': _selectedAddress?.id ?? 1, // ДОБАВЛЕНО
-        'address':
-            _selectedAddress?.toString() ?? 'Адрес не выбран', // ИЗМЕНЕНО
+        'addressId': 1,
         'deliveryTime': _selectedDeliveryTime,
         'notes': _notes.isNotEmpty ? _notes : null,
         'totalAmount': cartProvider.totalAmount,
         'prepaymentAmount': cartProvider.totalAmount,
       };
-      // cartProvider.debugOrderData();
-      // print('Order data being sent: $orderData');
-      // print('Order data: ${orderData['items']}');
 
       // Переходим к оплате
       Navigator.push(

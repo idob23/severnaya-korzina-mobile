@@ -187,6 +187,8 @@ class OrdersProvider with ChangeNotifier {
     required List<Map<String, dynamic>> items,
     String? notes,
   }) async {
+    print('🔔 OrdersProvider.createOrder вызван');
+    print('🔔 addressId: $addressId, items: ${items.length}');
     _isLoading = true;
     _error = null;
     notifyListeners();
