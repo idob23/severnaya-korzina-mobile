@@ -447,7 +447,8 @@ class PaymentService {
         },
         'confirmation': {
           'type': 'redirect',
-          'return_url': 'https://sevkorzina.ru/payment-success?status=success',
+          'return_url':
+              'https://sevkorzina.ru/payment-success.html?status=success',
         },
         'capture': true,
         'description': 'Оплата заказа $orderId в Северной корзине',

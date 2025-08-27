@@ -577,28 +577,28 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
 
                   SizedBox(height: 16),
-// Кнопка действия по центру
-                  Center(
-                    child: SizedBox(
-                      width:
-                          200, // Фиксированная ширина для центрированной кнопки
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          _showBatchDetails();
-                        },
-                        icon: Icon(Icons.info_outline, size: 18),
-                        label: Text('Подробнее'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: getProgressColor(),
-                          side: BorderSide(color: getProgressColor(), width: 2),
-                          padding: EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+// // Кнопка действия по центру
+//                   Center(
+//                     child: SizedBox(
+//                       width:
+//                           200, // Фиксированная ширина для центрированной кнопки
+//                       child: OutlinedButton.icon(
+//                         onPressed: () {
+//                           _showBatchDetails();
+//                         },
+//                         icon: Icon(Icons.info_outline, size: 18),
+//                         label: Text('Подробнее'),
+//                         style: OutlinedButton.styleFrom(
+//                           foregroundColor: getProgressColor(),
+//                           side: BorderSide(color: getProgressColor(), width: 2),
+//                           padding: EdgeInsets.symmetric(vertical: 14),
+//                           shape: RoundedRectangleBorder(
+//                             borderRadius: BorderRadius.circular(12),
+//                           ),
+//                         ),
+//                       ),
+//                     ),
+//                   ),
                 ],
               ),
             ),

@@ -39,7 +39,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Оформление заказа'),
-        backgroundColor: Color(0xFFDC2626),
+        backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
       body: Consumer2<CartProvider, AuthProvider>(
@@ -110,7 +110,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.person, color: Color(0xFFDC2626), size: 20),
+                Icon(Icons.person, color: Colors.blue, size: 20),
                 SizedBox(width: 8),
                 Text(user?.name ?? 'Пользователь'),
               ],
@@ -118,7 +118,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.phone, color: Color(0xFFDC2626), size: 20),
+                Icon(Icons.phone, color: Colors.blue, size: 20),
                 SizedBox(width: 8),
                 Text(user?.phone ?? 'Не указан'),
               ],
@@ -188,7 +188,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final totalAmount = cartProvider.totalAmount;
 
     return Card(
-      color: Color(0xFFDC2626),
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
@@ -196,7 +195,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           children: [
             Text(
               'Итого к оплате',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                // ИСПРАВЛЕНО: Используем стандартный цвет текста
+                color: Colors.black87,
+              ),
             ),
             SizedBox(height: 12),
             _buildSummaryRow('Товаров:', '${cartProvider.totalItems} шт.'),
@@ -222,6 +226,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             style: TextStyle(
               fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
               fontSize: isHighlighted ? 16 : 14,
+              color: Colors.black54,
             ),
           ),
           Text(
@@ -229,7 +234,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: isHighlighted ? 18 : 14,
-              color: isHighlighted ? Colors.green[700] : null,
+              color:
+                  label.contains('сумма') ? Colors.green[700] : Colors.black87,
             ),
           ),
         ],

@@ -159,23 +159,23 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
                 ),
               ),
               SizedBox(height: 16),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => OrdersScreen(),
-                    ),
-                  );
-                },
-                child: Text(
-                  'Посмотреть мои заказы',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.green[700],
-                  ),
-                ),
-              ),
+              // TextButton(
+              //   onPressed: () {
+              //     Navigator.push(
+              //       context,
+              //       MaterialPageRoute(
+              //         builder: (context) => OrdersScreen(),
+              //       ),
+              //     );
+              //   },
+              //   child: Text(
+              //     'Посмотреть мои заказы',
+              //     style: TextStyle(
+              //       fontSize: 16,
+              //       color: Colors.green[700],
+              //     ),
+              //   ),
+              // ),
             ],
           ),
         ),

@@ -47,7 +47,7 @@ class AuthChoiceScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'Экономьте до 70% на товарах первой необходимости',
+                  'Экономьте до 50% на товарах первой необходимости',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -95,43 +95,43 @@ class AuthChoiceScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 12),
 
-                Container(
-                  padding: EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue[200]!),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.local_shipping, color: Colors.blue, size: 28),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Доставка из Якутска',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue[800],
-                                fontSize: 14,
-                              ),
-                            ),
-                            Text(
-                              'Качественные товары',
-                              style: TextStyle(
-                                color: Colors.blue[700],
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 32),
+                // Container(
+                //   padding: EdgeInsets.all(14),
+                //   decoration: BoxDecoration(
+                //     color: Colors.blue[50],
+                //     borderRadius: BorderRadius.circular(12),
+                //     border: Border.all(color: Colors.blue[200]!),
+                //   ),
+                //   child: Row(
+                //     children: [
+                //       Icon(Icons.local_shipping, color: Colors.blue, size: 28),
+                //       SizedBox(width: 12),
+                //       Expanded(
+                //         child: Column(
+                //           crossAxisAlignment: CrossAxisAlignment.start,
+                //           children: [
+                //             Text(
+                //               'Доставка из Якутска и Магадана',
+                //               style: TextStyle(
+                //                 fontWeight: FontWeight.bold,
+                //                 color: Colors.blue[800],
+                //                 fontSize: 14,
+                //               ),
+                //             ),
+                //             Text(
+                //               'Качественные товары',
+                //               style: TextStyle(
+                //                 color: Colors.blue[700],
+                //                 fontSize: 13,
+                //               ),
+                //             ),
+                //           ],
+                //         ),
+                //       ),
+                //     ],
+                //   ),
+                // ),
+                // SizedBox(height: 32),
 
                 // Кнопки входа и регистрации
                 SizedBox(

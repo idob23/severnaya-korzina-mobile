@@ -37,48 +37,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
         title: Text('Каталог товаров'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
-        // actions: [
-        //   Consumer<CartProvider>(
-        //     builder: (context, cartProvider, child) {
-        //       final itemsCount = cartProvider.totalItems;
-        //       return Stack(
-        //         children: [
-        //           IconButton(
-        //             icon: Icon(Icons.shopping_cart),
-        //             onPressed: () {
-        //               // Переходим на вкладку корзины
-        //               DefaultTabController.of(context)?.animateTo(1);
-        //             },
-        //           ),
-        //           if (itemsCount > 0)
-        //             Positioned(
-        //               right: 8,
-        //               top: 8,
-        //               child: Container(
-        //                 padding: EdgeInsets.all(2),
-        //                 decoration: BoxDecoration(
-        //                   color: Colors.red,
-        //                   borderRadius: BorderRadius.circular(10),
-        //                 ),
-        //                 constraints: BoxConstraints(
-        //                   minWidth: 16,
-        //                   minHeight: 16,
-        //                 ),
-        //                 child: Text(
-        //                   '$itemsCount',
-        //                   style: TextStyle(
-        //                     color: Colors.white,
-        //                     fontSize: 12,
-        //                   ),
-        //                   textAlign: TextAlign.center,
-        //                 ),
-        //               ),
-        //             ),
-        //         ],
-        //       );
-        //     },
-        //   ),
-        // ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -110,7 +68,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    '🚚 Экономия до 70% от розничных цен!',
+                    '🚚 Экономия до 50% от розничных цен!',
                     style: TextStyle(
                       color: Colors.green[700],
                       fontWeight: FontWeight.w500,
