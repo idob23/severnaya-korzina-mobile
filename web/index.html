@@ -1,338 +1,81 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
-  <base href="$FLUTTER_BASE_HREF">
-
+  <base href="/">
   <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-  <!-- SEO мета-теги -->
-  <meta name="description"
-    content="Северная Корзина - коллективные закупки для жителей поселка. Заказывайте продукты онлайн с доставкой.">
-  <meta name="keywords" content="коллективные закупки, продукты, доставка, поселок, северная корзина">
-  <meta name="author" content="Северная Корзина">
-
-  <!-- Open Graph для социальных сетей -->
-  <meta property="og:title" content="Северная Корзина - Коллективные закупки">
-  <meta property="og:description" content="Заказывайте продукты онлайн с доставкой в ваш поселок">
-  <meta property="og:image" content="https://sevkorzina.ru/icons/og-image.png">
-  <meta property="og:url" content="https://sevkorzina.ru">
-  <meta property="og:type" content="website">
-
-  <!-- PWA мета-теги -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Северная Корзина">
-  <meta name="application-name" content="Северная Корзина">
-  <meta name="msapplication-TileColor" content="#000000">
-  <meta name="msapplication-TileImage" content="icons/ms-icon-144x144.png">
-
-  <!-- Цвета темы -->
-  <meta name="theme-color" content="#DC2626" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#DC2626" media="(prefers-color-scheme: dark)">
-
-  <title>Северная Корзина - Коллективные закупки</title>
-
-  <!-- PWA Manifest -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#DC2626">
+  
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="-1">
+  
+  <title>Severnaya Korzina v6.08282058</title>
   <link rel="manifest" href="manifest.json">
-
-  <!-- Иконки для разных устройств -->
-  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
-  <link rel="shortcut icon" href="favicon.ico">
-
-  <!-- Apple Touch иконки -->
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152x152.png">
-  <link rel="apple-touch-icon" sizes="144x144" href="icons/icon-144x144.png">
-  <link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120x120.png">
-  <link rel="apple-touch-icon" sizes="76x76" href="icons/icon-76x76.png">
-
-  <!-- iOS Splash Screens -->
-  <link rel="apple-touch-startup-image" href="splash/iphone5_splash.png"
-    media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash/iphone6_splash.png"
-    media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash/iphoneplus_splash.png"
-    media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash/iphonex_splash.png"
-    media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash/iphonexr_splash.png"
-    media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash/iphonexsmax_splash.png"
-    media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-
+  <link rel="icon" type="image/png" href="favicon.png">
+  
   <style>
-    /* Экран загрузки с красно-черным стилем */
-    body {
-      margin: 0;
-      padding: 0;
-      background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
-      overflow: hidden;
+    #loading {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(135deg, #DC2626, #EF4444);
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      z-index: 9999; transition: opacity 0.5s ease;
     }
-
-    .loading-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
-      z-index: 9999;
-    }
-
-    .loading-logo {
-      width: 120px;
-      height: 120px;
-      background: linear-gradient(45deg, #DC2626, #EF4444);
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 30px;
-      box-shadow: 0 8px 32px rgba(220, 38, 38, 0.3);
-      animation: pulse 2s infinite;
-    }
-
-    .loading-logo svg {
-      width: 60px;
-      height: 60px;
-      fill: white;
-    }
-
-    .loading-text {
-      color: #DC2626;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 24px;
-      font-weight: 600;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-
-    .loading-subtitle {
-      color: #666;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 16px;
-      text-align: center;
-      margin-bottom: 30px;
-    }
-
+    body.loaded #loading { opacity: 0; pointer-events: none; }
+    
+    .loading-text { color: white; font-size: 24px; margin-bottom: 10px; font-weight: bold; }
+    .loading-version { color: rgba(255,255,255,0.8); font-size: 14px; margin-bottom: 30px; }
     .loading-spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid #333;
-      border-top: 3px solid #DC2626;
-      border-radius: 50%;
+      width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3);
+      border-top: 4px solid white; border-radius: 50%;
       animation: spin 1s linear infinite;
     }
-
-    @keyframes pulse {
-
-      0%,
-      100% {
-        transform: scale(1);
-      }
-
-      50% {
-        transform: scale(1.05);
-      }
+    
+    #update-notification {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      background: #DC2626; color: white; padding: 20px; border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 10000; 
+      display: none; text-align: center; min-width: 320px;
     }
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
+    
+    .notification-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
+    .notification-text { margin: 10px 0 20px 0; font-size: 14px; opacity: 0.9; }
+    .button-group { display: flex; gap: 10px; justify-content: center; }
+    
+    #update-notification button {
+      background: white; color: #DC2626; border: none;
+      padding: 12px 24px; border-radius: 8px; cursor: pointer; 
+      font-weight: bold; min-width: 120px;
     }
-
-    /* Скрыть после загрузки */
-    .loaded .loading-container {
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.5s ease, visibility 0.5s ease;
+    
+    #dismiss-btn {
+      background: transparent !important; border: 2px solid white !important;
+      color: white !important;
     }
-
-    /* Основной контейнер приложения */
-    #app {
-      opacity: 0;
-      transition: opacity 0.5s ease;
-    }
-
-    .loaded #app {
-      opacity: 1;
-    }
+    
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
-
 <body>
-  <!-- Экран загрузки -->
-  <div class="loading-container" id="loading">
-    <div class="loading-logo">
-      <!-- SVG иконка корзины -->
-      <svg viewBox="0 0 24 24">
-        <path
-          d="M7 4V2C7 1.45 7.45 1 8 1H16C16.55 1 17 1.45 17 2V4H20C20.55 4 21 4.45 21 5S20.55 6 20 6H19V19C19 20.1 18.1 21 17 21H7C5.9 21 5 20.1 5 19V6H4C3.45 6 3 5.55 3 5S3.45 4 4 4H7ZM9 3V4H15V3H9ZM7 6V19H17V6H7Z" />
-      </svg>
-    </div>
-    <div class="loading-text">Северная Корзина</div>
-    <div class="loading-subtitle">Загрузка приложения...</div>
+  <div id="loading">
+    <div class="loading-text">Severnaya Korzina</div>
+    <div class="loading-version">v6.08282058</div>
     <div class="loading-spinner"></div>
   </div>
-
-  <!-- Основное приложение -->
-  <div id="app"></div>
-
-  <script>
-    // Регистрация Service Worker для PWA
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('/flutter_service_worker.js')
-          .then(function (registration) {
-            console.log('✅ Service Worker зарегистрирован:', registration.scope);
-          })
-          .catch(function (error) {
-            console.log('❌ Ошибка регистрации Service Worker:', error);
-          });
-      });
-    }
-
-    // Обработка установки PWA
-    let deferredPrompt;
-    let installButton;
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      console.log('💾 PWA готово к установке');
-      e.preventDefault();
-      deferredPrompt = e;
-
-      // Показать кнопку установки
-      showInstallPrompt();
-    });
-
-    function showInstallPrompt() {
-      // Создаем кнопку установки
-      if (!installButton) {
-        installButton = document.createElement('button');
-        installButton.innerHTML = '📲 Установить приложение';
-        installButton.style.cssText = `
-          position: fixed;
-          bottom: 20px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: linear-gradient(45deg, #DC2626, #EF4444);
-          color: white;
-          border: none;
-          padding: 12px 24px;
-          border-radius: 25px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          box-shadow: 0 4px 20px rgba(220, 38, 38, 0.3);
-          z-index: 10000;
-          transition: all 0.3s ease;
-        `;
-        installButton.onclick = installPWA;
-        document.body.appendChild(installButton);
-      }
-    }
-
-    function installPWA() {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-          if (choiceResult.outcome === 'accepted') {
-            console.log('✅ Пользователь установил PWA');
-            if (installButton) {
-              installButton.remove();
-              installButton = null;
-            }
-          } else {
-            console.log('❌ Пользователь отклонил установку');
-          }
-          deferredPrompt = null;
-        });
-      }
-    }
-
-    // Скрыть экран загрузки после инициализации Flutter
-    window.addEventListener('flutter-first-frame', function () {
-      setTimeout(() => {
-        document.body.classList.add('loaded');
-        setTimeout(() => {
-          const loadingElement = document.getElementById('loading');
-          if (loadingElement) {
-            loadingElement.remove();
-          }
-        }, 500);
-      }, 1000);
-    });
-
-    // Обработка онлайн/офлайн статуса
-    window.addEventListener('online', () => {
-      console.log('🌐 Подключение восстановлено');
-    });
-
-    window.addEventListener('offline', () => {
-      console.log('📵 Нет подключения к интернету');
-    });
-  </script>
-
-  <!-- Flutter Bootstrap -->
-  <script src="flutter_bootstrap.js" async></script>
   
-  <script>
-    // Функции для работы с уведомлениями
-    window.checkNotificationSupport = function () {
-      return 'Notification' in window;
-    };
-
-    window.requestPermissionJS = async function () {
-      if (!('Notification' in window)) {
-        return 'denied';
-      }
-
-      if (Notification.permission === 'default') {
-        return await Notification.requestPermission();
-      }
-
-      return Notification.permission;
-    };
-
-    window.showNotificationJS = function (title, body, icon, url) {
-      if (Notification.permission !== 'granted') {
-        return;
-      }
-
-      const notification = new Notification(title, {
-        body: body,
-        icon: icon,
-        tag: 'sevkorzina-order-update'
-      });
-
-      notification.onclick = function () {
-        window.focus();
-        notification.close();
-        if (url) {
-          window.location.href = url;
-        }
-      };
-
-      // Автоматически закрываем через 5 секунд
-      setTimeout(function () {
-        notification.close();
-      }, 5000);
-    };
-  </script>
+  <div id="update-notification">
+    <div class="notification-title">New version available!</div>
+    <div class="notification-text">Click to reload with latest version</div>
+    <div class="button-group">
+      <button id="update-btn">Update Now</button>
+      <button id="dismiss-btn">Later</button>
+    </div>
+  </div>
+  
+  <div id="app"></div>
+  
+  <script src="app-6.08282058.js"></script>
+  <script src="main-6.08282058.js" async></script>
+  <script src="flutter-6.08282058.js" async></script>
 </body>
-
 </html>

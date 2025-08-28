@@ -73,7 +73,7 @@ class AuthChoiceScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Экономия до 70%',
+                              'Экономия до 0%',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.green[800],
