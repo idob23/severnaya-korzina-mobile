@@ -46,15 +46,6 @@ class AuthChoiceScreen extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 6),
-                Text(
-                  'Экономьте до 50% на товарах первой необходимости',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[500],
-                  ),
-                ),
-                SizedBox(height: 32),
 
                 // Информационные карточки
                 Container(
@@ -73,7 +64,7 @@ class AuthChoiceScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Экономия до 0%',
+                              'Экономия до 1000%',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.green[800],

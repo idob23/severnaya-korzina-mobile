@@ -7,6 +7,7 @@ import 'payment_service.dart';
 import 'payment_success_screen.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import 'package:web/web.dart' as web;
 
 class UniversalPaymentScreen extends StatefulWidget {
   final String paymentUrl;
@@ -44,25 +45,110 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
   }
 
   Future<void> _handlePayment() async {
-    if (kIsWeb) {
-      // Для веб-версии открываем в том же окне
-      await _openPaymentInCurrentWindow();
-    } else {
+    if (!kIsWeb) {
       // Для мобильных платформ открываем во внешнем браузере
       await _openPaymentInBrowser();
+      // Начинаем проверку статуса
+      _startStatusChecking();
     }
+    // Для веб-версии НЕ открываем автоматически - покажем кнопку в UI
+  }
+  // ДОБАВИТЬ НОВЫЙ МЕТОД:
 
-    // Начинаем проверку статуса
-    _startStatusChecking();
+  Future<void> _openPaymentManually() async {
+    try {
+      if (kIsWeb) {
+        // Для веб - используем url_launcher без попытки popup
+        await launchUrl(
+          Uri.parse(widget.paymentUrl),
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        await launchUrl(
+          Uri.parse(widget.paymentUrl),
+          mode: LaunchMode.externalApplication,
+        );
+      }
+
+      // Начинаем проверку статуса только после клика пользователя
+      _startStatusChecking();
+    } catch (e) {
+      print('❌ Ошибка открытия платежа: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Не удалось открыть форму оплаты'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Попробовать снова',
+              textColor: Colors.white,
+              onPressed: _openPaymentManually,
+            ),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _openPaymentInCurrentWindow() async {
-    // Для веб-версии заменяем текущую страницу на платежную форму
-    if (await canLaunchUrl(Uri.parse(widget.paymentUrl))) {
-      await launchUrl(
-        Uri.parse(widget.paymentUrl),
-        mode: LaunchMode.inAppWebView,
-      );
+    try {
+      if (kIsWeb) {
+        // Для веб-версии используем современный package:web
+        web.window.open(widget.paymentUrl, '_blank');
+        print('✅ Ссылка на оплату открыта через web.window.open');
+      } else {
+        // Для других платформ используем стандартный подход
+        if (await canLaunchUrl(Uri.parse(widget.paymentUrl))) {
+          await launchUrl(
+            Uri.parse(widget.paymentUrl),
+            mode: LaunchMode.externalApplication,
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Ошибка открытия платежа: $e');
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Проблема с оплатой'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Не удалось автоматически открыть форму оплаты.'),
+                SizedBox(height: 12),
+                Text('Способы решения:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('• Разрешите всплывающие окна для этого сайта'),
+                Text('• Или нажмите кнопку ниже для ручного открытия'),
+                SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: () {
+                    // Попробовать открыть через url_launcher как fallback
+                    launchUrl(
+                      Uri.parse(widget.paymentUrl),
+                      mode: LaunchMode.platformDefault,
+                    );
+                  },
+                  child: Text('Открыть оплату'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Закрыть диалог
+                  Navigator.pop(context); // Вернуться назад
+                },
+                child: Text('Отмена'),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
 
@@ -213,7 +299,7 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
               ),
               SizedBox(height: 32),
               Text(
-                kIsWeb ? 'Завершите оплату' : 'Ожидание оплаты',
+                kIsWeb ? 'Готово к оплате' : 'Ожидание оплаты',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -224,7 +310,7 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
               SizedBox(height: 16),
               Text(
                 kIsWeb
-                    ? 'Завершите оплату в открывшейся форме.\nПосле этого вы автоматически вернетесь в приложение.'
+                    ? 'Нажмите кнопку ниже для открытия формы оплаты.\nПосле оплаты вернитесь в приложение.'
                     : 'Завершите оплату в браузере.\nМы автоматически отследим результат.',
                 style: TextStyle(
                   fontSize: 16,
@@ -233,6 +319,32 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 32),
+
+              // КНОПКА ОТКРЫТИЯ ОПЛАТЫ - ТОЛЬКО ДЛЯ ВЕБ
+              if (kIsWeb && !_isChecking) ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: _openPaymentManually,
+                    icon: Icon(Icons.open_in_new, size: 24),
+                    label: Text(
+                      'Открыть форму оплаты',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 24),
+              ],
+
               if (_isChecking) ...[
                 CircularProgressIndicator(color: Colors.green),
                 SizedBox(height: 16),
@@ -240,8 +352,9 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
                   'Проверяем статус платежа...',
                   style: TextStyle(color: Colors.grey[600]),
                 ),
+                SizedBox(height: 16),
               ],
-              SizedBox(height: 32),
+
               Row(
                 children: [
                   Expanded(
@@ -253,19 +366,22 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
                       child: Text('Отменить'),
                     ),
                   ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _checkPaymentStatus,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
+                  if (_isChecking) ...[
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _checkPaymentStatus,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text('Проверить статус'),
                       ),
-                      child: Text('Проверить статус'),
                     ),
-                  ),
+                  ],
                 ],
               ),
+
               if (!kIsWeb) ...[
                 SizedBox(height: 16),
                 TextButton(
