@@ -568,8 +568,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                           icon: Icons.account_balance_wallet,
                           label: 'Ваш вклад',
                           value: _formatCurrency(
-                              (_batchData!['userContribution'] ?? 0)
-                                  .toInt()), // ЗАМЕНИТЬ
+                              _safeDouble(_batchData!['userContribution'])
+                                  .toInt()),
                           color: Colors.green,
                         ),
                       ),
@@ -1126,6 +1126,14 @@ class _ProfileScreenState extends State<ProfileScreen>
         ],
       ),
     );
+  }
+
+  double _safeDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
   }
 
   void _showLogoutDialog(BuildContext context, AuthProvider authProvider) {

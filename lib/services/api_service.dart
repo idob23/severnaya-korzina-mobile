@@ -359,7 +359,8 @@ class ApiService {
 
   /// Получить активную закупку для информационной панели
   Future<Map<String, dynamic>> getActiveBatch() async {
-    return await _makeRequest('GET', '/batches/active');
+    // return await _makeRequest('GET', '/batches/active');
+    return await _makeRequest('GET', '/batches/active/user');
   }
 
   // === ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===
