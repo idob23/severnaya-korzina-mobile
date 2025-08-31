@@ -7,7 +7,15 @@
     <!-- Разрешения для камеры и галереи -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+
+     <!-- === НОВЫЕ РАЗРЕШЕНИЯ ДЛЯ ОБНОВЛЕНИЙ === -->
+    <!-- Разрешение на установку APK файлов -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    
+    <!-- Разрешение на запись файлов (для сохранения APK) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+                     android:maxSdkVersion="28" />
     
     <!-- Разрешения для вибрации и уведомлений -->
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -86,5 +94,12 @@
             <action android:name="android.intent.action.SENDTO" />
             <data android:scheme="mailto" />
         </intent>
+         <!-- Добавить queries для Android 11+ для открытия APK -->
+    
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/vnd.android.package-archive" />
+        </intent>
+    
     </queries>
 </manifest>

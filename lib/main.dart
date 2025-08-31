@@ -11,8 +11,14 @@ import 'screens/orders/orders_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'package:severnaya_korzina/screens/auth/auth_choice_screen.dart';
 import 'screens/payment/payment_success_screen.dart';
+import 'package:severnaya_korzina/services/update_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Инициализация сервиса обновлений
+  await UpdateService().init();
+
   runApp(MyApp());
 }
 
@@ -84,11 +90,31 @@ class _AppInitializerState extends State<AppInitializer> {
       setState(() {
         _isInitialized = true;
       });
+
+      // НОВОЕ: Проверяем обновления после инициализации
+      _checkForUpdates();
     } catch (e) {
       print('Ошибка инициализации приложения: $e');
       setState(() {
         _isInitialized = true;
       });
+    }
+  }
+
+  // НОВЫЙ МЕТОД: Проверка обновлений
+  Future<void> _checkForUpdates() async {
+    // Ждем 2 секунды, чтобы UI полностью загрузился
+    await Future.delayed(Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    final updateService = UpdateService(); // Создаем локально
+    final updateInfo = await updateService.checkForUpdate(silent: true);
+
+    if (updateInfo != null && mounted) {
+      if (await updateService.shouldShowUpdateDialog()) {
+        updateService.showUpdateDialog(context, updateInfo);
+      }
     }
   }
 
@@ -164,5 +190,68 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  // НОВЫЙ МЕТОД: AppBar для каталога с кнопкой обновлений
+  PreferredSizeWidget _buildCatalogAppBar() {
+    return AppBar(
+      title: Text('Северная Корзина'),
+      backgroundColor: Colors.blue,
+      foregroundColor: Colors.white,
+      actions: [
+        PopupMenuButton<String>(
+          onSelected: (value) async {
+            if (value == 'check_updates') {
+              await _manualCheckForUpdates();
+            }
+          },
+          itemBuilder: (BuildContext context) => [
+            PopupMenuItem<String>(
+              value: 'check_updates',
+              child: Row(
+                children: [
+                  Icon(Icons.system_update, color: Colors.black54),
+                  SizedBox(width: 8),
+                  Text('Проверить обновления'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // НОВЫЙ МЕТОД: Ручная проверка обновлений
+  Future<void> _manualCheckForUpdates() async {
+    final updateService = UpdateService(); // Создаем локально
+
+    // Показываем индикатор загрузки
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    // Проверяем обновления
+    final updateInfo = await updateService.checkForUpdate();
+
+    // Закрываем индикатор
+    if (mounted) Navigator.of(context).pop();
+
+    if (updateInfo != null && mounted) {
+      // Показываем диалог обновления
+      updateService.showUpdateDialog(context, updateInfo);
+    } else if (mounted) {
+      // Показываем сообщение, что обновлений нет
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('У вас установлена последняя версия приложения'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 }

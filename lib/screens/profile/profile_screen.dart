@@ -1,10 +1,12 @@
 // lib/screens/profile/profile_screen.dart - МИНИМАЛЬНЫЕ ИЗМЕНЕНИЯ
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart'; // ДОБАВИТЬ ЭТОТ ИМПОРТ
 import '../auth/auth_choice_screen.dart';
 import 'dart:math' as math;
+import 'package:severnaya_korzina/services/update_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -13,6 +15,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen>
     with TickerProviderStateMixin {
+  String _appVersion = '';
+
   late AnimationController _progressAnimationController;
   late AnimationController _pulseAnimationController;
   late Animation<double> _progressAnimation;
@@ -27,6 +31,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
+
+    _loadAppVersion(); // Добавить вызов
 
     // Анимация прогресс-бара
     _progressAnimationController = AnimationController(
@@ -63,6 +69,83 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     // ДОБАВИТЬ ЭТУ СТРОКУ:
     _loadActiveBatch(); // Загружаем реальные данные
+  }
+
+  // Добавить метод загрузки версии
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _appVersion = '${packageInfo.version} (${packageInfo.buildNumber})';
+      });
+    }
+  }
+
+  // ИСПРАВЛЕННЫЙ МЕТОД - проверка обновлений
+  Future<void> _checkForUpdates() async {
+    final updateService = UpdateService(); // Создаем локально
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    final updateInfo = await updateService.checkForUpdate();
+
+    if (mounted) Navigator.of(context).pop();
+
+    if (updateInfo != null && mounted) {
+      updateService.showUpdateDialog(context, updateInfo);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('У вас последняя версия приложения'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  // НОВЫЙ МЕТОД - диалог "О приложении"
+  void _showAboutDialog() {
+    showAboutDialog(
+      context: context,
+      applicationName: 'Северная Корзина',
+      applicationVersion: _appVersion,
+      applicationIcon: Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          color: Colors.blue,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          Icons.shopping_basket,
+          color: Colors.white,
+          size: 40,
+        ),
+      ),
+      applicationLegalese: '© 2024 Северная Корзина\nВсе права защищены',
+      children: [
+        SizedBox(height: 16),
+        Text(
+          'Платформа коллективных закупок для жителей Усть-Неры',
+          textAlign: TextAlign.center,
+        ),
+        SizedBox(height: 8),
+        Text(
+          'Экономьте до 50% покупая вместе!',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.green,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
   }
 
   // НОВЫЙ МЕТОД - добавить после initState
@@ -287,8 +370,67 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           SizedBox(height: 16),
 
+          _buildAboutSection(), // НОВАЯ СЕКЦИЯ
+          SizedBox(height: 16),
+
           // Кнопка выхода
           _buildLogoutButton(context, authProvider),
+        ],
+      ),
+    );
+  }
+
+  // НОВЫЙ ВИДЖЕТ - секция "О приложении"
+  Widget _buildAboutSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            leading: Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.info_outline, color: Colors.blue, size: 20),
+            ),
+            title: Text(
+              'О приложении',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text('Версия $_appVersion'),
+            trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
+            onTap: _showAboutDialog,
+          ),
+          Divider(height: 1),
+          ListTile(
+            leading: Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.system_update, color: Colors.green, size: 20),
+            ),
+            title: Text(
+              'Проверить обновления',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text('Проверить наличие новой версии'),
+            trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
+            onTap: _checkForUpdates,
+          ),
         ],
       ),
     );

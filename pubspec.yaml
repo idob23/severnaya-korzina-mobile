@@ -1,7 +1,7 @@
 name: severnaya_korzina
 description: Платформа коллективных закупок для Усть-Неры
 
-version: 1.0.0+1
+version: 1.2.5+15  # ВАЖНО: обновлять при каждом релизе!
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -46,6 +46,12 @@ dependencies:
   # Валидация
   validators: ^3.0.0
 
+  # === НОВЫЕ ЗАВИСИМОСТИ ДЛЯ ОБНОВЛЕНИЙ ===
+  package_info_plus: ^8.3.1      # Получение информации о версии приложения
+  open_file: ^3.5.10               # Открытие APK файла для установки
+  permission_handler: ^12.0.1     # Управление разрешениями
+  path_provider: ^2.1.5           # Работа с путями файловой системы
+
 dev_dependencies:
   flutter_launcher_icons: ^0.14.0
   flutter_test:
@@ -69,6 +75,6 @@ flutter_icons:
   remove_alpha_ios: true
   
   # Настройки для веб убираем, так как это мобильное приложение
-  # web:
-  #   generate: true
-  #   image_path: "assets/icons/app_icon.png"
+# web:
+#   generate: true
+#   image_path: "assets/icons/app_icon.png"
