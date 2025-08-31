@@ -7,7 +7,7 @@ import 'payment_service.dart';
 import 'payment_success_screen.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import 'package:web/web.dart' as web;
+// import 'package:web/web.dart' as web;
 
 class UniversalPaymentScreen extends StatefulWidget {
   final String paymentUrl;
@@ -93,18 +93,22 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
 
   Future<void> _openPaymentInCurrentWindow() async {
     try {
-      if (kIsWeb) {
-        // Для веб-версии используем современный package:web
-        web.window.open(widget.paymentUrl, '_blank');
-        print('✅ Ссылка на оплату открыта через web.window.open');
+      // Используем url_launcher для ВСЕХ платформ, включая веб
+      final Uri url = Uri.parse(widget.paymentUrl);
+
+      if (await canLaunchUrl(url)) {
+        // Для веб используем platformDefault или externalApplication
+        // Оба режима откроют новую вкладку в браузере
+        await launchUrl(
+          url,
+          mode: kIsWeb
+              ? LaunchMode.platformDefault // Для веб - откроет в новой вкладке
+              : LaunchMode
+                  .externalApplication, // Для мобильных - внешний браузер
+        );
+        print('✅ Ссылка на оплату открыта через url_launcher');
       } else {
-        // Для других платформ используем стандартный подход
-        if (await canLaunchUrl(Uri.parse(widget.paymentUrl))) {
-          await launchUrl(
-            Uri.parse(widget.paymentUrl),
-            mode: LaunchMode.externalApplication,
-          );
-        }
+        throw Exception('Не удается открыть URL');
       }
     } catch (e) {
       print('❌ Ошибка открытия платежа: $e');
@@ -126,12 +130,16 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
                 Text('• Или нажмите кнопку ниже для ручного открытия'),
                 SizedBox(height: 12),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     // Попробовать открыть через url_launcher как fallback
-                    launchUrl(
-                      Uri.parse(widget.paymentUrl),
-                      mode: LaunchMode.platformDefault,
-                    );
+                    try {
+                      await launchUrl(
+                        Uri.parse(widget.paymentUrl),
+                        mode: LaunchMode.platformDefault,
+                      );
+                    } catch (e) {
+                      print('Ошибка при повторной попытке: $e');
+                    }
                   },
                   child: Text('Открыть оплату'),
                 ),

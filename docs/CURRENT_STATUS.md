@@ -186,3 +186,31 @@
 - **localStorage** - Хранение информации о версиях
 - **File versioning** - Уникальные имена файлов
 - **PowerShell automation** - Автоматизация процесса деплоя
+
+Критическая проблема сборки Flutter APK на Windows (2025)
+Проблема: После создания системы автоматических обновлений для веб-версии приложения, мобильное приложение (APK) перестало собираться на Windows.
+Причина:
+
+Flutter 3.35.x имеет конфликты с пакетом web: 1.1.1 на Windows
+Пакеты dio, shared_preferences, url_launcher, flutter_secure_storage автоматически подтягивают веб-зависимости
+Ошибки типа dart:js_interop is not available on this platform
+
+Попытки решения:
+
+✗ Откат к коммиту 3376590 (рабочий)
+✗ dependency_overrides для блокировки web пакетов
+✗ Откат Flutter до 3.24.0 (все равно тянет web 1.1.1)
+✗ Полная очистка кэшей Flutter и pub
+✗ Минимизация зависимостей в pubspec.yaml
+
+Текущий статус:
+
+Backend API работает стабильно
+Веб-версия собирается и работает с системой автообновлений
+APK сборка заблокирована на Windows
+
+Рекомендуемое решение: Сборка APK на Ubuntu сервере, где Flutter работает без этих конфликтов:
+bashcd ~/severnaya-korzina
+git checkout 3376590
+flutter build apk --release
+Архитектура проекта: Android APK + Flutter Web для iPhone + Backend API + Админ панель.

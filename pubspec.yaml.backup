@@ -1,0 +1,63 @@
+﻿name: severnaya_korzina
+description: РџР»Р°С‚С„РѕСЂРјР° РєРѕР»Р»РµРєС‚РёРІРЅС‹С… Р·Р°РєСѓРїРѕРє РґР»СЏ РЈСЃС‚СЊ-РќРµСЂС‹
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # HTTP Р·Р°РїСЂРѕСЃС‹
+  http: ^1.1.0
+  
+  # State management
+  provider: ^6.0.5
+  
+  # Р›РѕРєР°Р»СЊРЅРѕРµ С…СЂР°РЅРµРЅРёРµ
+  shared_preferences: ^2.2.2
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  
+  # Р¤РѕСЂРјР°С‚РёСЂРѕРІР°РЅРёРµ РґР°С‚С‹
+  intl: ^0.18.1
+  mask_text_input_formatter: ^2.9.0
+  json_annotation: ^4.9.0
+  qr_flutter: ^4.1.0
+  url_launcher: ^6.3.2
+  
+  # WebView С‚РѕР»СЊРєРѕ РґР»СЏ РјРѕР±РёР»СЊРЅС‹С… РїР»Р°С‚С„РѕСЂРј
+  webview_flutter: ^4.4.2
+  
+  # SMS РѕС‚РїСЂР°РІРєР°
+  dio: ^5.4.0
+  
+  # Р‘РµР·РѕРїР°СЃРЅРѕРµ С…СЂР°РЅРµРЅРёРµ
+  flutter_secure_storage: ^9.0.0
+  
+  # РЈС‚РёР»РёС‚С‹
+  uuid: ^4.2.1
+  validators: ^3.0.0
+
+# РљР РРўРР§РќРћ: Р¤РёРєСЃРёСЂСѓРµРј РІРµСЂСЃРёСЋ web РґР»СЏ СЂРµС€РµРЅРёСЏ РїСЂРѕР±Р»РµРјС‹ СЃ js_interop
+dependency_overrides:
+  web: 0.5.1
+
+dev_dependencies:
+  flutter_launcher_icons: ^0.13.1
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/app_icon.png"
+  min_sdk_android: 21
+  android_adaptive_icon_background: "#FFFFFF"
+  android_adaptive_icon_foreground: "assets/icons/app_icon_foreground.png"
+  remove_alpha_ios: true

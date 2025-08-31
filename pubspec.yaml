@@ -11,64 +11,64 @@ dependencies:
     sdk: flutter
   
   # HTTP запросы
-  http: ^1.1.0
-
-  web: ^1.0.0
+  http: ^1.2.0
   
   # State management
-  provider: ^6.0.5
+  provider: ^6.1.1
   
   # Локальное хранение
-  shared_preferences: ^2.2.2
-  sqflite: ^2.3.0
-  path: ^1.8.3
+  shared_preferences: ^2.3.0
+  sqflite: ^2.3.2
+  path: ^1.9.0
   
   # Форматирование даты
-  intl: ^0.18.1
+  intl: ^0.20.0
   mask_text_input_formatter: ^2.9.0
   json_annotation: ^4.9.0
   qr_flutter: ^4.1.0
-  url_launcher: ^6.3.2
-  # НОВАЯ ЗАВИСИМОСТЬ для WebView:
-  webview_flutter: ^4.4.2
-  webview_flutter_web: ^0.2.2+4
-
- # SMS отправка
-  dio: ^5.4.0  # Для HTTP запросов к SMS API
-
+  
+  # URL Launcher для открытия ссылок
+  url_launcher: ^6.2.0
+  
+  # WebView ТОЛЬКО базовый пакет, БЕЗ webview_flutter_web!
+  webview_flutter: ^4.5.0
+  # webview_flutter_web: ^0.2.2+4  # ❌ УДАЛИТЬ ЭТУ СТРОКУ!
+  
+  # SMS отправка
+  dio: ^5.4.0
+  
   # Безопасное хранение
-  flutter_secure_storage: ^9.0.0
-
+  flutter_secure_storage: ^9.2.1
+  
   # Утилиты
-  uuid: ^4.2.1
+  uuid: ^4.3.0
   
   # Валидация
   validators: ^3.0.0
 
 dev_dependencies:
-  flutter_launcher_icons: ^0.13.1
+  flutter_launcher_icons: ^0.14.0
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.7
+  json_serializable: ^6.7.1
 
 flutter:
   uses-material-design: true
+  
 flutter_icons:
   android: true
   ios: true
   image_path: "assets/icons/app_icon.png"
   min_sdk_android: 21
   
-  # Дополнительные настройки для Android
   android_adaptive_icon_background: "#FFFFFF"
   android_adaptive_icon_foreground: "assets/icons/app_icon_foreground.png"
   
-  # Настройки для iOS
   remove_alpha_ios: true
   
-  # Для веб-версии
-  web:
-    generate: true
-    image_path: "assets/icons/app_icon.png"
-    background_color: "#FFFFFF"
-    theme_color: "#2196F3"
+  # Настройки для веб убираем, так как это мобильное приложение
+  # web:
+  #   generate: true
+  #   image_path: "assets/icons/app_icon.png"
