@@ -1,7 +1,8 @@
 // lib/services/update_service.dart
-// Сервис для проверки и установки обновлений приложения
+// УЛУЧШЕННАЯ ВЕРСИЯ с защитой от проблем кэширования
 
 import 'dart:io';
+import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:open_file/open_file.dart';
@@ -11,50 +12,130 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'package:flutter/services.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 
 class UpdateService {
   static final UpdateService _instance = UpdateService._internal();
   factory UpdateService() => _instance;
   UpdateService._internal();
 
-  // ИСПРАВЛЕНИЕ: Не храним Dio как поле класса
-  // Dio будет создаваться для каждой операции загрузки
   PackageInfo? _packageInfo;
-
-  // Токен отмены для текущей загрузки
   CancelToken? _currentDownloadToken;
 
-  // Используем тот же baseUrl что и в ApiService
   String get baseUrl => ApiService.baseUrl.replaceAll('/api', '');
-
-  // Информация о доступном обновлении
   UpdateInfo? _availableUpdate;
-
-  // Callback для прогресса загрузки
   Function(double)? onDownloadProgress;
 
-  // Инициализация сервиса
+  // НОВОЕ: Очистка старых APK файлов
+  Future<void> _cleanOldApkFiles() async {
+    try {
+      // Получаем директории где могут храниться APK
+      final List<Directory?> directories = [
+        await getExternalStorageDirectory(),
+        await getApplicationDocumentsDirectory(),
+        await getTemporaryDirectory(),
+      ];
+
+      // Также проверяем стандартную папку Downloads
+      final downloadsDir = Directory('/storage/emulated/0/Download/');
+      if (await downloadsDir.exists()) {
+        directories.add(downloadsDir);
+      }
+
+      for (final dir in directories) {
+        if (dir == null) continue;
+
+        // Ищем все APK файлы нашего приложения
+        final files = dir.listSync().where((item) =>
+            item.path.contains('severnaya') && item.path.endsWith('.apk'));
+
+        // Удаляем старые файлы
+        for (final file in files) {
+          try {
+            if (file is File) {
+              await file.delete();
+              print('🗑️ Deleted old APK: ${file.path}');
+            }
+          } catch (e) {
+            print('⚠️ Could not delete: ${file.path}');
+          }
+        }
+      }
+    } catch (e) {
+      print('⚠️ Error cleaning old APK files: $e');
+    }
+  }
+
+  // НОВОЕ: Генерация уникального имени файла
+  String _generateUniqueFileName(String version) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final random = Random().nextInt(9999);
+    return 'severnaya_korzina_${version}_${timestamp}_$random.apk';
+  }
+
+  // НОВОЕ: Проверка целостности загруженного файла
+  Future<bool> _verifyApkIntegrity(File file, double expectedSizeMb) async {
+    try {
+      final fileSize = await file.length();
+      final fileSizeMb = fileSize / (1024 * 1024);
+
+      // Проверяем размер (допускаем отклонение 10%)
+      final minSize = expectedSizeMb * 0.9;
+      final maxSize = expectedSizeMb * 1.1;
+
+      if (fileSizeMb < minSize || fileSizeMb > maxSize) {
+        print(
+            '❌ APK size mismatch: ${fileSizeMb}MB, expected ~${expectedSizeMb}MB');
+        return false;
+      }
+
+      // Проверяем, что файл начинается с PK (ZIP signature для APK)
+      final bytes = await file.openRead(0, 4).first;
+      if (bytes[0] != 0x50 || bytes[1] != 0x4B) {
+        print('❌ Invalid APK signature');
+        return false;
+      }
+
+      print('✅ APK verified: ${fileSizeMb.toStringAsFixed(1)}MB');
+      return true;
+    } catch (e) {
+      print('❌ Error verifying APK: $e');
+      return false;
+    }
+  }
+
   Future<void> init() async {
     _packageInfo = await PackageInfo.fromPlatform();
     print(
         '📱 App version: ${_packageInfo?.version} (${_packageInfo?.buildNumber})');
+
+    // Очищаем старые APK при инициализации
+    await _cleanOldApkFiles();
   }
 
-  // Получить текущую версию приложения
   String get currentVersion => _packageInfo?.version ?? '1.0.0';
+  String get currentBuildNumber => _packageInfo?.buildNumber ?? '1';
 
-  // Проверка обновлений
   Future<UpdateInfo?> checkForUpdate({bool silent = false}) async {
     try {
-      // Создаем новый экземпляр Dio для каждого запроса
       final dio = Dio();
 
+      // Добавляем timestamp для обхода кэша
       final response = await dio.get(
         '$baseUrl/api/app/version',
         queryParameters: {
           'current_version': currentVersion,
+          'current_build': currentBuildNumber,
           'platform': Platform.isAndroid ? 'android' : 'ios',
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
         },
+        options: Options(
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+          },
+        ),
       );
 
       if (response.statusCode == 200) {
@@ -63,7 +144,6 @@ class UpdateService {
         if (data['update_available'] == true) {
           _availableUpdate = UpdateInfo.fromJson(data);
 
-          // Сохраняем информацию о последней проверке
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString(
               'last_update_check', DateTime.now().toIso8601String());
@@ -82,7 +162,6 @@ class UpdateService {
     }
   }
 
-  // Показать диалог обновления
   Future<void> showUpdateDialog(
       BuildContext context, UpdateInfo updateInfo) async {
     final canSkip = updateInfo.features['can_skip'] ?? true;
@@ -151,6 +230,10 @@ class UpdateService {
                     'Размер: ${updateInfo.sizeMb.toStringAsFixed(1)} МБ',
                     style: TextStyle(color: Colors.grey[600], fontSize: 13),
                   ),
+                  Text(
+                    'Текущая версия: $currentVersion',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
                   if (updateInfo.forceUpdate) ...[
                     SizedBox(height: 12),
                     Container(
@@ -167,7 +250,7 @@ class UpdateService {
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Это обновление обязательно. Необходимо для продолжения работы.',
+                              'Это обновление обязательно для продолжения работы.',
                               style: TextStyle(
                                   color: Colors.red[800], fontSize: 12),
                             ),
@@ -179,10 +262,8 @@ class UpdateService {
                   if (updateInfo.showChangelog &&
                       updateInfo.changelog.isNotEmpty) ...[
                     SizedBox(height: 16),
-                    Text(
-                      'Что нового:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
+                    Text('Что нового:',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                     SizedBox(height: 8),
                     Container(
                       constraints: BoxConstraints(maxHeight: 200),
@@ -192,10 +273,8 @@ class UpdateService {
                           children: updateInfo.changelog
                               .map((item) => Padding(
                                     padding: EdgeInsets.only(bottom: 4),
-                                    child: Text(
-                                      item,
-                                      style: TextStyle(fontSize: 13),
-                                    ),
+                                    child: Text(item,
+                                        style: TextStyle(fontSize: 13)),
                                   ))
                               .toList(),
                         ),
@@ -210,7 +289,6 @@ class UpdateService {
                 TextButton(
                   onPressed: () async {
                     Navigator.of(context).pop();
-                    // Сохраняем, что пользователь отложил обновление
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.setString(
                       'update_skipped_date',
@@ -233,7 +311,6 @@ class UpdateService {
     );
   }
 
-  // Скачивание и установка обновления
   Future<void> _downloadAndInstallUpdate(
     BuildContext context,
     UpdateInfo updateInfo,
@@ -244,7 +321,6 @@ class UpdateService {
       if (!status.isGranted) {
         final result = await Permission.requestInstallPackages.request();
         if (!result.isGranted) {
-          // Открываем настройки для включения разрешения
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -261,7 +337,9 @@ class UpdateService {
       }
     }
 
-    // ИСПРАВЛЕНИЕ: Создаем новый Dio и CancelToken для каждой загрузки
+    // ВАЖНО: Очищаем старые APK перед загрузкой новой версии
+    await _cleanOldApkFiles();
+
     final dio = Dio();
     _currentDownloadToken = CancelToken();
 
@@ -277,7 +355,6 @@ class UpdateService {
             updateInfo: updateInfo,
             onCancel: () {
               downloadCancelled = true;
-              // ИСПРАВЛЕНИЕ: Используем CancelToken вместо закрытия Dio
               _currentDownloadToken?.cancel('User cancelled download');
               Navigator.of(context).pop();
             },
@@ -287,34 +364,31 @@ class UpdateService {
     );
 
     try {
-      // Получаем путь для сохранения файла
-      Directory? dir;
-
-      // Для Android 10+ используем getExternalStorageDirectory
-      if (Platform.isAndroid) {
-        // Пробуем разные варианты путей
-        dir = await getExternalStorageDirectory();
-        if (dir == null) {
-          dir = await getApplicationDocumentsDirectory();
-        }
-      } else {
-        dir = await getTemporaryDirectory();
+      // Получаем путь для сохранения с уникальным именем
+      Directory? dir = await getExternalStorageDirectory();
+      if (dir == null) {
+        dir = await getApplicationDocumentsDirectory();
       }
 
-      final fileName = 'severnaya_korzina_${updateInfo.latestVersion}.apk';
+      // ВАЖНО: Используем уникальное имя файла
+      final fileName = _generateUniqueFileName(updateInfo.latestVersion);
       final filePath = '${dir.path}/$fileName';
 
-      print('📱 Saving APK to: $filePath');
+      print('📱 Downloading APK to: $filePath');
 
-      // Удаляем старый файл, если существует
+      // Удаляем файл если существует (на всякий случай)
       final file = File(filePath);
       if (await file.exists()) {
         await file.delete();
       }
 
+      // Добавляем timestamp к URL для обхода кэша
+      final downloadUrl =
+          '${updateInfo.downloadUrl}?t=${DateTime.now().millisecondsSinceEpoch}';
+
       // Скачиваем APK
       await dio.download(
-        updateInfo.downloadUrl,
+        downloadUrl,
         filePath,
         onReceiveProgress: (received, total) {
           if (total != -1 && !downloadCancelled) {
@@ -322,12 +396,13 @@ class UpdateService {
             onDownloadProgress?.call(progress);
           }
         },
-        cancelToken:
-            _currentDownloadToken, // ИСПРАВЛЕНИЕ: Используем CancelToken
+        cancelToken: _currentDownloadToken,
         options: Options(
           headers: {
             'Accept': '*/*',
             'Connection': 'keep-alive',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
           },
           responseType: ResponseType.bytes,
           followRedirects: true,
@@ -339,26 +414,37 @@ class UpdateService {
         Navigator.of(context).pop();
       }
 
-      // Проверяем, что файл существует и имеет размер
+      // ВАЖНО: Проверяем целостность файла
       if (!await file.exists()) {
         throw Exception('Файл не был сохранен');
       }
 
-      final fileSize = await file.length();
-      print('📱 APK saved successfully. Size: $fileSize bytes');
-
-      if (fileSize < 1000000) {
-        // Меньше 1MB - явно что-то не то
-        throw Exception(
-            'Файл слишком маленький, возможно загрузка не завершена');
+      if (!await _verifyApkIntegrity(file, updateInfo.sizeMb)) {
+        await file.delete();
+        throw Exception('Загруженный файл поврежден или неполный');
       }
 
-      // Показываем уведомление с кнопкой установки
-      await _showInstallNotification(context, filePath, fileName);
+      // Показываем уведомление об успешной загрузке
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(child: Text('Обновление загружено успешно')),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
 
-      // Пробуем открыть автоматически через секунду
+      // Ждем немного перед установкой
       await Future.delayed(Duration(seconds: 1));
 
+      // Пробуем открыть для установки
       final result = await OpenFile.open(
         filePath,
         type: 'application/vnd.android.package-archive',
@@ -366,55 +452,15 @@ class UpdateService {
 
       print('📱 OpenFile result: ${result.type} - ${result.message}');
 
-      // Если open_file не сработал, пробуем альтернативный метод
+      // Если не удалось открыть автоматически
       if (result.type != ResultType.done) {
-        // Показываем инструкцию пользователю
         if (context.mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Text('Установка обновления'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('APK файл успешно загружен!'),
-                  SizedBox(height: 12),
-                  Text('Для установки:'),
-                  SizedBox(height: 8),
-                  Text('1. Откройте "Файлы" или "Загрузки"'),
-                  Text('2. Найдите файл "$fileName"'),
-                  Text('3. Нажмите на него для установки'),
-                  SizedBox(height: 12),
-                  Text('Путь к файлу:',
-                      style: TextStyle(fontSize: 12, color: Colors.grey)),
-                  Text(filePath,
-                      style: TextStyle(fontSize: 11, color: Colors.grey)),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    // Пробуем открыть папку загрузок
-                    _openDownloadsFolder();
-                  },
-                  child: Text('Открыть папку'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text('OK'),
-                ),
-              ],
-            ),
-          );
+          _showManualInstallDialog(context, filePath, fileName);
         }
       }
     } on DioError catch (e) {
-      // ИСПРАВЛЕНИЕ: Обрабатываем отмену загрузки
       if (e.type == DioErrorType.cancel) {
         print('📱 Download cancelled by user');
-        // Сбрасываем токен для возможности повторной загрузки
         _currentDownloadToken = null;
 
         if (context.mounted) {
@@ -433,80 +479,133 @@ class UpdateService {
       print('❌ Error downloading/installing update: $e');
       _handleDownloadError(context, e.toString(), updateInfo);
     } finally {
-      // ИСПРАВЛЕНИЕ: Очищаем токен после завершения
       _currentDownloadToken = null;
     }
   }
 
-  // Новый метод для обработки ошибок загрузки
-  void _handleDownloadError(
-      BuildContext context, String error, UpdateInfo updateInfo) {
-    if (context.mounted) {
-      Navigator.of(context).pop(); // Закрываем диалог загрузки
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Ошибка загрузки: $error'),
-          duration: Duration(seconds: 5),
-          action: SnackBarAction(
-            label: 'Повторить',
-            onPressed: () => _downloadAndInstallUpdate(context, updateInfo),
-          ),
-        ),
-      );
-    }
-  }
-
-  // Метод для показа постоянного уведомления с кнопкой установки
-  Future<void> _showInstallNotification(
-      BuildContext context, String filePath, String fileName) async {
-    if (!context.mounted) return;
-
-    // Показываем SnackBar с кнопкой установки
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
+  void _showManualInstallDialog(
+      BuildContext context, String filePath, String fileName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Установка обновления'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.download_done, color: Colors.white),
-            SizedBox(width: 12),
-            Expanded(
+            Icon(Icons.check_circle, color: Colors.green, size: 48),
+            SizedBox(height: 16),
+            Text('APK файл успешно загружен!'),
+            SizedBox(height: 12),
+            Text('Для завершения установки:'),
+            SizedBox(height: 8),
+            Text('1. Откройте "Файлы" или "Загрузки"'),
+            Text('2. Найдите файл "$fileName"'),
+            Text('3. Нажмите на него для установки'),
+            SizedBox(height: 12),
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Обновление загружено'),
-                  Text(
-                    fileName,
-                    style: TextStyle(fontSize: 12, color: Colors.white70),
-                  ),
+                  Text('Путь к файлу:',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 4),
+                  Text(filePath,
+                      style: TextStyle(fontSize: 11, color: Colors.grey[700])),
                 ],
               ),
             ),
           ],
         ),
-        duration: Duration(seconds: 10),
-        backgroundColor: Colors.green,
-        action: SnackBarAction(
-          label: 'Установить',
-          textColor: Colors.white,
-          onPressed: () async {
-            final result = await OpenFile.open(
-              filePath,
-              type: 'application/vnd.android.package-archive',
-            );
-            if (result.type != ResultType.done) {
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
               _openDownloadsFolder();
-            }
-          },
-        ),
+            },
+            child: Text('Открыть папку'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              // Пробуем еще раз
+              await OpenFile.open(
+                filePath,
+                type: 'application/vnd.android.package-archive',
+              );
+            },
+            child: Text('Попробовать снова'),
+          ),
+        ],
       ),
     );
   }
 
-  // Новый метод для открытия папки загрузок
+  void _handleDownloadError(
+      BuildContext context, String error, UpdateInfo updateInfo) {
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Ошибка обновления'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Не удалось загрузить обновление.'),
+              SizedBox(height: 12),
+              Text('Возможные причины:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('• Нестабильное интернет-соединение'),
+              Text('• Недостаточно места на устройстве'),
+              Text('• Временные проблемы с сервером'),
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Ошибка: ${error.length > 100 ? error.substring(0, 100) + '...' : error}',
+                  style: TextStyle(fontSize: 11, color: Colors.red[900]),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Отмена'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _downloadAndInstallUpdate(context, updateInfo);
+              },
+              child: Text('Повторить'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   Future<void> _openDownloadsFolder() async {
     try {
-      // Пробуем открыть папку через intent
       const platform = MethodChannel('app.channel.shared.data');
       await platform.invokeMethod('openDownloads');
     } catch (e) {
@@ -514,23 +613,19 @@ class UpdateService {
     }
   }
 
-  // Проверка, нужно ли показывать диалог обновления
   Future<bool> shouldShowUpdateDialog() async {
     if (_availableUpdate == null) return false;
 
     final prefs = await SharedPreferences.getInstance();
 
-    // Если обновление принудительное - всегда показываем
     if (_availableUpdate!.forceUpdate) return true;
 
-    // Проверяем, когда пользователь отложил обновление
     final skippedDateStr = prefs.getString('update_skipped_date');
     if (skippedDateStr != null) {
       final skippedDate = DateTime.parse(skippedDateStr);
       final daysSinceSkipped = DateTime.now().difference(skippedDate).inDays;
       final remindDays = _availableUpdate!.features['remind_later_days'] ?? 3;
 
-      // Не показываем, если еще не прошло нужное количество дней
       if (daysSinceSkipped < remindDays) return false;
     }
 
@@ -538,7 +633,7 @@ class UpdateService {
   }
 }
 
-// Модель информации об обновлении
+// Модель и диалог прогресса остаются без изменений...
 class UpdateInfo {
   final bool updateAvailable;
   final bool forceUpdate;
@@ -584,7 +679,6 @@ class UpdateInfo {
   }
 }
 
-// Виджет диалога прогресса загрузки
 class _DownloadProgressDialog extends StatefulWidget {
   final UpdateInfo updateInfo;
   final VoidCallback onCancel;
@@ -646,6 +740,13 @@ class _DownloadProgressDialogState extends State<_DownloadProgressDialog> {
             '$downloadedMb МБ / $totalMb МБ',
             style: TextStyle(color: Colors.grey[600]),
           ),
+          if (percentage > 0) ...[
+            SizedBox(height: 8),
+            Text(
+              'Не закрывайте приложение',
+              style: TextStyle(fontSize: 12, color: Colors.orange),
+            ),
+          ],
         ],
       ),
       actions: [

@@ -3,6 +3,7 @@ import '../catalog/catalog_screen.dart';
 import '../cart/cart_screen.dart';
 import '../orders/orders_screen.dart';
 import '../profile/profile_screen.dart';
+import '../../services/update_service.dart'; // НОВЫЙ ИМПОРТ
 
 class HomeScreen extends StatefulWidget {
   @override
