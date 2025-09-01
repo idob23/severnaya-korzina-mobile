@@ -391,6 +391,43 @@ class ApiService {
     }
   }
 
+  /// Получить статус доступности оформления заказов
+  Future<Map<String, dynamic>> getCheckoutEnabled() async {
+    try {
+      final uri = Uri.parse('$baseUrl/settings/checkout-enabled');
+
+      final response = await _client
+          .get(
+            uri,
+            headers: _defaultHeaders,
+          )
+          .timeout(Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'checkoutEnabled': data['checkoutEnabled'] ?? true,
+        };
+      }
+
+      // При любой ошибке разрешаем оформление
+      return {
+        'success': false,
+        'checkoutEnabled': true,
+      };
+    } catch (e) {
+      if (kDebugMode) {
+        print('API: Ошибка получения статуса checkout: $e');
+      }
+      // При ошибке разрешаем оформление чтобы не блокировать пользователей
+      return {
+        'success': false,
+        'checkoutEnabled': true,
+      };
+    }
+  }
+
   /// Закрытие клиента
   void dispose() {
     _client.close();

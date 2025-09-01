@@ -1,12 +1,54 @@
-// lib/screens/cart/cart_screen.dart - ОБНОВЛЕННАЯ ВЕРСИЯ С ОФОРМЛЕНИЕМ ЗАКАЗА
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart'; // ДОБАВИТЬ импорт
 import '../auth/auth_choice_screen.dart';
 import '../checkout/checkout_screen.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
+  // ИЗМЕНЕНО на StatefulWidget
+  @override
+  _CartScreenState createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  final ApiService _apiService = ApiService();
+  bool _checkoutEnabled = true;
+  bool _isLoadingStatus = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkCheckoutStatus();
+  }
+
+  Future<void> _checkCheckoutStatus() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoadingStatus = true;
+    });
+
+    try {
+      final response = await _apiService.getCheckoutEnabled();
+      if (mounted) {
+        setState(() {
+          _checkoutEnabled = response['checkoutEnabled'] ?? true;
+          _isLoadingStatus = false;
+        });
+      }
+    } catch (e) {
+      print('Ошибка проверки статуса checkout: $e');
+      if (mounted) {
+        setState(() {
+          _checkoutEnabled = true; // По умолчанию разрешаем
+          _isLoadingStatus = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -38,7 +80,7 @@ class CartScreen extends StatelessWidget {
                 ),
               ),
 
-              // Кнопка оформления заказа
+              // Кнопка оформления заказа с проверкой статуса
               _buildCheckoutButton(context, cartProvider, authProvider),
             ],
           );
@@ -74,14 +116,6 @@ class CartScreen extends StatelessWidget {
               color: Colors.grey[500],
             ),
           ),
-          SizedBox(height: 24),
-          // ElevatedButton(
-          //   onPressed: () {
-          //     // Переходим на первую вкладку (каталог)
-          //     DefaultTabController.of(context)?.animateTo(0);
-          //   },
-          //   child: Text('Перейти в каталог'),
-          // ),
         ],
       ),
     );
@@ -125,7 +159,6 @@ class CartScreen extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 8),
         ],
       ),
     );
@@ -144,17 +177,13 @@ class CartScreen extends StatelessWidget {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: Colors.blue[50],
+                color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                Icons.shopping_bag_outlined,
-                color: Colors.blue[300],
-                size: 30,
-              ),
+              child: Icon(Icons.shopping_bag, color: Colors.grey[400]),
             ),
 
-            SizedBox(width: 16),
+            SizedBox(width: 12),
 
             // Информация о товаре
             Expanded(
@@ -165,7 +194,7 @@ class CartScreen extends StatelessWidget {
                     item.name,
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.bold,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -178,24 +207,22 @@ class CartScreen extends StatelessWidget {
                       fontSize: 14,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 4),
                   Text(
-                    item.formattedTotalPrice,
+                    'Сумма: ${item.formattedTotalPrice}',
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
                       color: Colors.green[700],
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
               ),
             ),
 
-            // Контроллер количества
+            // Управление количеством
             Column(
               children: [
                 Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
                       onPressed: () {
@@ -203,7 +230,8 @@ class CartScreen extends StatelessWidget {
                           cartProvider.updateQuantity(
                               item.productId, item.quantity - 1);
                         } else {
-                          cartProvider.removeItem(item.productId);
+                          cartProvider.removeItem(item
+                              .productId); // ИСПРАВЛЕНО: removeItem вместо removeProduct
                         }
                       },
                       icon: Icon(
@@ -250,6 +278,7 @@ class CartScreen extends StatelessWidget {
     );
   }
 
+  // ОБНОВЛЕННЫЙ МЕТОД с проверкой статуса
   Widget _buildCheckoutButton(BuildContext context, CartProvider cartProvider,
       AuthProvider authProvider) {
     return Container(
@@ -267,22 +296,62 @@ class CartScreen extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Информация о предоплате
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.green[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green[200]!),
+          // Показываем предупреждение если оформление выключено
+          if (!_checkoutEnabled && !_isLoadingStatus)
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(12),
+              margin: EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[300]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.orange[700], size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Оформление заказов временно недоступно',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.orange[900],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-              children: [
-                Icon(Icons.info, color: Colors.green[700], size: 20),
-                SizedBox(width: 8),
-              ],
+
+          // Информация о предоплате (показываем только если оформление включено)
+          if (_checkoutEnabled && !_isLoadingStatus)
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, color: Colors.green[700], size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Требуется 100% предоплата картой МИР',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.green[900],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
 
           SizedBox(height: 12),
 
@@ -291,15 +360,26 @@ class CartScreen extends StatelessWidget {
             width: double.infinity,
             height: 56,
             child: ElevatedButton.icon(
-              onPressed: () =>
-                  _proceedToCheckout(context, cartProvider, authProvider),
-              icon: Icon(Icons.payment, size: 24),
+              onPressed: (_checkoutEnabled && !_isLoadingStatus)
+                  ? () =>
+                      _proceedToCheckout(context, cartProvider, authProvider)
+                  : null,
+              icon: _isLoadingStatus
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Icon(Icons.payment, size: 24),
               label: Text(
-                'Оформить заказ',
+                _isLoadingStatus ? 'Проверка...' : 'Оформить заказ',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: _checkoutEnabled ? Colors.green : Colors.grey,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -311,14 +391,15 @@ class CartScreen extends StatelessWidget {
           SizedBox(height: 8),
 
           // Дополнительная информация
-          Text(
-            'Безопасная оплата картой МИР через ЮKassa',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
+          if (_checkoutEnabled && !_isLoadingStatus)
+            Text(
+              'Безопасная оплата картой МИР через ЮKassa',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
         ],
       ),
     );
