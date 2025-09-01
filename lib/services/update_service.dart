@@ -10,15 +10,19 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
-import 'package:flutter/services.dart'; // Добавьте этот импорт
+import 'package:flutter/services.dart';
 
 class UpdateService {
   static final UpdateService _instance = UpdateService._internal();
   factory UpdateService() => _instance;
   UpdateService._internal();
 
-  final Dio _dio = Dio();
+  // ИСПРАВЛЕНИЕ: Не храним Dio как поле класса
+  // Dio будет создаваться для каждой операции загрузки
   PackageInfo? _packageInfo;
+
+  // Токен отмены для текущей загрузки
+  CancelToken? _currentDownloadToken;
 
   // Используем тот же baseUrl что и в ApiService
   String get baseUrl => ApiService.baseUrl.replaceAll('/api', '');
@@ -42,7 +46,10 @@ class UpdateService {
   // Проверка обновлений
   Future<UpdateInfo?> checkForUpdate({bool silent = false}) async {
     try {
-      final response = await _dio.get(
+      // Создаем новый экземпляр Dio для каждого запроса
+      final dio = Dio();
+
+      final response = await dio.get(
         '$baseUrl/api/app/version',
         queryParameters: {
           'current_version': currentVersion,
@@ -82,17 +89,24 @@ class UpdateService {
 
     await showDialog(
       context: context,
-      barrierDismissible: canSkip,
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return WillPopScope(
-          onWillPop: () async => canSkip,
+          onWillPop: () async => canSkip && !updateInfo.forceUpdate,
           child: AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
             title: Row(
               children: [
-                Icon(Icons.system_update,
-                    color: Theme.of(context).primaryColor),
-                SizedBox(width: 8),
-                Text('Доступно обновление'),
+                Icon(Icons.system_update, color: Colors.blue, size: 28),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Доступно обновление',
+                    style: TextStyle(fontSize: 20),
+                  ),
+                ),
               ],
             ),
             content: SingleChildScrollView(
@@ -100,33 +114,60 @@ class UpdateService {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Версия ${updateInfo.latestVersion}',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        'Версия ${updateInfo.latestVersion}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: updateInfo.forceUpdate
+                              ? Colors.red[100]
+                              : Colors.green[100],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          updateInfo.forceUpdate ? 'Обязательное' : 'Новое',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: updateInfo.forceUpdate
+                                ? Colors.red[800]
+                                : Colors.green[800],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 4),
+                  SizedBox(height: 8),
                   Text(
-                    'Размер: ${updateInfo.sizeMb} МБ',
-                    style: TextStyle(color: Colors.grey[600]),
+                    'Размер: ${updateInfo.sizeMb.toStringAsFixed(1)} МБ',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
                   ),
                   if (updateInfo.forceUpdate) ...[
                     SizedBox(height: 12),
                     Container(
-                      padding: EdgeInsets.all(8),
+                      padding: EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: Colors.red[50],
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red[200]!),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.warning, color: Colors.red, size: 20),
+                          Icon(Icons.warning_amber_rounded,
+                              color: Colors.red[800], size: 20),
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Критическое обновление! Необходимо для продолжения работы.',
+                              'Это обновление обязательно. Необходимо для продолжения работы.',
                               style: TextStyle(
                                   color: Colors.red[800], fontSize: 12),
                             ),
@@ -192,8 +233,6 @@ class UpdateService {
     );
   }
 
-  // Замените метод _downloadAndInstallUpdate в update_service.dart на этот:
-
   // Скачивание и установка обновления
   Future<void> _downloadAndInstallUpdate(
     BuildContext context,
@@ -222,6 +261,10 @@ class UpdateService {
       }
     }
 
+    // ИСПРАВЛЕНИЕ: Создаем новый Dio и CancelToken для каждой загрузки
+    final dio = Dio();
+    _currentDownloadToken = CancelToken();
+
     // Показываем диалог загрузки
     bool downloadCancelled = false;
     showDialog(
@@ -234,7 +277,8 @@ class UpdateService {
             updateInfo: updateInfo,
             onCancel: () {
               downloadCancelled = true;
-              _dio.close();
+              // ИСПРАВЛЕНИЕ: Используем CancelToken вместо закрытия Dio
+              _currentDownloadToken?.cancel('User cancelled download');
               Navigator.of(context).pop();
             },
           ),
@@ -269,7 +313,7 @@ class UpdateService {
       }
 
       // Скачиваем APK
-      await _dio.download(
+      await dio.download(
         updateInfo.downloadUrl,
         filePath,
         onReceiveProgress: (received, total) {
@@ -278,6 +322,8 @@ class UpdateService {
             onDownloadProgress?.call(progress);
           }
         },
+        cancelToken:
+            _currentDownloadToken, // ИСПРАВЛЕНИЕ: Используем CancelToken
         options: Options(
           headers: {
             'Accept': '*/*',
@@ -306,18 +352,6 @@ class UpdateService {
         throw Exception(
             'Файл слишком маленький, возможно загрузка не завершена');
       }
-
-      // // ВАЖНО: Добавляем задержку перед открытием
-      // await Future.delayed(Duration(seconds: 1));
-
-      // // Открываем установщик
-      // print('📱 Opening APK installer for: $filePath');
-
-      // // Используем open_file для открытия
-      // final result = await OpenFile.open(
-      //   filePath,
-      //   type: 'application/vnd.android.package-archive',
-      // );
 
       // Показываем уведомление с кнопкой установки
       await _showInstallNotification(context, filePath, fileName);
@@ -376,86 +410,95 @@ class UpdateService {
           );
         }
       }
+    } on DioError catch (e) {
+      // ИСПРАВЛЕНИЕ: Обрабатываем отмену загрузки
+      if (e.type == DioErrorType.cancel) {
+        print('📱 Download cancelled by user');
+        // Сбрасываем токен для возможности повторной загрузки
+        _currentDownloadToken = null;
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Загрузка отменена'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        print('❌ DioError downloading update: $e');
+        _handleDownloadError(context, e.toString(), updateInfo);
+      }
     } catch (e) {
       print('❌ Error downloading/installing update: $e');
-
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Закрываем диалог загрузки
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка установки: ${e.toString()}'),
-            duration: Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'Повторить',
-              onPressed: () => _downloadAndInstallUpdate(context, updateInfo),
-            ),
-          ),
-        );
-      }
+      _handleDownloadError(context, e.toString(), updateInfo);
+    } finally {
+      // ИСПРАВЛЕНИЕ: Очищаем токен после завершения
+      _currentDownloadToken = null;
     }
   }
 
-  // Добавьте этот метод в update_service.dart для показа уведомления
+  // Новый метод для обработки ошибок загрузки
+  void _handleDownloadError(
+      BuildContext context, String error, UpdateInfo updateInfo) {
+    if (context.mounted) {
+      Navigator.of(context).pop(); // Закрываем диалог загрузки
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка загрузки: $error'),
+          duration: Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Повторить',
+            onPressed: () => _downloadAndInstallUpdate(context, updateInfo),
+          ),
+        ),
+      );
+    }
+  }
 
   // Метод для показа постоянного уведомления с кнопкой установки
   Future<void> _showInstallNotification(
       BuildContext context, String filePath, String fileName) async {
     if (!context.mounted) return;
 
-    // Показываем Snackbar, который не исчезает
-    ScaffoldMessenger.of(context).showMaterialBanner(
-      MaterialBanner(
-        content: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+    // Показываем SnackBar с кнопкой установки
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
           children: [
-            Text(
-              '✅ Обновление загружено',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 4),
-            Text(
-              'Нажмите "Установить" для обновления приложения',
-              style: TextStyle(fontSize: 13),
+            Icon(Icons.download_done, color: Colors.white),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Обновление загружено'),
+                  Text(
+                    fileName,
+                    style: TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-        backgroundColor: Colors.green[50],
-        actions: [
-          TextButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
-            },
-            child: Text('Отмена'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
-
-              // Пробуем открыть файл еще раз
-              final result = await OpenFile.open(
-                filePath,
-                type: 'application/vnd.android.package-archive',
-              );
-
-              if (result.type != ResultType.done) {
-                // Если не удалось, показываем путь к файлу
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Откройте файл $fileName в папке Загрузки'),
-                    duration: Duration(seconds: 10),
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: Text('Установить'),
-          ),
-        ],
+        duration: Duration(seconds: 10),
+        backgroundColor: Colors.green,
+        action: SnackBarAction(
+          label: 'Установить',
+          textColor: Colors.white,
+          onPressed: () async {
+            final result = await OpenFile.open(
+              filePath,
+              type: 'application/vnd.android.package-archive',
+            );
+            if (result.type != ResultType.done) {
+              _openDownloadsFolder();
+            }
+          },
+        ),
       ),
     );
   }
@@ -470,20 +513,6 @@ class UpdateService {
       print('Could not open downloads folder: $e');
     }
   }
-
-//   // Упрощенный метод для открытия папки загрузок
-// Future<void> _openDownloadsFolder() async {
-//   try {
-//     // Пробуем открыть файловый менеджер
-//     // Большинство Android устройств откроют папку загрузок
-//     final Uri uri = Uri.parse('content://com.android.externalstorage.documents/document/primary:Download');
-//     if (await canLaunchUrl(uri)) {
-//       await launchUrl(uri);
-//     }
-//   } catch (e) {
-//     print('Could not open downloads folder: $e');
-//   }
-// }
 
   // Проверка, нужно ли показывать диалог обновления
   Future<bool> shouldShowUpdateDialog() async {
@@ -577,9 +606,11 @@ class _DownloadProgressDialogState extends State<_DownloadProgressDialog> {
   void initState() {
     super.initState();
     UpdateService().onDownloadProgress = (progress) {
-      setState(() {
-        _progress = progress;
-      });
+      if (mounted) {
+        setState(() {
+          _progress = progress;
+        });
+      }
     };
   }
 
