@@ -109,42 +109,319 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  // НОВЫЙ МЕТОД - диалог "О приложении"
+  // ОБНОВЛЕННЫЙ МЕТОД - диалог "О приложении" с инструкцией
   void _showAboutDialog() {
-    showAboutDialog(
+    showDialog(
       context: context,
-      applicationName: 'Северная Корзина',
-      applicationVersion: _appVersion,
-      applicationIcon: Container(
-        width: 64,
-        height: 64,
-        decoration: BoxDecoration(
-          color: Colors.blue,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(
-          Icons.shopping_basket,
-          color: Colors.white,
-          size: 40,
-        ),
-      ),
-      applicationLegalese: '© 2024 Северная Корзина\nВсе права защищены',
-      children: [
-        SizedBox(height: 16),
-        Text(
-          'Платформа коллективных закупок для жителей Усть-Неры',
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 8),
-        Text(
-          'Экономьте до 50% покупая вместе!',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.green,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-          textAlign: TextAlign.center,
-        ),
-      ],
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+              maxWidth: 400,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Заголовок
+                Container(
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.shopping_basket,
+                          color: Colors.blue,
+                          size: 24,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Северная Корзина',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Версия $_appVersion',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Контент с инструкцией
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildInstructionSection(
+                          '🎯 Как это работает',
+                          [
+                            'Северная Корзина - это платформа коллективных закупок для жителей Усть-Неры.',
+                            'Мы объединяем заказы жителей, чтобы получить оптовые цены от поставщиков.',
+                            'Чем больше участников - тем ниже цены!',
+                          ],
+                        ),
+
+                        _buildInstructionSection(
+                          '📱 Регистрация и вход',
+                          [
+                            '1. Нажмите "Войти" на главном экране',
+                            '2. Введите номер телефона в формате +7 XXX XXX XX XX',
+                            '3. Получите SMS с кодом подтверждения',
+                            '4. Введите код из SMS',
+                            '5. Заполните имя и фамилию при первом входе',
+                          ],
+                        ),
+
+                        _buildInstructionSection(
+                          '🛒 Как сделать заказ',
+                          [
+                            '1. Перейдите в раздел "Каталог"',
+                            '2. Выберите нужную категорию товаров',
+                            '3. Нажмите на товар для просмотра подробностей',
+                            '4. Укажите количество и нажмите "В корзину"',
+                            '5. Товары сохраняются в корзине даже после закрытия приложения',
+                            '6. Перейдите в "Корзину" для оформления заказа',
+                          ],
+                        ),
+
+                        _buildInstructionSection(
+                          '💳 Оплата заказа',
+                          [
+                            '• Требуется 100% предоплата',
+                            '• Принимаются карты МИР через систему ЮKassa',
+                            '• После оплаты заказ автоматически попадает в обработку',
+                            '• Корзина очищается только после успешной оплаты',
+                            '• Вы получите SMS-уведомление о статусе заказа',
+                          ],
+                        ),
+
+                        _buildInstructionSection(
+                          '🚛 Доставка',
+                          [
+                            '• Машина отправляется после набора целевой суммы закупки',
+                            '• Прогресс закупки отображается в разделе "Профиль"',
+                            '• Доставка осуществляется по указанному адресу',
+                            '• Вы получите SMS когда заказ будет готов к выдаче',
+                            '• Время доставки: 7-14 дней после отправки машины',
+                          ],
+                        ),
+
+                        _buildInstructionSection(
+                          '📊 Отслеживание заказов',
+                          [
+                            '• Все ваши заказы доступны в разделе "Заказы"',
+                            '• Статусы заказов:',
+                            '  - Ожидает оплаты (желтый)',
+                            '  - Оплачен (зеленый)',
+                            '  - В закупке (синий)',
+                            '  - Доставляется (оранжевый)',
+                            '  - Готов к выдаче (фиолетовый)',
+                            '  - Выдан (серый)',
+                          ],
+                        ),
+
+                        _buildInstructionSection(
+                          '🎯 Целевая сумма закупки',
+                          [
+                            '• Минимальная сумма для отправки машины отображается в профиле',
+                            '• Текущий прогресс показан в виде прогресс-бара',
+                            '• Машина отправляется сразу после достижения цели',
+                            '• Приглашайте друзей для быстрого набора суммы!',
+                          ],
+                        ),
+
+                        _buildInstructionSection(
+                          '🔄 Обновления приложения',
+                          [
+                            '• Приложение автоматически проверяет обновления',
+                            '• При наличии новой версии появится уведомление',
+                            '• Нажмите "Обновить" для загрузки',
+                            '• Обновление установится автоматически',
+                            '• Важные обновления обязательны для установки',
+                          ],
+                        ),
+
+                        _buildInstructionSection(
+                          '❓ Частые вопросы',
+                          [
+                            'Q: Можно ли отменить оплаченный заказ?',
+                            'A: Отмена возможна до отправки машины. Обратитесь в поддержку.',
+                            '',
+                            'Q: Как изменить адрес доставки?',
+                            'A: Свяжитесь с поддержкой до отправки машины.',
+                            '',
+                            'Q: Когда придет мой заказ?',
+                            'A: Следите за прогресс-баром в профиле. После отправки машины - 7-14 дней.',
+                            '',
+                            'Q: Почему товары в корзине не удаляются?',
+                            'A: Корзина сохраняется до оплаты для вашего удобства.',
+                          ],
+                        ),
+
+                        _buildInstructionSection(
+                          '📞 Контакты поддержки',
+                          [
+                            '📧 Email: sevkorzina@gmail.com',
+                            '📱 Телефон: +7 (914) 266-75-82',
+                            '⏰ Время работы: Пн-Пт 9:00-18:00',
+                            '📍 Адрес: Республика Саха (Якутия), пос. Усть-Нера',
+                          ],
+                        ),
+
+                        SizedBox(height: 16),
+
+                        // Информация о разработчике
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                '© 2024 Северная Корзина',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Платформа коллективных закупок',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Экономьте до 50% покупая вместе!',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Нижняя панель с кнопкой
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: Icon(Icons.check_circle),
+                        label: Text('Понятно'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.blue,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Вспомогательный метод для создания секций инструкции
+  Widget _buildInstructionSection(String title, List<String> items) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.blue[700],
+            ),
+          ),
+          SizedBox(height: 8),
+          ...items
+              .map((item) => Padding(
+                    padding: EdgeInsets.only(bottom: 4, left: 8),
+                    child: Text(
+                      item,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: item.startsWith('Q:')
+                            ? Colors.grey[700]
+                            : item.startsWith('A:')
+                                ? Colors.blue[600]
+                                : Colors.grey[600],
+                        fontWeight:
+                            item.startsWith('Q:') || item.startsWith('A:')
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                        height: 1.4,
+                      ),
+                    ),
+                  ))
+              .toList(),
+        ],
+      ),
     );
   }
 

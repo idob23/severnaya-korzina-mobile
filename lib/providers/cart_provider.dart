@@ -1,5 +1,7 @@
-// lib/providers/cart_provider.dart - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// lib/providers/cart_provider.dart - ВЕРСИЯ С ПЕРСИСТЕНТНОСТЬЮ
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 // Импортируем Product из products_provider
 import 'products_provider.dart';
 
@@ -45,15 +47,43 @@ class CartItem {
   /// Форматированная цена за единицу
   String get formattedPrice => '${price.toStringAsFixed(0)} ₽';
 
+  /// Преобразование в JSON для сохранения
+  Map<String, dynamic> toJson() {
+    return {
+      'productId': productId,
+      'name': name,
+      'price': price,
+      'unit': unit,
+      'quantity': quantity,
+    };
+  }
+
+  /// Создание из JSON при загрузке
+  factory CartItem.fromJson(Map<String, dynamic> json) {
+    return CartItem(
+      productId: json['productId'],
+      name: json['name'],
+      price: json['price'].toDouble(),
+      unit: json['unit'],
+      quantity: json['quantity'],
+    );
+  }
+
   @override
   String toString() {
     return 'CartItem(productId: $productId, name: $name, quantity: $quantity)';
   }
 }
 
-/// Провайдер для управления корзиной
+/// Провайдер для управления корзиной с персистентностью
 class CartProvider with ChangeNotifier {
   Map<int, CartItem> _items = {};
+  static const String _cartStorageKey = 'cart_items';
+
+  /// Инициализация провайдера с загрузкой сохраненной корзины
+  CartProvider() {
+    loadCart();
+  }
 
   /// Получает все элементы корзины
   Map<int, CartItem> get items => _items;
@@ -104,6 +134,7 @@ class CartProvider with ChangeNotifier {
       );
     }
 
+    saveCart(); // Сохраняем после изменения
     notifyListeners();
 
     if (kDebugMode) {
@@ -126,6 +157,7 @@ class CartProvider with ChangeNotifier {
   void removeItem(int productId) {
     if (_items.containsKey(productId)) {
       final removedItem = _items.remove(productId);
+      saveCart(); // Сохраняем после изменения
       notifyListeners();
 
       if (kDebugMode) {
@@ -141,6 +173,7 @@ class CartProvider with ChangeNotifier {
         removeItem(productId);
       } else {
         _items[productId]!.quantity = quantity;
+        saveCart(); // Сохраняем после изменения
         notifyListeners();
 
         if (kDebugMode) {
@@ -160,6 +193,7 @@ class CartProvider with ChangeNotifier {
   void incrementItem(int productId) {
     if (_items.containsKey(productId)) {
       _items[productId]!.quantity++;
+      saveCart(); // Сохраняем после изменения
       notifyListeners();
     }
   }
@@ -169,6 +203,7 @@ class CartProvider with ChangeNotifier {
     if (_items.containsKey(productId)) {
       if (_items[productId]!.quantity > 1) {
         _items[productId]!.quantity--;
+        saveCart(); // Сохраняем после изменения
         notifyListeners();
       } else {
         removeItem(productId);
@@ -194,6 +229,7 @@ class CartProvider with ChangeNotifier {
   /// Очищает корзину
   void clearCart() {
     _items.clear();
+    saveCart(); // Сохраняем пустую корзину
     notifyListeners();
 
     if (kDebugMode) {
@@ -223,19 +259,68 @@ class CartProvider with ChangeNotifier {
     };
   }
 
-  /// Сохраняет корзину (заглушка для будущей реализации)
+  /// Сохраняет корзину в локальное хранилище
   Future<void> saveCart() async {
-    // TODO: Сохранение в локальное хранилище
-    if (kDebugMode) {
-      print('CartProvider: Сохранение корзины (заглушка)');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      if (_items.isEmpty) {
+        // Если корзина пуста, удаляем данные
+        await prefs.remove(_cartStorageKey);
+        if (kDebugMode) {
+          print('CartProvider: Корзина пуста, удалены сохраненные данные');
+        }
+      } else {
+        // Преобразуем корзину в JSON
+        final cartData = _items
+            .map((key, value) => MapEntry(key.toString(), value.toJson()));
+        final jsonString = jsonEncode(cartData);
+
+        // Сохраняем в SharedPreferences
+        await prefs.setString(_cartStorageKey, jsonString);
+
+        if (kDebugMode) {
+          print('CartProvider: Корзина сохранена (${_items.length} товаров)');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('CartProvider: Ошибка сохранения корзины: $e');
+      }
     }
   }
 
-  /// Загружает корзину (заглушка для будущей реализации)
+  /// Загружает корзину из локального хранилища
   Future<void> loadCart() async {
-    // TODO: Загрузка из локального хранилища
-    if (kDebugMode) {
-      print('CartProvider: Загрузка корзины (заглушка)');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = prefs.getString(_cartStorageKey);
+
+      if (jsonString != null && jsonString.isNotEmpty) {
+        final Map<String, dynamic> cartData = jsonDecode(jsonString);
+
+        _items.clear();
+        cartData.forEach((key, value) {
+          final productId = int.parse(key);
+          _items[productId] = CartItem.fromJson(value);
+        });
+
+        notifyListeners();
+
+        if (kDebugMode) {
+          print('CartProvider: Корзина загружена (${_items.length} товаров)');
+        }
+      } else {
+        if (kDebugMode) {
+          print('CartProvider: Нет сохраненной корзины');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('CartProvider: Ошибка загрузки корзины: $e');
+      }
+      // В случае ошибки очищаем корзину
+      _items.clear();
     }
   }
 
@@ -243,17 +328,4 @@ class CartProvider with ChangeNotifier {
   void forceUpdate() {
     notifyListeners();
   }
-
-  // /// Отладочная информация для проверки данных заказа
-  // void debugOrderData() {
-  //   print('=== DEBUG ORDER DATA ===');
-  //   print('Total items: ${totalItems}');
-  //   print('Total amount: ${totalAmount}');
-  //   print('Order items:');
-  //   getOrderItems().forEach((item) {
-  //     print(
-  //         '  - ${item['name']}: ${item['quantity']} x ${item['price']} = ${item['quantity'] * item['price']}');
-  //   });
-  //   print('========================');
-  // }
 }
