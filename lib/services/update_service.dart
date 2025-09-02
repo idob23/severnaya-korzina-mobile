@@ -117,9 +117,21 @@ class UpdateService {
   String get currentVersion => _packageInfo?.version ?? '1.0.0';
   String get currentBuildNumber => _packageInfo?.buildNumber ?? '1';
 
+  // Упрощенный метод checkForUpdate - убираем логику пропуска
   Future<UpdateInfo?> checkForUpdate({bool silent = false}) async {
     try {
+      // Убеждаемся, что сервис инициализирован
+      if (_packageInfo == null) {
+        await init();
+      }
+
       final dio = Dio();
+
+      if (!silent) {
+        print('🔍 Checking for updates...');
+        print(
+            '📱 Current version: $currentVersion (build: $currentBuildNumber)');
+      }
 
       // Добавляем timestamp для обхода кэша
       final response = await dio.get(
@@ -135,15 +147,27 @@ class UpdateService {
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache',
           },
+          receiveTimeout: Duration(seconds: 10),
+          sendTimeout: Duration(seconds: 10),
         ),
       );
 
       if (response.statusCode == 200) {
         final data = response.data;
 
+        if (!silent) {
+          print(
+              '📦 Server response: ${data['update_available'] ? 'Update available' : 'No updates'}');
+          if (data['update_available']) {
+            print('📦 Latest version: ${data['latest_version']}');
+            print('⚠️ Update is MANDATORY');
+          }
+        }
+
         if (data['update_available'] == true) {
           _availableUpdate = UpdateInfo.fromJson(data);
 
+          // Сохраняем информацию о последней проверке
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString(
               'last_update_check', DateTime.now().toIso8601String());
@@ -162,16 +186,15 @@ class UpdateService {
     }
   }
 
+  // Упрощенный диалог - только кнопка "Обновить"
   Future<void> showUpdateDialog(
       BuildContext context, UpdateInfo updateInfo) async {
-    final canSkip = updateInfo.features['can_skip'] ?? true;
-
     await showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: false, // Нельзя закрыть по клику вне диалога
       builder: (BuildContext context) {
         return WillPopScope(
-          onWillPop: () async => canSkip && !updateInfo.forceUpdate,
+          onWillPop: () async => false, // Нельзя закрыть кнопкой "Назад"
           child: AlertDialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(15),
@@ -182,7 +205,7 @@ class UpdateService {
                 SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Доступно обновление',
+                    'Обязательное обновление',
                     style: TextStyle(fontSize: 20),
                   ),
                 ),
@@ -208,62 +231,94 @@ class UpdateService {
                         padding:
                             EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: updateInfo.forceUpdate
-                              ? Colors.red[100]
-                              : Colors.green[100],
+                          color: Colors.red[100],
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          updateInfo.forceUpdate ? 'Обязательное' : 'Новое',
+                          'ОБЯЗАТЕЛЬНО',
                           style: TextStyle(
                             fontSize: 12,
-                            color: updateInfo.forceUpdate
-                                ? Colors.red[800]
-                                : Colors.green[800],
+                            color: Colors.red[700],
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Размер: ${updateInfo.sizeMb.toStringAsFixed(1)} МБ',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                  ),
+                  SizedBox(height: 4),
                   Text(
                     'Текущая версия: $currentVersion',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
                   ),
-                  if (updateInfo.forceUpdate) ...[
-                    SizedBox(height: 12),
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red[200]!),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.warning_amber_rounded,
-                              color: Colors.red[800], size: 20),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Это обновление обязательно для продолжения работы.',
-                              style: TextStyle(
-                                  color: Colors.red[800], fontSize: 12),
-                            ),
-                          ),
-                        ],
+                  if (updateInfo.sizeMb > 0) ...[
+                    SizedBox(height: 4),
+                    Text(
+                      'Размер: ${updateInfo.sizeMb.toStringAsFixed(1)} МБ',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
                       ),
                     ),
                   ],
+                  if (updateInfo.releaseDate.isNotEmpty) ...[
+                    Text(
+                      'Дата выпуска: ${updateInfo.releaseDate}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                  SizedBox(height: 16),
+
+                  // Сообщение об обязательности
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange[300]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning,
+                            color: Colors.orange[700], size: 20),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Для продолжения работы необходимо установить это обновление',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.orange[900],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  if (updateInfo.message.isNotEmpty) ...[
+                    SizedBox(height: 12),
+                    Text(
+                      updateInfo.message,
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ],
+
                   if (updateInfo.showChangelog &&
                       updateInfo.changelog.isNotEmpty) ...[
-                    SizedBox(height: 16),
-                    Text('Что нового:',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    SizedBox(height: 12),
+                    Text(
+                      'Что нового:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
                     SizedBox(height: 8),
                     Container(
                       constraints: BoxConstraints(maxHeight: 200),
@@ -273,8 +328,22 @@ class UpdateService {
                           children: updateInfo.changelog
                               .map((item) => Padding(
                                     padding: EdgeInsets.only(bottom: 4),
-                                    child: Text(item,
-                                        style: TextStyle(fontSize: 13)),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text('• ',
+                                            style: TextStyle(
+                                                color: Colors.blue,
+                                                fontWeight: FontWeight.bold)),
+                                        Expanded(
+                                          child: Text(
+                                            item,
+                                            style: TextStyle(fontSize: 13),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ))
                               .toList(),
                         ),
@@ -285,24 +354,25 @@ class UpdateService {
               ),
             ),
             actions: [
-              if (canSkip && !updateInfo.forceUpdate)
-                TextButton(
-                  onPressed: () async {
+              // Только одна кнопка - Обновить
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
                     Navigator.of(context).pop();
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.setString(
-                      'update_skipped_date',
-                      DateTime.now().toIso8601String(),
-                    );
+                    _downloadAndInstallUpdate(context, updateInfo);
                   },
-                  child: Text('Позже'),
+                  icon: Icon(Icons.download, size: 20),
+                  label: Text('Обновить сейчас'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  _downloadAndInstallUpdate(context, updateInfo);
-                },
-                child: Text('Обновить'),
               ),
             ],
           ),
@@ -613,23 +683,10 @@ class UpdateService {
     }
   }
 
+  // Упрощенный метод - всегда показываем диалог если есть обновление
   Future<bool> shouldShowUpdateDialog() async {
-    if (_availableUpdate == null) return false;
-
-    final prefs = await SharedPreferences.getInstance();
-
-    if (_availableUpdate!.forceUpdate) return true;
-
-    final skippedDateStr = prefs.getString('update_skipped_date');
-    if (skippedDateStr != null) {
-      final skippedDate = DateTime.parse(skippedDateStr);
-      final daysSinceSkipped = DateTime.now().difference(skippedDate).inDays;
-      final remindDays = _availableUpdate!.features['remind_later_days'] ?? 3;
-
-      if (daysSinceSkipped < remindDays) return false;
-    }
-
-    return true;
+    // Если есть доступное обновление - всегда показываем
+    return _availableUpdate != null;
   }
 }
 

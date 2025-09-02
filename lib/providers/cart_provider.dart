@@ -1,4 +1,4 @@
-// lib/providers/cart_provider.dart - ВЕРСИЯ С ПЕРСИСТЕНТНОСТЬЮ
+// lib/providers/cart_provider.dart - ПОЛНАЯ ВЕРСИЯ С ИСПРАВЛЕНИЯМИ
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -79,10 +79,13 @@ class CartItem {
 class CartProvider with ChangeNotifier {
   Map<int, CartItem> _items = {};
   static const String _cartStorageKey = 'cart_items';
+  bool _isInitialized = false;
 
-  /// Инициализация провайдера с загрузкой сохраненной корзины
+  /// Инициализация провайдера БЕЗ автоматической загрузки
+  /// чтобы избежать двойного вызова loadCart()
   CartProvider() {
-    loadCart();
+    // НЕ вызываем loadCart() здесь
+    // Он будет вызван явно из main.dart с await
   }
 
   /// Получает все элементы корзины
@@ -292,6 +295,9 @@ class CartProvider with ChangeNotifier {
 
   /// Загружает корзину из локального хранилища
   Future<void> loadCart() async {
+    // Защита от повторной загрузки
+    if (_isInitialized) return;
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_cartStorageKey);
@@ -305,10 +311,9 @@ class CartProvider with ChangeNotifier {
           _items[productId] = CartItem.fromJson(value);
         });
 
-        notifyListeners();
-
         if (kDebugMode) {
-          print('CartProvider: Корзина загружена (${_items.length} товаров)');
+          print(
+              'CartProvider: Корзина загружена (${_items.length} товаров, всего ${totalItems} шт.)');
         }
       } else {
         if (kDebugMode) {
@@ -321,6 +326,11 @@ class CartProvider with ChangeNotifier {
       }
       // В случае ошибки очищаем корзину
       _items.clear();
+    } finally {
+      _isInitialized = true;
+      // ВАЖНО: всегда вызываем notifyListeners после загрузки
+      // Используем Future.microtask для гарантии вызова после build
+      Future.microtask(() => notifyListeners());
     }
   }
 

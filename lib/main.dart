@@ -346,13 +346,16 @@ class _AppInitializerState extends State<AppInitializer> {
           Provider.of<OrdersProvider>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
-      // Параллельная инициализация
+      // Параллельная инициализация основных провайдеров
       await Future.wait([
         authProvider.init(),
         productsProvider.init(),
         if (authProvider.isAuthenticated) ordersProvider.loadOrders(),
-        cartProvider.loadCart(), // Загружаем сохраненную корзину
       ]);
+
+      // Загружаем корзину ОТДЕЛЬНО после основной инициализации
+      // чтобы гарантировать корректное обновление UI
+      await cartProvider.loadCart();
 
       setState(() {
         _isInitialized = true;
@@ -360,7 +363,7 @@ class _AppInitializerState extends State<AppInitializer> {
 
       // Проверка обновлений после инициализации
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        UpdateService().checkForUpdate();
+        UpdateService().checkForUpdate(silent: true);
       });
     } catch (e) {
       print('Ошибка инициализации: $e');
