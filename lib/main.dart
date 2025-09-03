@@ -256,7 +256,7 @@
 //   }
 // }
 
-// lib/main.dart - ВЕРСИЯ С ПЕРСИСТЕНТНОЙ КОРЗИНОЙ
+// lib/main.dart - ПОЛНАЯ ВЕРСИЯ С ИСПРАВЛЕННЫМИ ОБНОВЛЕНИЯМИ
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:severnaya_korzina/providers/cart_provider.dart';
@@ -297,10 +297,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider<OrdersProvider>(
             create: (context) => OrdersProvider()..init()),
 
-        // Корзина с автоматической загрузкой сохраненных данных
+        // Корзина
         ChangeNotifierProvider<CartProvider>(
-            create: (context) =>
-                CartProvider()), // Конструктор автоматически вызовет loadCart()
+            create: (context) => CartProvider()),
       ],
       child: MaterialApp(
         title: 'Северная корзина',
@@ -329,6 +328,7 @@ class AppInitializer extends StatefulWidget {
 
 class _AppInitializerState extends State<AppInitializer> {
   bool _isInitialized = false;
+  bool _updateChecked = false;
 
   @override
   void initState() {
@@ -354,7 +354,6 @@ class _AppInitializerState extends State<AppInitializer> {
       ]);
 
       // Загружаем корзину ОТДЕЛЬНО после основной инициализации
-      // чтобы гарантировать корректное обновление UI
       await cartProvider.loadCart();
 
       setState(() {
@@ -362,14 +361,45 @@ class _AppInitializerState extends State<AppInitializer> {
       });
 
       // Проверка обновлений после инициализации
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        UpdateService().checkForUpdate(silent: true);
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // Ждем немного для плавного появления UI
+        await Future.delayed(Duration(milliseconds: 500));
+
+        if (!mounted) return;
+
+        _checkForUpdates();
       });
     } catch (e) {
       print('Ошибка инициализации: $e');
       setState(() {
         _isInitialized = true;
       });
+    }
+  }
+
+  Future<void> _checkForUpdates() async {
+    // Защита от повторных проверок
+    if (_updateChecked) return;
+    _updateChecked = true;
+
+    try {
+      print('🔄 Автоматическая проверка обновлений...');
+
+      final updateService = UpdateService();
+      final updateInfo = await updateService.checkForUpdate(silent: false);
+
+      if (updateInfo != null && mounted) {
+        print('📱 Обновление доступно: v${updateInfo.latestVersion}');
+        print('📱 Текущая версия: v${updateInfo.currentVersion}');
+
+        // Всегда показываем диалог для обязательных обновлений
+        print('📢 Показываем обязательный диалог обновления');
+        await updateService.showUpdateDialog(context, updateInfo);
+      } else {
+        print('✅ Приложение актуально или сервер недоступен');
+      }
+    } catch (e) {
+      print('❌ Ошибка при проверке обновлений: $e');
     }
   }
 

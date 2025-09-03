@@ -106,12 +106,18 @@ class UpdateService {
   }
 
   Future<void> init() async {
-    _packageInfo = await PackageInfo.fromPlatform();
-    print(
-        '📱 App version: ${_packageInfo?.version} (${_packageInfo?.buildNumber})');
+    try {
+      _packageInfo = await PackageInfo.fromPlatform();
+      print('📱 UpdateService инициализирован');
+      print(
+          '📱 Версия приложения: ${_packageInfo?.version} (build: ${_packageInfo?.buildNumber})');
 
-    // Очищаем старые APK при инициализации
-    await _cleanOldApkFiles();
+      // Очищаем старые APK при инициализации
+      await _cleanOldApkFiles();
+    } catch (e) {
+      print('❌ Ошибка инициализации UpdateService: $e');
+      _packageInfo = null;
+    }
   }
 
   String get currentVersion => _packageInfo?.version ?? '1.0.0';
@@ -122,16 +128,15 @@ class UpdateService {
     try {
       // Убеждаемся, что сервис инициализирован
       if (_packageInfo == null) {
+        print('⚠️ PackageInfo не инициализирован, инициализируем...');
         await init();
       }
 
       final dio = Dio();
 
-      if (!silent) {
-        print('🔍 Checking for updates...');
-        print(
-            '📱 Current version: $currentVersion (build: $currentBuildNumber)');
-      }
+      print('🔍 Проверка обновлений...');
+      print('📱 Текущая версия: $currentVersion (build: $currentBuildNumber)');
+      print('🌐 URL проверки: $baseUrl/api/app/version');
 
       // Добавляем timestamp для обхода кэша
       final response = await dio.get(
@@ -152,19 +157,18 @@ class UpdateService {
         ),
       );
 
+      print('📡 Статус ответа: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final data = response.data;
-
-        if (!silent) {
-          print(
-              '📦 Server response: ${data['update_available'] ? 'Update available' : 'No updates'}');
-          if (data['update_available']) {
-            print('📦 Latest version: ${data['latest_version']}');
-            print('⚠️ Update is MANDATORY');
-          }
-        }
+        print('📦 Данные с сервера: $data');
 
         if (data['update_available'] == true) {
+          print('🎯 ОБНОВЛЕНИЕ ДОСТУПНО!');
+          print('📦 Новая версия: ${data['latest_version']}');
+          print('📦 Размер: ${data['size_mb']} MB');
+          print('📦 URL загрузки: ${data['download_url']}');
+
           _availableUpdate = UpdateInfo.fromJson(data);
 
           // Сохраняем информацию о последней проверке
@@ -174,13 +178,18 @@ class UpdateService {
           await prefs.setString('available_version', data['latest_version']);
 
           return _availableUpdate;
+        } else {
+          print('✅ Обновлений нет');
         }
       }
 
       return null;
     } catch (e) {
-      if (!silent) {
-        print('❌ Error checking for updates: $e');
+      print('❌ Ошибка при проверке обновлений: $e');
+      if (e is DioError) {
+        print('❌ DioError тип: ${e.type}');
+        print('❌ DioError сообщение: ${e.message}');
+        print('❌ DioError ответ: ${e.response}');
       }
       return null;
     }
@@ -685,7 +694,8 @@ class UpdateService {
 
   // Упрощенный метод - всегда показываем диалог если есть обновление
   Future<bool> shouldShowUpdateDialog() async {
-    // Если есть доступное обновление - всегда показываем
+    print(
+        '🔍 shouldShowUpdateDialog: обновление ${_availableUpdate != null ? "доступно" : "недоступно"}');
     return _availableUpdate != null;
   }
 }
