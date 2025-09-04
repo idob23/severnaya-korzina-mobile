@@ -283,7 +283,7 @@ class AuthProvider with ChangeNotifier {
 
   /// Регистрирует нового пользователя через API
   Future<bool> register(String phone, String firstName, String password,
-      {String? lastName}) async {
+      {String? lastName, String? email, bool acceptedTerms = false}) async {
     _isLoading = true;
     _lastError = null;
     notifyListeners();
@@ -305,6 +305,8 @@ class AuthProvider with ChangeNotifier {
         phone: formattedPhone,
         firstName: firstName.trim(),
         lastName: lastName?.trim(),
+        email: email?.trim(),
+        acceptedTerms: acceptedTerms,
       );
 
       if (kDebugMode) {

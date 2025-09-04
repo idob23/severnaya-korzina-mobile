@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+
 class ApiService {
   // URL вашего сервера в Yandex Cloud
   static String get baseUrl {
@@ -189,6 +191,7 @@ class ApiService {
     required String firstName,
     String? lastName,
     String? email,
+    bool acceptedTerms = false,
   }) async {
     // ОЧИЩАЕМ токен перед регистрацией
     _authToken = null;
@@ -204,6 +207,8 @@ class ApiService {
     if (email != null && email.isNotEmpty) {
       body['email'] = email;
     }
+
+    body['acceptedTerms'] = acceptedTerms;
 
     final result = await _makeRequest('POST', '/auth/register', body: body);
 

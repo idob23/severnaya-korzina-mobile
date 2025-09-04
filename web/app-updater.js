@@ -1,12 +1,12 @@
 let swRegistration = null;
-const APP_VERSION = '6.09030933';
+const APP_VERSION = '6.09042031';
 console.log('APP VERSION: ' + APP_VERSION);
 
 async function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     try {
       console.log('Registering Service Worker...');
-      swRegistration = await navigator.serviceWorker.register('/sw-6.09030933.js', {
+      swRegistration = await navigator.serviceWorker.register('/sw-6.09042031.js', {
         updateViaCache: 'none'
       });
       console.log('Service Worker registered');

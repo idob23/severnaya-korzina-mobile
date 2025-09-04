@@ -8,8 +8,9 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import 'login_screen.dart';
 import 'sms_verification_screen.dart';
-import 'package:flutter/foundation.dart'; // Добавьте этот импорт вверху файла
-import '../home/home_screen.dart'; // Добавьте этот импорт
+import 'package:flutter/foundation.dart';
+import '../home/home_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -22,6 +23,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _lastNameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
+  bool _acceptedTerms = false;
+  bool _formSubmitted = false;
 
   @override
   void dispose() {
@@ -255,6 +258,91 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 SizedBox(height: 24),
 
+                // НОВЫЙ БЛОК: Чекбокс согласия с условиями
+                Container(
+                  decoration: BoxDecoration(
+                    color: _acceptedTerms ? Colors.green[50] : Colors.grey[50],
+                    border: Border.all(
+                      color: _acceptedTerms
+                          ? Colors.green
+                          : (_formSubmitted && !_acceptedTerms
+                              ? Colors.red
+                              : Colors.grey[300]!),
+                      width: 1,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: CheckboxListTile(
+                    value: _acceptedTerms,
+                    onChanged: (value) {
+                      setState(() {
+                        _acceptedTerms = value ?? false;
+                      });
+                    },
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    title: Wrap(
+                      children: [
+                        Text('Я принимаю условия ',
+                            style: TextStyle(fontSize: 14)),
+                        GestureDetector(
+                          onTap: () => _openDocument('terms'),
+                          child: Text(
+                            'Пользовательского соглашения',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.blue,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                        Text(', ', style: TextStyle(fontSize: 14)),
+                        GestureDetector(
+                          onTap: () => _openDocument('privacy'),
+                          child: Text(
+                            'Политики конфиденциальности',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.blue,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                        Text(' и ', style: TextStyle(fontSize: 14)),
+                        GestureDetector(
+                          onTap: () => _openDocument('offer'),
+                          child: Text(
+                            'Публичной оферты',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.blue,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                        Text(' *',
+                            style: TextStyle(fontSize: 14, color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Сообщение об ошибке если не принято согласие
+                if (_formSubmitted && !_acceptedTerms)
+                  Padding(
+                    padding: EdgeInsets.only(top: 8, left: 12),
+                    child: Text(
+                      '⚠️ Необходимо принять условия для продолжения',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+
+                SizedBox(height: 24),
+
                 // Кнопка регистрации
                 Consumer<AuthProvider>(
                   builder: (context, authProvider, child) {
@@ -376,7 +464,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  // ОБНОВЛЕННЫЙ метод регистрации
   Future<void> _register() async {
+    setState(() {
+      _formSubmitted = true;
+    });
+
+    // Проверяем согласие с условиями
+    if (!_acceptedTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.warning, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Необходимо принять условия использования'),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -397,13 +508,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     print('Фамилия: $lastName');
     print('Телефон: $formattedPhone');
     print('Email: $email');
+    print('Согласие принято: $_acceptedTerms');
 
-    // Пробуем зарегистрировать через API
+    // Пробуем зарегистрировать через API с передачей согласия
     final success = await authProvider.register(
       formattedPhone,
       firstName,
       'password', // Пароль не используется в нашей системе
       lastName: lastName.isNotEmpty ? lastName : null,
+      email: email.isNotEmpty ? email : null,
+      acceptedTerms: _acceptedTerms, // ПЕРЕДАЕМ СОГЛАСИЕ
     );
 
     if (success) {
@@ -447,5 +561,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       }
     }
+  }
+
+  // НОВЫЙ метод для открытия документов
+  void _openDocument(String type) {
+    String url = '';
+    String title = '';
+
+    switch (type) {
+      case 'terms':
+        url = 'http://84.201.149.245:3000/agreement.html';
+        title = 'Пользовательское соглашение';
+        break;
+      case 'privacy':
+        url = 'http://84.201.149.245:3000/privacy.html';
+        title = 'Политика конфиденциальности';
+        break;
+      case 'offer':
+        url = 'http://84.201.149.245:3000/offer.html';
+        title = 'Публичная оферта';
+        break;
+    }
+
+    // Открываем в браузере
+    launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
   }
 }
