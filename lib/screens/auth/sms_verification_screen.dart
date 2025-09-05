@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../providers/auth_provider.dart';
 import '../home/home_screen.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class SMSVerificationScreen extends StatefulWidget {
   final String phone;
@@ -400,45 +401,47 @@ class _SMSVerificationScreenState extends State<SMSVerificationScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     authProvider.clearError();
 
-    // Верификация через SMS сервис
-    final success = await authProvider.verifySMSAndLogin(
-      widget.phone,
-      _enteredCode,
-      rememberMe: widget.rememberMe,
-    );
+    try {
+      // Верификация через SMS сервис
+      final success = await authProvider.verifySMSAndLogin(
+        widget.phone,
+        _enteredCode,
+        rememberMe: widget.rememberMe,
+      );
 
-    if (success) {
-      // Показываем сообщение об успехе
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Добро пожаловать!'),
-            ],
+      if (!mounted) return;
+
+      if (success) {
+        // Показываем сообщение об успехе
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Добро пожаловать!'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
           ),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
+        );
 
-      // Небольшая задержка для показа сообщения
-      await Future.delayed(Duration(milliseconds: 500));
+        // Добавляем задержку для веб
+        if (kIsWeb) {
+          await Future.delayed(Duration(milliseconds: 500));
+        }
 
-      // Переходим на главный экран
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => HomeScreen()),
-        (route) => false,
-      );
-    } else {
-      // Очищаем поля при ошибке
-      for (var controller in _controllers) {
-        controller.clear();
+        if (!mounted) return;
+
+        // Переходим на главный экран
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => HomeScreen()),
+          (Route<dynamic> route) => false,
+        );
       }
-      _updateEnteredCode();
-      _focusNodes[0].requestFocus();
+    } catch (e) {
+      print('Verification error: $e');
     }
   }
 

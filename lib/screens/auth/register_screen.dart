@@ -11,6 +11,7 @@ import 'sms_verification_screen.dart';
 import 'package:flutter/foundation.dart';
 import '../home/home_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -464,7 +465,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ОБНОВЛЕННЫЙ метод регистрации
+  // ОБНОВЛЕННЫЙ метод регистрации для register_screen.dart
   Future<void> _register() async {
     setState(() {
       _formSubmitted = true;
@@ -511,52 +512,119 @@ class _RegisterScreenState extends State<RegisterScreen> {
     print('Согласие принято: $_acceptedTerms');
 
     // Пробуем зарегистрировать через API с передачей согласия
-    final success = await authProvider.register(
-      formattedPhone,
-      firstName,
-      'password', // Пароль не используется в нашей системе
-      lastName: lastName.isNotEmpty ? lastName : null,
-      email: email.isNotEmpty ? email : null,
-      acceptedTerms: _acceptedTerms, // ПЕРЕДАЕМ СОГЛАСИЕ
-    );
-
-    if (success) {
-      // Показываем сообщение об успехе
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Регистрация успешна! Отправляем SMS...'),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
+    try {
+      final success = await authProvider.register(
+        formattedPhone,
+        firstName,
+        'password', // Пароль не используется в нашей системе
+        lastName: lastName.isNotEmpty ? lastName : null,
+        email: email.isNotEmpty ? email : null,
+        acceptedTerms: _acceptedTerms,
       );
 
-      // Небольшая задержка для отображения сообщения
-      await Future.delayed(Duration(seconds: 1));
+      // Проверяем, что виджет все еще смонтирован
+      if (!mounted) return;
 
-      // Отправляем SMS код на телефон
-      final smsSuccess = await authProvider.sendSMSCode(formattedPhone);
-
-      if (smsSuccess) {
-        // Переходим на экран верификации SMS
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => SMSVerificationScreen(
-              phone: formattedPhone,
-              rememberMe: true,
+      if (success) {
+        // Показываем сообщение об успехе
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Регистрация успешна! Отправляем SMS...'),
+              ],
             ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
           ),
         );
+
+        // Небольшая задержка для отображения сообщения
+        await Future.delayed(Duration(seconds: 1));
+
+        // Проверяем mounted после задержки
+        if (!mounted) return;
+
+        // Отправляем SMS код на телефон
+        final smsSuccess = await authProvider.sendSMSCode(formattedPhone);
+
+        // Снова проверяем mounted
+        if (!mounted) return;
+
+        if (smsSuccess) {
+          // Добавляем задержку для веб-версии
+          if (kIsWeb) {
+            await Future.delayed(Duration(milliseconds: 300));
+          }
+
+          // Финальная проверка mounted перед навигацией
+          if (!mounted) return;
+
+          // Переходим на экран верификации SMS
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => SMSVerificationScreen(
+                phone: formattedPhone,
+                rememberMe: true,
+              ),
+            ),
+          );
+        } else {
+          // Если SMS не отправилось, показываем ошибку
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.error, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('Не удалось отправить SMS. Попробуйте войти.'),
+                  ],
+                ),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 3),
+              ),
+            );
+
+            // Задержка перед переходом
+            await Future.delayed(Duration(seconds: 2));
+
+            if (mounted) {
+              // Переходим на экран входа
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => LoginScreen(),
+                ),
+              );
+            }
+          }
+        }
       } else {
-        // Если SMS не отправилось, переходим на экран входа
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => LoginScreen(),
+        // Регистрация не удалась
+        // Ошибка уже отображается через Consumer в UI
+        if (authProvider.lastError != null && mounted) {
+          print('❌ Ошибка регистрации: ${authProvider.lastError}');
+        }
+      }
+    } catch (e) {
+      print('❌ Исключение при регистрации: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text('Ошибка регистрации. Попробуйте позже.'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
           ),
         );
       }

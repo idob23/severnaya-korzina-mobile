@@ -270,12 +270,18 @@ import 'screens/profile/profile_screen.dart';
 import 'package:severnaya_korzina/screens/auth/auth_choice_screen.dart';
 import 'screens/payment/payment_success_screen.dart';
 import 'package:severnaya_korzina/services/update_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Инициализация сервиса обновлений
-  await UpdateService().init();
+  // Инициализация сервиса обновлений только для веб
+  try {
+    await UpdateService().init();
+  } catch (e) {
+    print('Ошибка инициализации UpdateService: $e');
+    // Продолжаем работу даже при ошибке
+  }
 
   runApp(MyApp());
 }
@@ -338,37 +344,37 @@ class _AppInitializerState extends State<AppInitializer> {
 
   Future<void> _initializeApp() async {
     try {
-      // Инициализация провайдеров
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final productsProvider =
-          Provider.of<ProductsProvider>(context, listen: false);
-      final ordersProvider =
-          Provider.of<OrdersProvider>(context, listen: false);
-      final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
-      // Параллельная инициализация основных провайдеров
-      await Future.wait([
-        authProvider.init(),
-        productsProvider.init(),
-        if (authProvider.isAuthenticated) ordersProvider.loadOrders(),
-      ]);
+      // Для веб-версии добавляем больше времени на инициализацию
+      if (kIsWeb) {
+        // Ждем инициализации LocalStorage
+        await Future.delayed(Duration(milliseconds: 500));
+      }
 
-      // Загружаем корзину ОТДЕЛЬНО после основной инициализации
-      await cartProvider.loadCart();
+      // Проверяем статус авторизации
+      await authProvider.checkAuthStatus();
+
+      // Если пользователь авторизован, инициализируем OrdersProvider
+      if (authProvider.isAuthenticated) {
+        final ordersProvider =
+            Provider.of<OrdersProvider>(context, listen: false);
+        await ordersProvider.init();
+      }
 
       setState(() {
         _isInitialized = true;
       });
 
-      // Проверка обновлений после инициализации
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        // Ждем немного для плавного появления UI
-        await Future.delayed(Duration(milliseconds: 500));
-
-        if (!mounted) return;
-
-        _checkForUpdates();
-      });
+      // Проверка обновлений только для мобильных
+      if (!kIsWeb) {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          await Future.delayed(Duration(milliseconds: 500));
+          if (mounted) {
+            _checkForUpdates();
+          }
+        });
+      }
     } catch (e) {
       print('Ошибка инициализации: $e');
       setState(() {
@@ -378,25 +384,15 @@ class _AppInitializerState extends State<AppInitializer> {
   }
 
   Future<void> _checkForUpdates() async {
-    // Защита от повторных проверок
-    if (_updateChecked) return;
+    if (_updateChecked || kIsWeb) return;
     _updateChecked = true;
 
     try {
-      print('🔄 Автоматическая проверка обновлений...');
-
       final updateService = UpdateService();
       final updateInfo = await updateService.checkForUpdate(silent: false);
 
       if (updateInfo != null && mounted) {
-        print('📱 Обновление доступно: v${updateInfo.latestVersion}');
-        print('📱 Текущая версия: v${updateInfo.currentVersion}');
-
-        // Всегда показываем диалог для обязательных обновлений
-        print('📢 Показываем обязательный диалог обновления');
         await updateService.showUpdateDialog(context, updateInfo);
-      } else {
-        print('✅ Приложение актуально или сервер недоступен');
       }
     } catch (e) {
       print('❌ Ошибка при проверке обновлений: $e');
@@ -412,20 +408,37 @@ class _AppInitializerState extends State<AppInitializer> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
               ),
               SizedBox(height: 16),
               Text(
                 'Загрузка...',
                 style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               ),
+              if (kIsWeb) ...[
+                SizedBox(height: 8),
+                Text(
+                  'Инициализация веб-версии...',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                ),
+              ],
             ],
           ),
         ),
       );
     }
 
-    return MainScreen();
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        // Если пользователь авторизован - показываем главный экран
+        if (authProvider.isAuthenticated) {
+          return MainScreen();
+        } else {
+          // Иначе показываем экран выбора авторизации
+          return AuthChoiceScreen();
+        }
+      },
+    );
   }
 }
 

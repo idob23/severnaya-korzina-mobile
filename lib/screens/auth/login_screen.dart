@@ -6,6 +6,7 @@ import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../../providers/auth_provider.dart';
 import '../home/home_screen.dart';
 import 'sms_verification_screen.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -335,24 +336,36 @@ class _LoginScreenState extends State<LoginScreen> {
     final cleanPhone = _phoneController.text.replaceAll(RegExp(r'[^\d]'), '');
     final formattedPhone = '+$cleanPhone';
 
-    // УДАЛЯЕМ ВЕСЬ БЛОК АВТОЛОГИНА - он вызывает проблему
-    // Просто отправляем SMS всегда
+    // Для веб-версии добавляем проверку mounted
+    if (!mounted) return;
 
-    final success = await authProvider.sendSMSCode(formattedPhone);
+    try {
+      final success = await authProvider.sendSMSCode(formattedPhone);
 
-    if (success) {
-      // SMS отправлено, переходим к экрану подтверждения
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SMSVerificationScreen(
-            phone: formattedPhone,
-            rememberMe: _rememberMe,
+      if (!mounted) return;
+
+      if (success) {
+        // SMS отправлено, переходим к экрану подтверждения
+        // Добавляем небольшую задержку для веб
+        if (kIsWeb) {
+          await Future.delayed(Duration(milliseconds: 200));
+        }
+
+        if (!mounted) return;
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SMSVerificationScreen(
+              phone: formattedPhone,
+              rememberMe: _rememberMe,
+            ),
           ),
-        ),
-      );
+        );
+      }
+    } catch (e) {
+      print('Error sending SMS: $e');
     }
-    // Ошибки отображаются через Consumer выше
   }
 
   @override

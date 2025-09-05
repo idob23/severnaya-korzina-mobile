@@ -9,6 +9,8 @@ import '../models/user.dart';
 import '../services/sms_service.dart';
 import '../services/api_service.dart';
 
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
+
 class AuthProvider with ChangeNotifier {
   User? _currentUser;
   bool _isAuthenticated = false;
@@ -44,9 +46,90 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      // Для веб-версии добавляем специальную обработку
+      if (kIsWeb) {
+        print('🌐 Web platform detected, checking saved auth...');
+
+        // Пробуем несколько раз получить SharedPreferences
+        SharedPreferences? prefs;
+        int attempts = 0;
+
+        while (prefs == null && attempts < 3) {
+          try {
+            prefs = await SharedPreferences.getInstance();
+          } catch (e) {
+            print(
+                'Attempt ${attempts + 1} to get SharedPreferences failed: $e');
+            attempts++;
+            if (attempts < 3) {
+              await Future.delayed(Duration(milliseconds: 300));
+            }
+          }
+        }
+
+        if (prefs == null) {
+          print('❌ Failed to initialize SharedPreferences on web');
+          _currentUser = null;
+          _isAuthenticated = false;
+          _isLoading = false;
+          notifyListeners();
+          return;
+        }
+
+        // Проверяем сохраненные данные
+        final userJson = prefs.getString(_userDataKey);
+        final token = prefs.getString(_authTokenKey);
+
+        print(
+            '🔍 Web auth check - has user: ${userJson != null}, has token: ${token != null}');
+
+        if (userJson != null && token != null) {
+          try {
+            // Восстанавливаем пользователя из сохраненных данных
+            final userMap = jsonDecode(userJson);
+            _currentUser = User.fromJson(userMap);
+            _apiService.setAuthToken(token);
+
+            // Проверяем токен на сервере
+            try {
+              final checkResult =
+                  await _apiService.getProfile().timeout(Duration(seconds: 5));
+
+              if (checkResult['success'] == true &&
+                  checkResult['user'] != null) {
+                // Обновляем данные пользователя свежими с сервера
+                _currentUser = User.fromJson(checkResult['user']);
+                _isAuthenticated = true;
+                await _saveUserToPrefs(_currentUser!);
+
+                print('✅ Web user authenticated from saved session');
+              } else {
+                throw Exception('Invalid token');
+              }
+            } catch (e) {
+              print('⚠️ Token validation failed, using cached data');
+              // Если сервер недоступен, используем кешированные данные
+              _isAuthenticated = true;
+            }
+          } catch (e) {
+            print('❌ Failed to restore web session: $e');
+            await _clearLocalAuth();
+          }
+        } else {
+          print('📝 No saved session on web');
+          _currentUser = null;
+          _isAuthenticated = false;
+        }
+
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      // Для мобильных платформ - стандартная логика
       final prefs = await SharedPreferences.getInstance();
 
-      // ПЕРВЫМ ДЕЛОМ проверяем флаг ожидания верификации
+      // Проверяем флаг ожидания верификации
       final pendingVerification =
           prefs.getBool(_pendingSmsVerificationKey) ?? false;
       if (pendingVerification) {
@@ -60,68 +143,61 @@ class AuthProvider with ChangeNotifier {
         return;
       }
 
-      // Теперь проверяем сохраненного пользователя
+      // Проверяем сохраненного пользователя
       final userJson = prefs.getString(_userDataKey);
       final token = prefs.getString(_authTokenKey);
 
       if (userJson != null && token != null) {
         try {
-          // Устанавливаем токен для проверки
           _apiService.setAuthToken(token);
-
-          // Проверяем, существует ли пользователь на сервере
           final checkResult = await _apiService.getProfile();
 
           if (checkResult['success'] == true && checkResult['user'] != null) {
-            // Пользователь существует, используем свежие данные с сервера
             _currentUser = User.fromJson(checkResult['user']);
             _isAuthenticated = true;
-
-            // Обновляем локальные данные свежими с сервера
             await _saveUserToPrefs(_currentUser!);
 
             if (kDebugMode) {
-              print(
-                  '✅ Пользователь подтвержден сервером: ${_currentUser?.fullName}');
+              print('✅ Пользователь авторизован из локального хранилища');
             }
           } else {
-            // Пользователь не найден на сервере, очищаем локальные данные
-            if (kDebugMode) {
-              print('❌ Пользователь не найден на сервере, очищаем данные');
-            }
-            await prefs.remove(_userDataKey);
-            await prefs.remove(_authTokenKey);
-            await prefs.remove(_pendingSmsVerificationKey);
-            _apiService.clearAuthToken();
-            _currentUser = null;
-            _isAuthenticated = false;
+            await _clearLocalAuth();
           }
         } catch (e) {
           if (kDebugMode) {
-            print('❌ Ошибка проверки пользователя на сервере: $e');
+            print('❌ Ошибка проверки токена: $e');
           }
-          // Очищаем данные при ошибке
-          await prefs.remove(_userDataKey);
-          await prefs.remove(_authTokenKey);
-          await prefs.remove(_pendingSmsVerificationKey);
-          _apiService.clearAuthToken();
-          _currentUser = null;
-          _isAuthenticated = false;
+          await _clearLocalAuth();
         }
       } else {
-        if (kDebugMode) {
-          print('ℹ️ Пользователь не найден в локальном хранилище');
-        }
+        _currentUser = null;
+        _isAuthenticated = false;
       }
     } catch (e) {
-      _lastError = 'Ошибка при проверке авторизации: $e';
       if (kDebugMode) {
-        print('❌ Auth check error: $e');
+        print('❌ Критическая ошибка checkAuthStatus: $e');
       }
+      _currentUser = null;
+      _isAuthenticated = false;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+// Добавьте вспомогательный метод если его нет
+  Future<void> _clearLocalAuth() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_authTokenKey);
+      await prefs.remove(_userDataKey);
+      await prefs.remove(_autoLoginPhoneKey);
+      _apiService.clearAuthToken();
+    } catch (e) {
+      print('Error clearing auth: $e');
+    }
+    _currentUser = null;
+    _isAuthenticated = false;
   }
 
   /// Отправляет SMS с кодом подтверждения
@@ -180,7 +256,7 @@ class AuthProvider with ChangeNotifier {
         print('🔐 Начинаем верификацию для: $formattedPhone');
       }
 
-      // ОБНОВЛЕНО: Используем асинхронную проверку кода через backend
+      // Используем асинхронную проверку кода через backend
       final isCodeValid =
           await _smsService.verifyCodeAsync(formattedPhone, code);
 
@@ -213,25 +289,34 @@ class AuthProvider with ChangeNotifier {
               print('🔧 Создаем пользователя из данных сервера...');
             }
 
-            // Убираем флаг ожидания верификации
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.remove(_pendingSmsVerificationKey);
+            // Создаем пользователя
             _currentUser = User.fromJson(userData);
             _isAuthenticated = true;
 
-            if (kDebugMode) {
-              print('✅ Пользователь создан: ${_currentUser?.fullName}');
-            }
-
             // Сохраняем токен
             if (token != null) {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setString(_authTokenKey, token);
-              _apiService.setAuthToken(token);
-
-              if (kDebugMode) {
-                print('✅ Токен сохранен');
+              // Для веб-версии делаем несколько попыток сохранения
+              if (kIsWeb) {
+                bool saved = false;
+                for (int i = 0; i < 3 && !saved; i++) {
+                  try {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setString(_authTokenKey, token);
+                    await prefs.remove(_pendingSmsVerificationKey);
+                    saved = true;
+                    print('✅ Token saved to web storage (attempt ${i + 1})');
+                  } catch (e) {
+                    print('⚠️ Failed to save token (attempt ${i + 1}): $e');
+                    await Future.delayed(Duration(milliseconds: 200));
+                  }
+                }
+              } else {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setString(_authTokenKey, token);
+                await prefs.remove(_pendingSmsVerificationKey);
               }
+
+              _apiService.setAuthToken(token);
             }
 
             // Сохраняем пользователя локально
@@ -241,22 +326,16 @@ class AuthProvider with ChangeNotifier {
             if (rememberMe) {
               final prefs = await SharedPreferences.getInstance();
               await prefs.setString(_autoLoginPhoneKey, formattedPhone);
-
-              if (kDebugMode) {
-                print('✅ Автологин настроен');
-              }
             }
 
             if (kDebugMode) {
-              print(
-                  '🎉 Успешная авторизация завершена: ${_currentUser?.fullName}');
+              print('🎉 Успешная авторизация: ${_currentUser?.fullName}');
             }
 
             return true;
           } catch (e) {
             if (kDebugMode) {
               print('❌ Ошибка при обработке пользователя: $e');
-              print('📊 UserData: $userData');
             }
             _lastError = 'Ошибка обработки данных пользователя: $e';
             return false;
@@ -383,9 +462,26 @@ class AuthProvider with ChangeNotifier {
   /// Сохраняет пользователя в SharedPreferences
   Future<void> _saveUserToPrefs(User user) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
       final userJson = jsonEncode(user.toJson());
-      await prefs.setString(_userDataKey, userJson);
+
+      if (kIsWeb) {
+        // Для веб делаем несколько попыток
+        bool saved = false;
+        for (int i = 0; i < 3 && !saved; i++) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString(_userDataKey, userJson);
+            saved = true;
+            print('✅ User saved to web storage (attempt ${i + 1})');
+          } catch (e) {
+            print('⚠️ Failed to save user (attempt ${i + 1}): $e');
+            await Future.delayed(Duration(milliseconds: 200));
+          }
+        }
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_userDataKey, userJson);
+      }
 
       if (kDebugMode) {
         print('✅ Пользователь сохранен в локальное хранилище');
@@ -394,7 +490,6 @@ class AuthProvider with ChangeNotifier {
       if (kDebugMode) {
         print('❌ Ошибка сохранения пользователя: $e');
       }
-      // Не критичная ошибка, не прерываем процесс авторизации
     }
   }
 
