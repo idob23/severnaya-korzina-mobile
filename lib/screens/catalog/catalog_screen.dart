@@ -309,42 +309,31 @@ class _CatalogScreenState extends State<CatalogScreen> {
     );
   }
 
-  /// Виджет карточки товара
+  /// Виджет карточки товара с отображением остатков
   Widget _buildProductCard(BuildContext context, Product product) {
+    // Определяем статус остатков
+    final bool hasStock =
+        product.maxQuantity == null || product.maxQuantity! > 0;
+    final bool isLowStock = product.maxQuantity != null &&
+        product.maxQuantity! <= 5 &&
+        product.maxQuantity! > 0;
+    final bool isOutOfStock =
+        product.maxQuantity != null && product.maxQuantity! == 0;
+
     return Card(
       margin: EdgeInsets.only(bottom: 12),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      // Подсветка карточки если товара нет
+      color: isOutOfStock ? Colors.red[50] : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => _showProductDetails(context, product),
+        onTap: hasStock ? () => _showProductDetails(context, product) : null,
         child: Padding(
           padding: EdgeInsets.all(16),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // // Изображение товара
-              // Container(
-              //   width: 80,
-              //   height: 80,
-              //   decoration: BoxDecoration(
-              //     borderRadius: BorderRadius.circular(8),
-              //     color: Colors.grey[200],
-              //   ),
-              //   child: ClipRRect(
-              //     borderRadius: BorderRadius.circular(8),
-              //     child: product.hasImage
-              //         ? Image.network(
-              //             product.imageUrl!,
-              //             fit: BoxFit.cover,
-              //             errorBuilder: (context, error, stackTrace) {
-              //               return _buildPlaceholderImage(product.name);
-              //             },
-              //           )
-              //         : _buildPlaceholderImage(product.name),
-              //   ),
-              // ),
-
               SizedBox(width: 16),
 
               // Информация о товаре
@@ -352,15 +341,47 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Название товара
-                    Text(
-                      product.name,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    // Название товара с бейджем остатка
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            product.name,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isOutOfStock ? Colors.grey : null,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        // Бейдж остатка
+                        if (product.maxQuantity != null)
+                          Container(
+                            margin: EdgeInsets.only(left: 8),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isOutOfStock
+                                  ? Colors.red
+                                  : isLowStock
+                                      ? Colors.orange
+                                      : Colors.green,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              isOutOfStock
+                                  ? 'НЕТ'
+                                  : product.maxQuantity.toString(),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
 
                     SizedBox(height: 4),
@@ -385,10 +406,68 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         product.description!,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color: isOutOfStock
+                              ? Colors.grey[400]
+                              : Colors.grey[600],
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
+                      ),
+
+                    // Предупреждение о низких остатках
+                    if (isLowStock)
+                      Container(
+                        margin: EdgeInsets.only(top: 8),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[50],
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.orange[200]!),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.warning,
+                                size: 12, color: Colors.orange[700]),
+                            SizedBox(width: 4),
+                            Text(
+                              'Спешите! Осталось мало',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.orange[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Сообщение если товара нет
+                    if (isOutOfStock)
+                      Container(
+                        margin: EdgeInsets.only(top: 8),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red[50],
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.red[200]!),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.cancel,
+                                size: 12, color: Colors.red[700]),
+                            SizedBox(width: 4),
+                            Text(
+                              'Временно нет в наличии',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.red[700],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
 
                     SizedBox(height: 12),
@@ -405,7 +484,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.green[700],
+                                color: isOutOfStock
+                                    ? Colors.grey
+                                    : Colors.green[700],
                               ),
                             ),
                             Text(
@@ -415,6 +496,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                 color: Colors.grey[600],
                               ),
                             ),
+                            // Показываем доступное количество
+                            if (product.maxQuantity != null && !isOutOfStock)
+                              Text(
+                                'Доступно: ${product.maxQuantity} ${product.unit}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isLowStock
+                                      ? Colors.orange
+                                      : Colors.grey[600],
+                                ),
+                              ),
                           ],
                         ),
 
@@ -428,7 +520,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
                               // Если товар уже в корзине, показываем счетчик
                               return Container(
                                 decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.blue),
+                                  border: Border.all(
+                                    color: isOutOfStock
+                                        ? Colors.grey
+                                        : Colors.blue,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Row(
@@ -436,10 +532,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                   children: [
                                     IconButton(
                                       icon: Icon(Icons.remove, size: 20),
-                                      onPressed: () {
-                                        cartProvider.updateProductQuantity(
-                                            product.id, quantityInCart - 1);
-                                      },
+                                      onPressed: isOutOfStock
+                                          ? null
+                                          : () {
+                                              cartProvider
+                                                  .updateProductQuantity(
+                                                      product.id,
+                                                      quantityInCart - 1);
+                                            },
                                       constraints: BoxConstraints.tightFor(
                                           width: 32, height: 32),
                                       padding: EdgeInsets.zero,
@@ -455,14 +555,32 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                     ),
                                     IconButton(
                                       icon: Icon(Icons.add, size: 20),
-                                      onPressed: () {
-                                        if (product.maxQuantity == null ||
-                                            quantityInCart <
-                                                product.maxQuantity!) {
-                                          cartProvider.updateProductQuantity(
-                                              product.id, quantityInCart + 1);
-                                        }
-                                      },
+                                      onPressed: (isOutOfStock ||
+                                              (product.maxQuantity != null &&
+                                                  quantityInCart >=
+                                                      product.maxQuantity!))
+                                          ? null
+                                          : () {
+                                              // Проверяем, не превышаем ли доступное количество
+                                              if (product.maxQuantity == null ||
+                                                  quantityInCart <
+                                                      product.maxQuantity!) {
+                                                cartProvider
+                                                    .updateProductQuantity(
+                                                        product.id,
+                                                        quantityInCart + 1);
+                                              } else {
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                        'Достигнут максимум: ${product.maxQuantity} ${product.unit}'),
+                                                    backgroundColor:
+                                                        Colors.orange,
+                                                  ),
+                                                );
+                                              }
+                                            },
                                       constraints: BoxConstraints.tightFor(
                                           width: 32, height: 32),
                                       padding: EdgeInsets.zero,
@@ -473,21 +591,29 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             } else {
                               // Если товара нет в корзине, показываем кнопку добавления
                               return ElevatedButton.icon(
-                                onPressed: () {
-                                  cartProvider.addProduct(
-                                      product, product.minQuantity);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          '${product.name} добавлен в корзину'),
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
-                                },
-                                icon: Icon(Icons.add_shopping_cart, size: 18),
-                                label: Text('В корзину'),
+                                onPressed: isOutOfStock
+                                    ? null
+                                    : () {
+                                        cartProvider.addProduct(
+                                            product, product.minQuantity);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                '${product.name} добавлен в корзину'),
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      },
+                                icon: Icon(
+                                    isOutOfStock
+                                        ? Icons.cancel
+                                        : Icons.add_shopping_cart,
+                                    size: 18),
+                                label: Text(isOutOfStock ? 'Нет' : 'В корзину'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
+                                  backgroundColor:
+                                      isOutOfStock ? Colors.grey : Colors.blue,
                                   foregroundColor: Colors.white,
                                   padding: EdgeInsets.symmetric(
                                       horizontal: 12, vertical: 8),
@@ -543,8 +669,16 @@ class _CatalogScreenState extends State<CatalogScreen> {
     );
   }
 
-  /// Показать детали товара
+  /// Показать детали товара с информацией об остатках
   void _showProductDetails(BuildContext context, Product product) {
+    final bool hasStock =
+        product.maxQuantity == null || product.maxQuantity! > 0;
+    final bool isLowStock = product.maxQuantity != null &&
+        product.maxQuantity! <= 5 &&
+        product.maxQuantity! > 0;
+    final bool isOutOfStock =
+        product.maxQuantity != null && product.maxQuantity! == 0;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -553,86 +687,198 @@ class _CatalogScreenState extends State<CatalogScreen> {
         height: MediaQuery.of(context).size.height * 0.8,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
         ),
         child: Column(
           children: [
-            // Заголовок
+            // Шапка с изображением и статусом остатка
             Container(
-              padding: EdgeInsets.all(20),
-              child: Row(
+              height: 200,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+              ),
+              child: Stack(
                 children: [
-                  Expanded(
-                    child: Text(
-                      product.name,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                  Center(
+                    child: Icon(
+                      Icons.shopping_bag,
+                      size: 80,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                  // Кнопка закрытия
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: CircleAvatar(
+                      backgroundColor: Colors.white,
+                      child: IconButton(
+                        icon: Icon(Icons.close, color: Colors.black),
+                        onPressed: () => Navigator.pop(context),
                       ),
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
+                  // Бейдж остатка
+                  if (product.maxQuantity != null)
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      child: Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isOutOfStock
+                              ? Colors.red
+                              : isLowStock
+                                  ? Colors.orange
+                                  : Colors.green,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isOutOfStock
+                                  ? Icons.cancel
+                                  : isLowStock
+                                      ? Icons.warning
+                                      : Icons.check_circle,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              isOutOfStock
+                                  ? 'Нет в наличии'
+                                  : isLowStock
+                                      ? 'Осталось: ${product.maxQuantity}'
+                                      : 'В наличии: ${product.maxQuantity}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
 
-            Divider(height: 1),
-
-            // Содержимое
+            // Информация о товаре
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // // Изображение
-                    // Container(
-                    //   width: double.infinity,
-                    //   height: 200,
-                    //   decoration: BoxDecoration(
-                    //     borderRadius: BorderRadius.circular(12),
-                    //     color: Colors.grey[200],
-                    //   ),
-                    //   child: ClipRRect(
-                    //     borderRadius: BorderRadius.circular(12),
-                    //     child: product.hasImage
-                    //         ? Image.network(
-                    //             product.imageUrl!,
-                    //             fit: BoxFit.cover,
-                    //             errorBuilder: (context, error, stackTrace) {
-                    //               return _buildPlaceholderImage(product.name);
-                    //             },
-                    //           )
-                    //         : _buildPlaceholderImage(product.name),
-                    //   ),
-                    // ),
+                    // Название и цена
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
 
-                    SizedBox(height: 20),
-
-                    // Цена
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           product.formattedPrice,
                           style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
                             color: Colors.green[700],
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        SizedBox(width: 8),
-                        Text(
-                          'за ${product.unit}',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
+                        if (product.maxQuantity != null)
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: Text(
+                              'Доступно: ${product.maxQuantity} ${product.unit}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: isLowStock
+                                    ? Colors.orange
+                                    : Colors.grey[700],
+                              ),
+                            ),
                           ),
-                        ),
                       ],
                     ),
+
+                    // Предупреждение о низких остатках
+                    if (isLowStock)
+                      Container(
+                        margin: EdgeInsets.only(top: 12),
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange[200]!),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning,
+                                color: Colors.orange[700], size: 20),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Спешите! Товар заканчивается. Осталось всего ${product.maxQuantity} ${product.unit}',
+                                style: TextStyle(
+                                  color: Colors.orange[700],
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Сообщение если товара нет
+                    if (isOutOfStock)
+                      Container(
+                        margin: EdgeInsets.only(top: 12),
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red[200]!),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.error_outline,
+                                color: Colors.red[700], size: 20),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'К сожалению, товар временно отсутствует. Попробуйте заказать позже.',
+                                style: TextStyle(
+                                  color: Colors.red[700],
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
                     SizedBox(height: 20),
 
@@ -671,25 +917,44 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       SizedBox(height: 20),
                     ],
 
-                    // Минимальное количество
-                    Text(
-                      'Минимальный заказ: ${product.minQuantity} ${product.unit}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                    // Минимальное и максимальное количество
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Минимальный заказ:'),
+                              Text(
+                                '${product.minQuantity} ${product.unit}',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          if (product.maxQuantity != null) ...[
+                            SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Максимальный заказ:'),
+                                Text(
+                                  '${product.maxQuantity} ${product.unit}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isLowStock ? Colors.orange : null,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-
-                    if (product.maxQuantity != null) ...[
-                      SizedBox(height: 4),
-                      Text(
-                        'Максимальный заказ: ${product.maxQuantity} ${product.unit}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -698,31 +963,93 @@ class _CatalogScreenState extends State<CatalogScreen> {
             // Кнопка добавления в корзину
             Container(
               padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: Offset(0, -5),
+                  ),
+                ],
+              ),
               child: Consumer<CartProvider>(
                 builder: (context, cartProvider, child) {
+                  final quantityInCart =
+                      cartProvider.getProductQuantity(product.id);
+
                   return SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        cartProvider.addProduct(product, product.minQuantity);
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${product.name} добавлен в корзину'),
-                            duration: Duration(seconds: 2),
+                    child: quantityInCart > 0
+                        ? Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'В корзине: $quantityInCart ${product.unit}',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: isOutOfStock ||
+                                        (product.maxQuantity != null &&
+                                            quantityInCart >=
+                                                product.maxQuantity!)
+                                    ? null
+                                    : () {
+                                        cartProvider.updateProductQuantity(
+                                            product.id, quantityInCart + 1);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content:
+                                                Text('Количество обновлено'),
+                                            duration: Duration(seconds: 1),
+                                          ),
+                                        );
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                ),
+                                child: Text(
+                                  'Добавить еще',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              ),
+                            ],
+                          )
+                        : ElevatedButton(
+                            onPressed: isOutOfStock
+                                ? null
+                                : () {
+                                    cartProvider.addProduct(
+                                        product, product.minQuantity);
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                            '${product.name} добавлен в корзину'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  isOutOfStock ? Colors.grey : Colors.blue,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            child: Text(
+                              isOutOfStock
+                                  ? 'Нет в наличии'
+                                  : 'Добавить в корзину',
+                              style: TextStyle(fontSize: 16),
+                            ),
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: Text(
-                        'Добавить в корзину',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    ),
                   );
                 },
               ),
