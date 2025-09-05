@@ -22,6 +22,19 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
   void initState() {
     super.initState();
     _handlePaymentSuccess();
+    _clearCartAndRefresh();
+  }
+
+  Future<void> _clearCartAndRefresh() async {
+    // Очищаем корзину
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    cartProvider.clearCart();
+    print('Корзина очищена после успешной оплаты');
+
+    // Обновляем список заказов
+    final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
+    await ordersProvider.loadOrders();
+    print('Список заказов обновлен');
   }
 
   Future<void> _handlePaymentSuccess() async {

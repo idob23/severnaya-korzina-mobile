@@ -638,15 +638,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     switch (type) {
       case 'terms':
-        url = 'http://84.201.149.245:3000/agreement.html';
+        url = 'https://sevkorzina.ru//agreement.html';
         title = 'Пользовательское соглашение';
         break;
       case 'privacy':
-        url = 'http://84.201.149.245:3000/privacy.html';
+        url = 'https://sevkorzina.ru//privacy.html';
         title = 'Политика конфиденциальности';
         break;
       case 'offer':
-        url = 'http://84.201.149.245:3000/offer.html';
+        url = 'https://sevkorzina.ru//offer.html';
         title = 'Публичная оферта';
         break;
     }
