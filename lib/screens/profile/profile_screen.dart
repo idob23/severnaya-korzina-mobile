@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart'; // ДОБАВИТЬ ЭТОТ ИМПОРТ
+import 'package:url_launcher/url_launcher.dart'; // ДОБАВЛЕН ИМПОРТ
 import '../auth/auth_choice_screen.dart';
 import 'dart:math' as math;
 import 'package:severnaya_korzina/services/update_service.dart';
@@ -16,6 +17,10 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen>
     with TickerProviderStateMixin {
   String _appVersion = '';
+
+  // ДОБАВЛЕНА ССЫЛКА НА WHATSAPP ГРУППУ
+  static const String WHATSAPP_GROUP_LINK =
+      'https://chat.whatsapp.com/BkMuB7ALKzZ5Zj81yGhdvG';
 
   late AnimationController _progressAnimationController;
   late AnimationController _pulseAnimationController;
@@ -69,6 +74,42 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     // ДОБАВИТЬ ЭТУ СТРОКУ:
     _loadActiveBatch(); // Загружаем реальные данные
+  }
+
+  // НОВЫЙ МЕТОД ДЛЯ ОТКРЫТИЯ WHATSAPP ГРУППЫ
+  Future<void> _openWhatsAppGroup() async {
+    try {
+      final Uri whatsappUrl = Uri.parse(WHATSAPP_GROUP_LINK);
+
+      if (await canLaunchUrl(whatsappUrl)) {
+        await launchUrl(
+          whatsappUrl,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        // Если не удается открыть ссылку, показываем сообщение
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Не удалось открыть WhatsApp'),
+              action: SnackBarAction(
+                label: 'OK',
+                onPressed: () {},
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Ошибка при открытии WhatsApp: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: не удалось открыть ссылку'),
+          ),
+        );
+      }
+    }
   }
 
   // Добавить метод загрузки версии
@@ -193,19 +234,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                           [
                             'Северная Корзина - это платформа коллективных закупок для жителей Усть-Неры.',
                             'Мы объединяем заказы жителей, чтобы получить оптовые цены от поставщиков.',
-                            'Чем больше участников - тем ниже цены!',
                           ],
                         ),
 
                         _buildInstructionSection(
-                          '📱 Регистрация и вход',
-                          [
-                            '1. Нажмите "Войти" на главном экране',
-                            '2. Введите номер телефона в формате +7 XXX XXX XX XX',
-                            '3. Получите SMS с кодом подтверждения',
-                            '4. Введите код из SMS',
-                            '5. Заполните имя и фамилию при первом входе',
-                          ],
+                          'Проект имеет высокую степень сложности, для пользователя видима лишь малая часть сервиса, поэтому просим оказывать содействие в модернизации и развитии проекта путём вступления в нашу группу WhatsApp "Северная Корзина", где можно оставлять отзывы, предложения и сообщать о проблемах. Также там будет озвучиваться вся актуальная информация. Ссылка на группу доступна в профиле.',
+                          [],
                         ),
 
                         _buildInstructionSection(
@@ -213,10 +247,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                           [
                             '1. Перейдите в раздел "Каталог"',
                             '2. Выберите нужную категорию товаров',
-                            '3. Нажмите на товар для просмотра подробностей',
-                            '4. Укажите количество и нажмите "В корзину"',
-                            '5. Товары сохраняются в корзине даже после закрытия приложения',
-                            '6. Перейдите в "Корзину" для оформления заказа',
+                            '3. Укажите количество и нажмите "В корзину"',
+                            '4. Товары сохраняются в корзине даже после закрытия приложения',
+                            '5. Перейдите в "Корзину" для оформления заказа',
+                            '6. Кнопка "Оформить заказ" активна только при наличии товаров и иногда может быть неактивна, когда проводятся профилактические работы или нет активной закупки.',
                           ],
                         ),
 
@@ -227,7 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             '• Принимаются карты МИР через систему ЮKassa',
                             '• После оплаты заказ автоматически попадает в обработку',
                             '• Корзина очищается только после успешной оплаты',
-                            '• Вы получите SMS-уведомление о статусе заказа',
+                            '• Оплаченные заказы нельзя отменить, за исключением случаев, когда не набрана общая целевая сумма закупки',
                           ],
                         ),
 
@@ -236,8 +270,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                           [
                             '• Машина отправляется после набора целевой суммы закупки',
                             '• Прогресс закупки отображается в разделе "Профиль"',
-                            '• Доставка осуществляется по указанному адресу',
-                            '• Вы получите SMS когда заказ будет готов к выдаче',
+                            '• Доставка осуществляется по адресу, указанному в приложении или в группе WhatsApp.',
+                            '• Вы получите SMS когда заказ будет сформирован и готов к выдаче',
                             '• Время доставки: 7-14 дней после отправки машины',
                           ],
                         ),
@@ -247,12 +281,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                           [
                             '• Все ваши заказы доступны в разделе "Заказы"',
                             '• Статусы заказов:',
-                            '  - Ожидает оплаты (желтый)',
+                            '  - Ожидает оплаты (оранжевый)',
                             '  - Оплачен (зеленый)',
-                            '  - В закупке (синий)',
-                            '  - Доставляется (оранжевый)',
-                            '  - Готов к выдаче (фиолетовый)',
-                            '  - Выдан (серый)',
+                            '  - Отправлен (синий)',
+                            '  - Доставлен (зеленый)',
+                            '  - Отменен (красный)',
                           ],
                         ),
 
@@ -270,27 +303,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                           '🔄 Обновления приложения',
                           [
                             '• Приложение автоматически проверяет обновления',
-                            '• При наличии новой версии появится уведомление',
+                            '• При наличии новой версии появится уведомление (актуально только для Android). В веб-версии на iOS обновление происходит автоматически.',
                             '• Нажмите "Обновить" для загрузки',
                             '• Обновление установится автоматически',
                             '• Важные обновления обязательны для установки',
-                          ],
-                        ),
-
-                        _buildInstructionSection(
-                          '❓ Частые вопросы',
-                          [
-                            'Q: Можно ли отменить оплаченный заказ?',
-                            'A: Отмена возможна до отправки машины. Обратитесь в поддержку.',
-                            '',
-                            'Q: Как изменить адрес доставки?',
-                            'A: Свяжитесь с поддержкой до отправки машины.',
-                            '',
-                            'Q: Когда придет мой заказ?',
-                            'A: Следите за прогресс-баром в профиле. После отправки машины - 7-14 дней.',
-                            '',
-                            'Q: Почему товары в корзине не удаляются?',
-                            'A: Корзина сохраняется до оплаты для вашего удобства.',
                           ],
                         ),
 
@@ -316,29 +332,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                           child: Column(
                             children: [
                               Text(
-                                '© 2024 Северная Корзина',
+                                '© 2025 Северная Корзина',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.grey[700],
                                 ),
                               ),
                               SizedBox(height: 4),
-                              Text(
-                                'Платформа коллективных закупок',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Экономьте до 50% покупая вместе!',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
                             ],
                           ),
                         ),
@@ -607,6 +607,176 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  // НОВЫЙ ВИДЖЕТ - Карточка WhatsApp группы
+  Widget _buildWhatsAppGroupCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Заголовок с информацией
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.green[400]!, Colors.green[600]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.group,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Группа "Северная корзина"',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Общение и поддержка',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white.withOpacity(0.8),
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+
+          // Описание группы
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Для общей пользы просим оказывать содействие в модернизации и развитии проекта путём вступления в нашу группу WhatsApp "Северная Корзина".',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[700],
+                    height: 1.4,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'В группе вы можете:',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                SizedBox(height: 8),
+                _buildGroupFeature('💬 Оставлять отзывы и предложения'),
+                _buildGroupFeature('🐛 Сообщать о проблемах'),
+                _buildGroupFeature('📢 Получать актуальную информацию'),
+                _buildGroupFeature('🤝 Общаться с другими участниками'),
+                SizedBox(height: 16),
+
+                // Кнопка присоединения к группе
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _openWhatsAppGroup,
+                    icon: Image.asset(
+                      'assets/images/whatsapp_icon.png', // Добавьте иконку WhatsApp в assets
+                      width: 24,
+                      height: 24,
+                      errorBuilder: (context, error, stackTrace) {
+                        // Если нет иконки, используем текстовую
+                        return Icon(Icons.chat, color: Colors.white);
+                      },
+                    ),
+                    label: Text(
+                      'Присоединиться к группе WhatsApp',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[600],
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Вспомогательный виджет для отображения возможностей группы
+  Widget _buildGroupFeature(String text) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[600],
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLoadingView() {
     return Center(
       child: Column(
@@ -646,6 +816,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           _buildSettingsCard(context, authProvider),
 
           SizedBox(height: 16),
+
+          // ДОБАВЬТЕ ЭТУ СТРОКУ - WhatsApp группа
+          _buildWhatsAppGroupCard(),
 
           _buildAboutSection(), // НОВАЯ СЕКЦИЯ
           SizedBox(height: 16),
