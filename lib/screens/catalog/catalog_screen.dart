@@ -46,37 +46,37 @@ class _CatalogScreenState extends State<CatalogScreen> {
         },
         child: Column(
           children: [
-            // Информационный баннер
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(16),
-              margin: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green[200]!),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    '💰 Цены за коллективную закупку',
-                    style: TextStyle(
-                      color: Colors.green[800],
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    '🚚 Экономия до 50% от розничных цен!',
-                    style: TextStyle(
-                      color: Colors.green[700],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // // Информационный баннер
+            // Container(
+            //   width: double.infinity,
+            //   padding: EdgeInsets.all(16),
+            //   margin: EdgeInsets.all(16),
+            //   decoration: BoxDecoration(
+            //     color: Colors.green[50],
+            //     borderRadius: BorderRadius.circular(12),
+            //     border: Border.all(color: Colors.green[200]!),
+            //   ),
+            //   child: Column(
+            //     children: [
+            //       Text(
+            //         '💰 Цены за коллективную закупку',
+            //         style: TextStyle(
+            //           color: Colors.green[800],
+            //           fontWeight: FontWeight.bold,
+            //           fontSize: 16,
+            //         ),
+            //       ),
+            //       SizedBox(height: 4),
+            //       Text(
+            //         '🚚 Экономия до 50% от розничных цен!',
+            //         style: TextStyle(
+            //           color: Colors.green[700],
+            //           fontWeight: FontWeight.w500,
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
 
             // Поиск и фильтры
             Padding(
