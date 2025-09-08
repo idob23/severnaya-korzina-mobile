@@ -8,6 +8,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/orders_provider.dart';
 import 'payment_service.dart';
 import 'universal_payment_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class PaymentScreen extends StatefulWidget {
   final Map<String, dynamic> orderData;
@@ -239,15 +241,57 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final notes = widget.orderData['notes'] as String?;
       final amount = widget.orderData['totalAmount'] ?? 0.0;
 
-      // Получаем активную партию если есть
+      // Получаем активную партию из API
       int? batchId;
       try {
-        final ordersProvider =
-            Provider.of<OrdersProvider>(context, listen: false);
-        // Здесь можно получить batchId из контекста или API если нужно
+        // Сначала ищем активную партию
+        final activeResponse = await http.get(
+          Uri.parse('http://84.201.149.245:3000/api/batches?status=active'),
+          headers: {
+            'Content-Type': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+        );
+
+        if (activeResponse.statusCode == 200) {
+          final activeData = jsonDecode(activeResponse.body);
+          if (activeData['success'] == true &&
+              activeData['batches'] != null &&
+              (activeData['batches'] as List).isNotEmpty) {
+            final activeBatch = activeData['batches'][0];
+            batchId = activeBatch['id'];
+            print('✅ Найдена активная партия #$batchId');
+          }
+        }
+
+        // Если не нашли активную, ищем партию в сборе
+        if (batchId == null) {
+          final collectingResponse = await http.get(
+            Uri.parse(
+                'http://84.201.149.245:3000/api/batches?status=collecting'),
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null) 'Authorization': 'Bearer $token',
+            },
+          );
+
+          if (collectingResponse.statusCode == 200) {
+            final collectingData = jsonDecode(collectingResponse.body);
+            if (collectingData['success'] == true &&
+                collectingData['batches'] != null &&
+                (collectingData['batches'] as List).isNotEmpty) {
+              final collectingBatch = collectingData['batches'][0];
+              batchId = collectingBatch['id'];
+              print('✅ Найдена партия в сборе #$batchId');
+            }
+          }
+        }
       } catch (e) {
-        print('Не удалось получить batchId: $e');
+        print('❌ Ошибка получения партии: $e');
+        // Продолжаем без batchId - заказ создастся без привязки к партии
       }
+
+      print('📦 Создаем платеж с batchId: ${batchId ?? "без партии"}');
 
       // Генерируем фейковый orderId как сигнал для бэкенда создать заказ
       final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -263,7 +307,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         orderItems: items,
         notes: notes,
         addressId: addressId,
-        batchId: batchId,
+        batchId: batchId, // Передаем найденный batchId или null
       );
 
       if (result.success && result.confirmationUrl != null) {
@@ -291,8 +335,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 Text(
                     'Сейчас вы будете перенаправлены на защищенную страницу банка для оплаты картой.'),
                 SizedBox(height: 16),
+                if (batchId != null) ...[
+                  Text(
+                    '📦 Заказ будет добавлен в партию #$batchId',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  SizedBox(height: 8),
+                ],
                 Text(
-                  '💳 Принимаются карты: МИР, Visa, Mastercard',
+                  '💳 Принимаются карты: МИР',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
