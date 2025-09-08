@@ -1,4 +1,4 @@
-// lib/main.dart - ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ВЕРСИЯ
+// lib/main.dart - ИСПРАВЛЕННАЯ ВЕРСИЯ БЕЗ ОШИБОК ИНТЕРПОЛЯЦИИ
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:severnaya_korzina/providers/cart_provider.dart';
@@ -51,10 +51,300 @@ class MyApp extends StatelessWidget {
             create: (context) => CartProvider()),
       ],
       child: MaterialApp(
-        title: 'Северная корзина',
+        title: 'Северная Корзина',
+
+        // 🔴 ГЛОБАЛЬНОЕ УВЕЛИЧЕНИЕ ВСЕХ ШРИФТОВ НА 40%
+        builder: (context, child) {
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaleFactor:
+                  1.2, // Увеличивает ВСЕ тексты в приложении на 40%
+            ),
+            child: child!,
+          );
+        },
+
         theme: ThemeData(
           primarySwatch: Colors.blue,
+          fontFamily: 'MarckScript',
+
+          // 🔴 ЗНАЧИТЕЛЬНО УВЕЛИЧЕННЫЕ РАЗМЕРЫ ШРИФТОВ
+          textTheme: TextTheme(
+            // Очень крупные заголовки
+            displayLarge: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 42,
+              fontWeight: FontWeight.w400,
+              height: 1.3,
+            ),
+            displayMedium: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 38,
+              fontWeight: FontWeight.w400,
+              height: 1.3,
+            ),
+            displaySmall: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 34,
+              fontWeight: FontWeight.w400,
+              height: 1.3,
+            ),
+
+            // Заголовки экранов и разделов
+            headlineLarge: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 32,
+              fontWeight: FontWeight.w400,
+              height: 1.3,
+            ),
+            headlineMedium: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 30,
+              fontWeight: FontWeight.w400,
+              height: 1.3,
+            ),
+            headlineSmall: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 28,
+              fontWeight: FontWeight.w400,
+              height: 1.3,
+            ),
+
+            // Заголовки в списках и карточках
+            titleLarge: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 26,
+              fontWeight: FontWeight.w400,
+              height: 1.3,
+            ),
+            titleMedium: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 24,
+              fontWeight: FontWeight.w400,
+              height: 1.3,
+            ),
+            titleSmall: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 22,
+              fontWeight: FontWeight.w400,
+              height: 1.3,
+            ),
+
+            // Основной текст - ЗНАЧИТЕЛЬНО УВЕЛИЧЕН
+            bodyLarge: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 24,
+              fontWeight: FontWeight.w400,
+              height: 1.4,
+            ),
+            bodyMedium: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 22,
+              fontWeight: FontWeight.w400,
+              height: 1.4,
+            ),
+            bodySmall: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 20,
+              fontWeight: FontWeight.w400,
+              height: 1.4,
+            ),
+
+            // Кнопки и метки - УВЕЛИЧЕНЫ
+            labelLarge: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 22,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0.5,
+            ),
+            labelMedium: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 20,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0.5,
+            ),
+            labelSmall: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 18,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0.5,
+            ),
+          ),
+
+          // 🔴 AppBar - увеличенный заголовок и высота
+          appBarTheme: AppBarTheme(
+            titleTextStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 30,
+              fontWeight: FontWeight.w400,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+            toolbarHeight: 70,
+            iconTheme: IconThemeData(
+              size: 28,
+              color: Colors.white,
+            ),
+          ),
+
+          // 🔴 Кнопки - увеличенный текст и отступы
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              minimumSize: Size(100, 50),
+              textStyle: TextStyle(
+                fontFamily: 'MarckScript',
+                fontSize: 24,
+                fontWeight: FontWeight.w400,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              textStyle: TextStyle(
+                fontFamily: 'MarckScript',
+                fontSize: 22,
+                fontWeight: FontWeight.w400,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: OutlinedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              textStyle: TextStyle(
+                fontFamily: 'MarckScript',
+                fontSize: 22,
+                fontWeight: FontWeight.w400,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+
+          // 🔴 Поля ввода - увеличенный текст
+          inputDecorationTheme: InputDecorationTheme(
+            labelStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 22,
+            ),
+            hintStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 21,
+              color: Colors.grey,
+            ),
+            helperStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 18,
+            ),
+            errorStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 18,
+              color: Colors.red,
+            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+
+          // 🔴 ListTile - увеличенные размеры для списков
+          listTileTheme: ListTileThemeData(
+            titleTextStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 24,
+              color: Colors.black87,
+            ),
+            subtitleTextStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 20,
+              color: Colors.black54,
+              height: 1.3,
+            ),
+            minVerticalPadding: 14,
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          ),
+
+          // 🔴 Карточки - увеличенные отступы
+          cardTheme: CardThemeData(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+
+          // 🔴 Чипы (теги категорий)
+          chipTheme: ChipThemeData(
+            labelStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 20,
+            ),
+            labelPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            padding: EdgeInsets.all(8),
+          ),
+
+          // 🔴 Табы
+          tabBarTheme: const TabBarThemeData(
+            labelStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 22,
+              fontWeight: FontWeight.w400,
+            ),
+            unselectedLabelStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 21,
+              fontWeight: FontWeight.w400,
+            ),
+            indicatorSize: TabBarIndicatorSize.label,
+          ),
+
+          // 🔴 BottomNavigationBar - увеличенные иконки и текст
+          bottomNavigationBarTheme: BottomNavigationBarThemeData(
+            selectedLabelStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 18,
+            ),
+            unselectedLabelStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 17,
+            ),
+            selectedIconTheme: IconThemeData(size: 32),
+            unselectedIconTheme: IconThemeData(size: 30),
+            type: BottomNavigationBarType.fixed,
+          ),
+
+          // 🔴 Диалоги
+          dialogTheme: const DialogThemeData(
+            titleTextStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 26,
+              fontWeight: FontWeight.w400,
+              color: Colors.black87,
+            ),
+            contentTextStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 22,
+              color: Colors.black87,
+              height: 1.4,
+            ),
+          ),
+
+          // 🔴 SnackBar
+          snackBarTheme: SnackBarThemeData(
+            contentTextStyle: TextStyle(
+              fontFamily: 'MarckScript',
+              fontSize: 20,
+              color: Colors.white,
+            ),
+          ),
+
+          // Иконки - увеличенный размер по умолчанию
+          iconTheme: IconThemeData(
+            size: 26,
+          ),
         ),
+
         home: AppInitializer(),
         debugShowCheckedModeBanner: false,
         routes: {
@@ -163,28 +453,30 @@ class _AppInitializerState extends State<AppInitializer> {
             children: [
               // Логотип или иконка приложения
               Container(
-                width: 80,
-                height: 80,
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
                   color: Colors.blue[50],
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.shopping_cart,
-                  size: 40,
+                  size: 50,
                   color: Colors.blue,
                 ),
               ),
-              SizedBox(height: 24),
+              SizedBox(height: 32),
               CircularProgressIndicator(
+                strokeWidth: 3,
                 valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
               ),
-              SizedBox(height: 16),
+              SizedBox(height: 20),
               Text(
                 'Загрузка...',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 20,
                   color: Colors.grey[600],
+                  fontFamily: 'MarckScript',
                 ),
               ),
             ],

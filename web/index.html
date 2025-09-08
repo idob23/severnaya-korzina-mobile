@@ -10,11 +10,34 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="-1">
   
-  <title>Severnaya Korzina v6.09081418</title>
+  <title>Severnaya Korzina v6.09082257</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="favicon.png">
   
   <style>
+
+   /* РџРћР”РљР›Р®Р§Р•РќРР• РЁР РР¤РўРђ MarckScript */
+    @font-face {
+      font-family: 'MarckScript';
+      src: url('assets/fonts/MarckScript-Regular.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    /* РџСЂРёРјРµРЅРµРЅРёРµ С€СЂРёС„С‚Р° РєРѕ РІСЃРµРјСѓ РїСЂРёР»РѕР¶РµРЅРёСЋ */
+    * {
+      font-family: 'MarckScript', cursive, sans-serif !important;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'MarckScript', cursive, sans-serif;
+      font-size: 20px; /* РЈРІРµР»РёС‡РµРЅРЅС‹Р№ Р±Р°Р·РѕРІС‹Р№ СЂР°Р·РјРµСЂ */
+    }
+
+
     #loading {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: linear-gradient(135deg, #DC2626, #EF4444);
@@ -23,29 +46,53 @@
     }
     body.loaded #loading { opacity: 0; pointer-events: none; }
     
-    .loading-text { color: white; font-size: 24px; margin-bottom: 10px; font-weight: bold; }
-    .loading-version { color: rgba(255,255,255,0.8); font-size: 14px; margin-bottom: 30px; }
+    .loading-text { 
+      color: white; 
+      font-size: 32px; /* РЈРІРµР»РёС‡РµРЅРѕ */
+      margin-bottom: 10px; 
+      font-weight: bold;
+      font-family: 'MarckScript', cursive, sans-serif;
+    }
+    .loading-version { 
+      color: rgba(255,255,255,0.8); 
+      font-size: 18px; /* РЈРІРµР»РёС‡РµРЅРѕ */
+      margin-bottom: 30px;
+      font-family: 'MarckScript', cursive, sans-serif;
+    }
     .loading-spinner {
       width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3);
       border-top: 4px solid white; border-radius: 50%;
       animation: spin 1s linear infinite;
     }
     
-    #update-notification {
+     #update-notification {
       position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
       background: #DC2626; color: white; padding: 20px; border-radius: 12px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 10000; 
       display: none; text-align: center; min-width: 320px;
+      font-family: 'MarckScript', cursive, sans-serif;
     }
     
-    .notification-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
-    .notification-text { margin: 10px 0 20px 0; font-size: 14px; opacity: 0.9; }
+    .notification-title { 
+      font-size: 22px; /* РЈРІРµР»РёС‡РµРЅРѕ */
+      font-weight: bold; 
+      margin-bottom: 8px;
+      font-family: 'MarckScript', cursive, sans-serif;
+    }
+    .notification-text { 
+      margin: 10px 0 20px 0; 
+      font-size: 18px; /* РЈРІРµР»РёС‡РµРЅРѕ */
+      opacity: 0.9;
+      font-family: 'MarckScript', cursive, sans-serif;
+    }
     .button-group { display: flex; gap: 10px; justify-content: center; }
     
-    #update-notification button {
+     #update-notification button {
       background: white; color: #DC2626; border: none;
       padding: 12px 24px; border-radius: 8px; cursor: pointer; 
       font-weight: bold; min-width: 120px;
+      font-family: 'MarckScript', cursive, sans-serif;
+      font-size: 18px; /* РЈРІРµР»РёС‡РµРЅРѕ */
     }
     
     #dismiss-btn {
@@ -58,24 +105,23 @@
 </head>
 <body>
   <div id="loading">
-    <div class="loading-text">Severnaya Korzina</div>
-    <div class="loading-version">v6.09081418</div>
+    <div class="loading-text">РЎРµРІРµСЂРЅР°СЏ РєРѕСЂР·РёРЅР°</div>
+    <div class="loading-version">v6.09082257</div>
     <div class="loading-spinner"></div>
   </div>
   
   <div id="update-notification">
-    <div class="notification-title">New version available!</div>
-    <div class="notification-text">Click to reload with latest version</div>
+    <div class="notification-title">Р”РѕСЃС‚СѓРїРЅР° РЅРѕРІР°СЏ РІРµСЂСЃРёСЏ!</div>
+    <div class="notification-text">РќР°Р¶РјРёС‚Рµ РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ</div>
     <div class="button-group">
-      <button id="update-btn">Update Now</button>
-      <button id="dismiss-btn">Later</button>
+      <button id="update-btn">РћР±РЅРѕРІРёС‚СЊ</button>
     </div>
   </div>
   
   <div id="app"></div>
   
-  <script src="app-6.09081418.js"></script>
-  <script src="main-6.09081418.js" async></script>
-  <script src="flutter-6.09081418.js" async></script>
+  <script src="app-6.09082257.js"></script>
+  <script src="main-6.09082257.js" async></script>
+  <script src="flutter-6.09082257.js" async></script>
 </body>
 </html>

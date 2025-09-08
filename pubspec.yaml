@@ -1,7 +1,7 @@
 name: severnaya_korzina
 description: Платформа коллективных закупок для Усть-Неры
 
-version: 3.0.0+23  # ВАЖНО: обновлять при каждом релизе!
+version: 3.1.0+24  # ВАЖНО: обновлять при каждом релизе!
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -62,6 +62,12 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # Добавьте эту секцию для шрифтов
+  fonts:
+    - family: MarckScript
+      fonts:
+        - asset: assets/fonts/MarckScript-Regular.ttf
+          weight: 400
   
 flutter_icons:
   android: true

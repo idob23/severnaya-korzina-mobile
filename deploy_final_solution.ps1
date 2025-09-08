@@ -1,5 +1,5 @@
-# Деплой с автоматической очисткой старых версий
-Write-Host "Deploying with automatic cleanup..." -ForegroundColor Green
+# Деплой с автоматической очисткой старых версий и поддержкой шрифта MarckScript
+Write-Host "Deploying with automatic cleanup and MarckScript font..." -ForegroundColor Green
 
 $timestamp = [DateTimeOffset]::Now.ToString("MMddHHmm")
 $NEW_VERSION = "6.$timestamp"
@@ -7,73 +7,74 @@ Write-Host "New version: $NEW_VERSION" -ForegroundColor Yellow
 
 # Функция очистки старых файлов
 function Cleanup-OldVersions {
-    param($path)
+  param($path)
     
-    Write-Host "Cleaning old versions from: $path" -ForegroundColor Cyan
+  Write-Host "Cleaning old versions from: $path" -ForegroundColor Cyan
     
-    if (-not (Test-Path $path)) {
-        return
-    }
+  if (-not (Test-Path $path)) {
+    return
+  }
     
-    $versionedFiles = Get-ChildItem $path -Name | Where-Object { 
-        $_ -match "(main|flutter|app|sw)-\d+\.\d+\.js$" 
-    }
+  $versionedFiles = Get-ChildItem $path -Name | Where-Object { 
+    $_ -match "(main|flutter|app|sw)-\d+\.\d+\.js$" 
+  }
     
-    if ($versionedFiles.Count -eq 0) {
-        Write-Host "  No old versions to clean" -ForegroundColor Gray
-        return
-    }
+  if ($versionedFiles.Count -eq 0) {
+    Write-Host "  No old versions to clean" -ForegroundColor Gray
+    return
+  }
     
-    # Группируем по типу файла
-    $groupedFiles = @{}
-    foreach ($file in $versionedFiles) {
-        if ($file -match "^(main|flutter|app|sw)-(\d+\.\d+)\.js$") {
-            $type = $matches[1]
-            $version = [double]$matches[2]
+  # Группируем по типу файла
+  $groupedFiles = @{}
+  foreach ($file in $versionedFiles) {
+    if ($file -match "^(main|flutter|app|sw)-(\d+\.\d+)\.js$") {
+      $type = $matches[1]
+      $version = [double]$matches[2]
             
-            if (-not $groupedFiles.ContainsKey($type)) {
-                $groupedFiles[$type] = @()
-            }
+      if (-not $groupedFiles.ContainsKey($type)) {
+        $groupedFiles[$type] = @()
+      }
             
-            $groupedFiles[$type] += @{
-                File = $file
-                Version = $version
-                Path = Join-Path $path $file
-            }
-        }
+      $groupedFiles[$type] += @{
+        File    = $file
+        Version = $version
+        Path    = Join-Path $path $file
+      }
     }
+  }
     
-    $totalDeleted = 0
+  $totalDeleted = 0
     
-    foreach ($type in $groupedFiles.Keys) {
-        $files = $groupedFiles[$type] | Sort-Object Version -Descending
+  foreach ($type in $groupedFiles.Keys) {
+    $files = $groupedFiles[$type] | Sort-Object Version -Descending
         
-        # Оставляем 3 последние версии
-        if ($files.Count -gt 3) {
-            $toDelete = $files[3..($files.Count-1)]
+    # Оставляем 3 последние версии
+    if ($files.Count -gt 3) {
+      $toDelete = $files[3..($files.Count - 1)]
             
-            Write-Host "  Deleting $($toDelete.Count) old $type files" -ForegroundColor Yellow
-            foreach ($file in $toDelete) {
-                try {
-                    Remove-Item $file.Path -Force
-                    Write-Host "    Deleted: $($file.File)" -ForegroundColor Gray
-                    $totalDeleted++
-                } catch {
-                    Write-Host "    Failed to delete: $($file.File)" -ForegroundColor Red
-                }
-            }
+      Write-Host "  Deleting $($toDelete.Count) old $type files" -ForegroundColor Yellow
+      foreach ($file in $toDelete) {
+        try {
+          Remove-Item $file.Path -Force
+          Write-Host "    Deleted: $($file.File)" -ForegroundColor Gray
+          $totalDeleted++
         }
+        catch {
+          Write-Host "    Failed to delete: $($file.File)" -ForegroundColor Red
+        }
+      }
     }
+  }
     
-    if ($totalDeleted -gt 0) {
-        Write-Host "  Cleaned up $totalDeleted old files" -ForegroundColor Green
-    }
+  if ($totalDeleted -gt 0) {
+    Write-Host "  Cleaned up $totalDeleted old files" -ForegroundColor Green
+  }
 }
 
 # Обычный процесс сборки
 if (Test-Path "build") { 
-    Cleanup-OldVersions "build\web"
-    Remove-Item -Recurse -Force "build" 
+  Cleanup-OldVersions "build\web"
+  Remove-Item -Recurse -Force "build" 
 }
 
 $appUpdaterJs = @"
@@ -190,6 +191,29 @@ $indexHtml = @"
   <link rel="icon" type="image/png" href="favicon.png">
   
   <style>
+
+   /* ПОДКЛЮЧЕНИЕ ШРИФТА MarckScript */
+    @font-face {
+      font-family: 'MarckScript';
+      src: url('assets/fonts/MarckScript-Regular.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    /* Применение шрифта ко всему приложению */
+    * {
+      font-family: 'MarckScript', cursive, sans-serif !important;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'MarckScript', cursive, sans-serif;
+      font-size: 20px; /* Увеличенный базовый размер */
+    }
+
+
     #loading {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: linear-gradient(135deg, #DC2626, #EF4444);
@@ -198,29 +222,53 @@ $indexHtml = @"
     }
     body.loaded #loading { opacity: 0; pointer-events: none; }
     
-    .loading-text { color: white; font-size: 24px; margin-bottom: 10px; font-weight: bold; }
-    .loading-version { color: rgba(255,255,255,0.8); font-size: 14px; margin-bottom: 30px; }
+    .loading-text { 
+      color: white; 
+      font-size: 32px; /* Увеличено */
+      margin-bottom: 10px; 
+      font-weight: bold;
+      font-family: 'MarckScript', cursive, sans-serif;
+    }
+    .loading-version { 
+      color: rgba(255,255,255,0.8); 
+      font-size: 18px; /* Увеличено */
+      margin-bottom: 30px;
+      font-family: 'MarckScript', cursive, sans-serif;
+    }
     .loading-spinner {
       width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3);
       border-top: 4px solid white; border-radius: 50%;
       animation: spin 1s linear infinite;
     }
     
-    #update-notification {
+     #update-notification {
       position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
       background: #DC2626; color: white; padding: 20px; border-radius: 12px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 10000; 
       display: none; text-align: center; min-width: 320px;
+      font-family: 'MarckScript', cursive, sans-serif;
     }
     
-    .notification-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
-    .notification-text { margin: 10px 0 20px 0; font-size: 14px; opacity: 0.9; }
+    .notification-title { 
+      font-size: 22px; /* Увеличено */
+      font-weight: bold; 
+      margin-bottom: 8px;
+      font-family: 'MarckScript', cursive, sans-serif;
+    }
+    .notification-text { 
+      margin: 10px 0 20px 0; 
+      font-size: 18px; /* Увеличено */
+      opacity: 0.9;
+      font-family: 'MarckScript', cursive, sans-serif;
+    }
     .button-group { display: flex; gap: 10px; justify-content: center; }
     
-    #update-notification button {
+     #update-notification button {
       background: white; color: #DC2626; border: none;
       padding: 12px 24px; border-radius: 8px; cursor: pointer; 
       font-weight: bold; min-width: 120px;
+      font-family: 'MarckScript', cursive, sans-serif;
+      font-size: 18px; /* Увеличено */
     }
     
     #dismiss-btn {
@@ -233,17 +281,16 @@ $indexHtml = @"
 </head>
 <body>
   <div id="loading">
-    <div class="loading-text">Severnaya Korzina</div>
+    <div class="loading-text">Северная корзина</div>
     <div class="loading-version">v$NEW_VERSION</div>
     <div class="loading-spinner"></div>
   </div>
   
   <div id="update-notification">
-    <div class="notification-title">New version available!</div>
-    <div class="notification-text">Click to reload with latest version</div>
+    <div class="notification-title">Доступна новая версия!</div>
+    <div class="notification-text">Нажмите для обновления</div>
     <div class="button-group">
-      <button id="update-btn">Update Now</button>
-      <button id="dismiss-btn">Later</button>
+      <button id="update-btn">Обновить</button>
     </div>
   </div>
   
@@ -270,17 +317,32 @@ Write-Host "Renaming files..." -ForegroundColor Yellow
 
 # Переименование файлов
 if (Test-Path "build\web\main.dart.js") {
-    Move-Item "build\web\main.dart.js" "build\web\main-$NEW_VERSION.js"
-    Write-Host "  main.dart.js -> main-$NEW_VERSION.js" -ForegroundColor Green
+  Move-Item "build\web\main.dart.js" "build\web\main-$NEW_VERSION.js"
+  Write-Host "  main.dart.js -> main-$NEW_VERSION.js" -ForegroundColor Green
 }
 
 if (Test-Path "build\web\flutter.js") {
-    Move-Item "build\web\flutter.js" "build\web\flutter-$NEW_VERSION.js"
-    Write-Host "  flutter.js -> flutter-$NEW_VERSION.js" -ForegroundColor Green
+  Move-Item "build\web\flutter.js" "build\web\flutter-$NEW_VERSION.js"
+  Write-Host "  flutter.js -> flutter-$NEW_VERSION.js" -ForegroundColor Green
 }
 
 Copy-Item "web\app-updater.js" "build\web\app-$NEW_VERSION.js"
 Write-Host "  created app-$NEW_VERSION.js" -ForegroundColor Green
+
+# ВАЖНО: Копирование шрифта в сборку
+Write-Host "Copying MarckScript font..." -ForegroundColor Cyan
+if (Test-Path "assets\fonts\MarckScript-Regular.ttf") {
+    # Создаем папку для шрифтов если её нет
+    if (-not (Test-Path "build\web\assets\fonts")) {
+        New-Item -ItemType Directory -Force -Path "build\web\assets\fonts"
+    }
+    
+    # Копируем шрифт
+    Copy-Item "assets\fonts\MarckScript-Regular.ttf" "build\web\assets\fonts\MarckScript-Regular.ttf" -Force
+    Write-Host "  Font copied successfully" -ForegroundColor Green
+} else {
+    Write-Host "  WARNING: Font file not found at assets\fonts\MarckScript-Regular.ttf" -ForegroundColor Red
+}
 
 # Service Worker
 $swContent = @"
@@ -292,7 +354,7 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         return cache.addAll([
-          '/', '/main-$NEW_VERSION.js', '/flutter-$NEW_VERSION.js', '/app-$NEW_VERSION.js'
+          '/', '/main-$NEW_VERSION.js', '/flutter-$NEW_VERSION.js', '/app-$NEW_VERSION.js','/assets/fonts/MarckScript-Regular.ttf'
         ]);
       })
       .then(() => self.skipWaiting())
@@ -341,5 +403,6 @@ Cleanup-OldVersions "build\web"
 Write-Host "`nDEPLOY WITH CLEANUP COMPLETED!" -ForegroundColor Green -BackgroundColor Black
 Write-Host "Version: $NEW_VERSION" -ForegroundColor Yellow
 Write-Host "Old versions automatically cleaned (keeping 3 latest)" -ForegroundColor Cyan
+Write-Host "MarckScript font included in build" -ForegroundColor Magenta
 
 pause
