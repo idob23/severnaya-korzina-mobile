@@ -1,47 +1,69 @@
-// lib/screens/payment/universal_payment_screen.dart
+// lib/screens/payment/universal_payment_screen.dart - ПОЛНЫЙ ФАЙЛ
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 import 'payment_service.dart';
-import 'payment_success_screen.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-// import 'package:web/web.dart' as web;
+import '../../providers/cart_provider.dart';
+import '../../providers/orders_provider.dart';
 
 class UniversalPaymentScreen extends StatefulWidget {
   final String paymentUrl;
   final String paymentId;
-  final Map<String, dynamic>? orderData; // ДОБАВИТЬ
+  final String? orderId;
+  final bool orderCreated;
 
   const UniversalPaymentScreen({
     Key? key,
     required this.paymentUrl,
     required this.paymentId,
-    this.orderData, // ДОБАВИТЬ
+    this.orderId,
+    this.orderCreated = false,
   }) : super(key: key);
 
   @override
   _UniversalPaymentScreenState createState() => _UniversalPaymentScreenState();
 }
 
-class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
+class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
+    with WidgetsBindingObserver {
   final PaymentService _paymentService = PaymentService();
   Timer? _statusCheckTimer;
   bool _isChecking = false;
   int _checkAttempts = 0;
-  static const int _maxAttempts = 24; // 2 минуты проверки (каждые 5 секунд)
+  static const int _maxAttempts = 40; // 2 минуты проверки (каждые 3 секунды)
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _handlePayment();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _statusCheckTimer?.cancel();
     super.dispose();
+  }
+
+  // Обработка возврата из фона (для iOS)
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      print('🔄 Приложение вернулось из фона, проверяем статус платежа');
+      // Сразу проверяем статус при возврате
+      _checkPaymentStatus();
+      // Перезапускаем таймер если он был остановлен
+      if (_statusCheckTimer == null || !_statusCheckTimer!.isActive) {
+        _startStatusChecking();
+      }
+    } else if (state == AppLifecycleState.paused) {
+      print('⏸️ Приложение ушло в фон');
+    }
   }
 
   Future<void> _handlePayment() async {
@@ -51,30 +73,18 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
       // Начинаем проверку статуса
       _startStatusChecking();
     }
-    // Для веб-версии НЕ открываем автоматически - покажем кнопку в UI
+    // Для веб-версии показываем кнопку в UI
   }
-  // ДОБАВИТЬ НОВЫЙ МЕТОД:
 
   Future<void> _openPaymentManually() async {
     try {
-      if (kIsWeb) {
-        // Для веб - используем url_launcher без попытки popup
-        await launchUrl(
-          Uri.parse(widget.paymentUrl),
-          mode: LaunchMode.externalApplication,
-        );
-      } else {
-        await launchUrl(
-          Uri.parse(widget.paymentUrl),
-          mode: LaunchMode.externalApplication,
-        );
-      }
-
-      // Начинаем проверку статуса только после клика пользователя
+      await launchUrl(
+        Uri.parse(widget.paymentUrl),
+        mode: LaunchMode.externalApplication,
+      );
       _startStatusChecking();
     } catch (e) {
       print('❌ Ошибка открытия платежа: $e');
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -91,77 +101,7 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
     }
   }
 
-  Future<void> _openPaymentInCurrentWindow() async {
-    try {
-      // Используем url_launcher для ВСЕХ платформ, включая веб
-      final Uri url = Uri.parse(widget.paymentUrl);
-
-      if (await canLaunchUrl(url)) {
-        // Для веб используем platformDefault или externalApplication
-        // Оба режима откроют новую вкладку в браузере
-        await launchUrl(
-          url,
-          mode: kIsWeb
-              ? LaunchMode.platformDefault // Для веб - откроет в новой вкладке
-              : LaunchMode
-                  .externalApplication, // Для мобильных - внешний браузер
-        );
-        print('✅ Ссылка на оплату открыта через url_launcher');
-      } else {
-        throw Exception('Не удается открыть URL');
-      }
-    } catch (e) {
-      print('❌ Ошибка открытия платежа: $e');
-
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text('Проблема с оплатой'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Не удалось автоматически открыть форму оплаты.'),
-                SizedBox(height: 12),
-                Text('Способы решения:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('• Разрешите всплывающие окна для этого сайта'),
-                Text('• Или нажмите кнопку ниже для ручного открытия'),
-                SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: () async {
-                    // Попробовать открыть через url_launcher как fallback
-                    try {
-                      await launchUrl(
-                        Uri.parse(widget.paymentUrl),
-                        mode: LaunchMode.platformDefault,
-                      );
-                    } catch (e) {
-                      print('Ошибка при повторной попытке: $e');
-                    }
-                  },
-                  child: Text('Открыть оплату'),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context); // Закрыть диалог
-                  Navigator.pop(context); // Вернуться назад
-                },
-                child: Text('Отмена'),
-              ),
-            ],
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _openPaymentInBrowser() async {
-    // Для мобильных устройств открываем внешний браузер
     if (await canLaunchUrl(Uri.parse(widget.paymentUrl))) {
       await launchUrl(
         Uri.parse(widget.paymentUrl),
@@ -171,7 +111,10 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
   }
 
   void _startStatusChecking() {
-    _statusCheckTimer = Timer.periodic(Duration(seconds: 5), (timer) {
+    _statusCheckTimer?.cancel();
+    _checkAttempts = 0;
+
+    _statusCheckTimer = Timer.periodic(Duration(seconds: 3), (timer) {
       if (_checkAttempts >= _maxAttempts) {
         timer.cancel();
         _showTimeoutDialog();
@@ -191,13 +134,12 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
     });
 
     try {
-      // ПОЛУЧАЕМ ТОКЕН ИЗ AuthProvider:
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final token = authProvider.token;
 
       final status = await _paymentService.checkPaymentStatus(
         widget.paymentId,
-        token: token, // ПЕРЕДАЕМ ТОКЕН
+        token: token,
       );
 
       if (!mounted) return;
@@ -209,9 +151,7 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
         _statusCheckTimer?.cancel();
         _handlePaymentCancelled();
       }
-      // Если pending - продолжаем проверку
     } catch (e) {
-      // Ошибки игнорируем и продолжаем проверку
       print('Ошибка проверки статуса: $e');
     }
 
@@ -222,15 +162,56 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
     }
   }
 
-  void _handlePaymentSuccess() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PaymentSuccessScreen(
-          orderData: widget.orderData, // ПЕРЕДАТЬ orderData
+  void _handlePaymentSuccess() async {
+    // Очищаем корзину
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    cartProvider.clearCart();
+    print('✅ Корзина очищена после успешной оплаты');
+
+    // Обновляем список заказов
+    final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
+    await ordersProvider.loadOrders();
+    print('✅ Список заказов обновлен');
+
+    // Показываем диалог успеха и возвращаемся в каталог
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Оплата успешна!'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.orderId != null)
+                Text('Заказ #${widget.orderId} успешно оплачен'),
+              SizedBox(height: 8),
+              Text(
+                  'Ваш заказ принят в обработку и будет доставлен в указанные сроки.'),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                // Возвращаемся на главный экран
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/',
+                  (route) => false,
+                );
+              },
+              child: Text('В каталог'),
+            ),
+          ],
         ),
-      ),
-    );
+      );
+    }
   }
 
   void _handlePaymentCancelled() {
@@ -268,8 +249,8 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // Закрыть диалог
-              Navigator.pop(context); // Вернуться назад
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
             child: Text('Вернуться'),
           ),
@@ -326,9 +307,19 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
+              if (widget.orderId != null) ...[
+                SizedBox(height: 8),
+                Text(
+                  'Заказ #${widget.orderId}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
               SizedBox(height: 32),
 
-              // КНОПКА ОТКРЫТИЯ ОПЛАТЫ - ТОЛЬКО ДЛЯ ВЕБ
+              // Кнопка открытия оплаты - только для веб
               if (kIsWeb && !_isChecking) ...[
                 SizedBox(
                   width: double.infinity,
@@ -374,37 +365,17 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen> {
                       child: Text('Отменить'),
                     ),
                   ),
-                  if (_isChecking) ...[
+                  if (!kIsWeb && !_isChecking) ...[
                     SizedBox(width: 16),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: _checkPaymentStatus,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                        ),
                         child: Text('Проверить статус'),
                       ),
                     ),
                   ],
                 ],
               ),
-
-              if (!kIsWeb) ...[
-                SizedBox(height: 16),
-                TextButton(
-                  onPressed: () async {
-                    await launchUrl(
-                      Uri.parse(widget.paymentUrl),
-                      mode: LaunchMode.externalApplication,
-                    );
-                  },
-                  child: Text(
-                    'Открыть оплату заново',
-                    style: TextStyle(color: Colors.green[700]),
-                  ),
-                ),
-              ],
             ],
           ),
         ),

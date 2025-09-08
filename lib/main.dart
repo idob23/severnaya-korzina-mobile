@@ -64,7 +64,6 @@ class MyApp extends StatelessWidget {
           '/cart': (context) => CartScreen(),
           '/orders': (context) => OrdersScreen(),
           '/profile': (context) => ProfileScreen(),
-          '/payment-success': (context) => PaymentSuccessScreen(),
         },
       ),
     );
