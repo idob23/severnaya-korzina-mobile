@@ -173,17 +173,17 @@ class _CartScreenState extends State<CartScreen> {
         child: Row(
           children: [
             // Изображение товара (заглушка)
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.shopping_bag, color: Colors.grey[400]),
-            ),
+            // Container(
+            //   width: 60,
+            //   height: 60,
+            //   decoration: BoxDecoration(
+            //     color: Colors.grey[200],
+            //     borderRadius: BorderRadius.circular(8),
+            //   ),
+            //   child: Icon(Icons.shopping_bag, color: Colors.grey[400]),
+            // ),
 
-            SizedBox(width: 12),
+            // SizedBox(width: 12),
 
             // Информация о товаре
             Expanded(
