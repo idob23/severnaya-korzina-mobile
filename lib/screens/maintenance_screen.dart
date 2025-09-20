@@ -1,5 +1,7 @@
 // lib/screens/maintenance_screen.dart
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
+import '../main.dart';
 
 class MaintenanceScreen extends StatelessWidget {
   final String message;
@@ -132,14 +134,110 @@ class MaintenanceScreen extends StatelessWidget {
 
                 const SizedBox(height: 32),
 
-                // Кнопка обновить
+                // Кнопка обновить - ИСПРАВЛЕННАЯ ВЕРСИЯ
                 OutlinedButton.icon(
-                  onPressed: () {
-                    // Перезапуск приложения
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                      '/',
-                      (route) => false,
+                  onPressed: () async {
+                    // Показываем индикатор загрузки
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) => Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const CircularProgressIndicator(),
+                        ),
+                      ),
                     );
+
+                    try {
+                      // Проверяем статус приложения
+                      final apiService = ApiService();
+                      final statusResponse = await apiService.checkAppStatus();
+
+                      // Закрываем диалог загрузки
+                      Navigator.of(context).pop();
+
+                      print(
+                          '🔍 Проверка статуса: maintenance=${statusResponse['maintenance']}');
+
+                      if (statusResponse['maintenance'] != true) {
+                        // Режим обслуживания отключен, перезапускаем приложение
+                        print(
+                            '✅ Режим обслуживания отключен, перезапускаем приложение');
+
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (context) => AppInitializer(),
+                          ),
+                          (route) => false,
+                        );
+                      } else {
+                        // Режим все еще включен
+                        print('⚠️ Режим обслуживания все еще активен');
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: const [
+                                Icon(
+                                  Icons.warning,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                      'Технические работы еще не завершены'),
+                                ),
+                              ],
+                            ),
+                            backgroundColor: Colors.orange,
+                            duration: const Duration(seconds: 3),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      // Закрываем диалог если он еще открыт
+                      if (Navigator.canPop(context)) {
+                        Navigator.of(context).pop();
+                      }
+
+                      print('❌ Ошибка при проверке статуса: $e');
+
+                      // Показываем ошибку
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: const [
+                              Icon(
+                                Icons.error_outline,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                    'Ошибка подключения. Попробуйте позже'),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Colors.red,
+                          duration: const Duration(seconds: 3),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      );
+                    }
                   },
                   icon: const Icon(Icons.refresh),
                   label: const Text('Попробовать снова'),
@@ -153,6 +251,17 @@ class MaintenanceScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+
+                const SizedBox(height: 16),
+
+                // // Дополнительная информация о версии (опционально)
+                // Text(
+                //   'Версия приложения: 4.0.0',
+                //   style: TextStyle(
+                //     fontSize: 12,
+                //     color: Colors.grey.shade500,
+                //   ),
+                // ),
               ],
             ),
           ),
@@ -161,3 +270,6 @@ class MaintenanceScreen extends StatelessWidget {
     );
   }
 }
+
+// Вспомогательный класс AppInitializer должен быть импортирован из main.dart
+// Если он не экспортируется, создайте отдельный файл app_initializer.dart

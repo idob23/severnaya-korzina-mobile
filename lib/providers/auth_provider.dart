@@ -302,6 +302,10 @@ class AuthProvider with ChangeNotifier {
                   try {
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.setString(_authTokenKey, token);
+
+                    // ВАЖНО: Сохраняем номер телефона для проверки режима обслуживания
+                    await prefs.setString('user_phone', formattedPhone);
+
                     await prefs.remove(_pendingSmsVerificationKey);
                     saved = true;
                     print('✅ Token saved to web storage (attempt ${i + 1})');
@@ -313,6 +317,11 @@ class AuthProvider with ChangeNotifier {
               } else {
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.setString(_authTokenKey, token);
+
+                // ВАЖНО: Сохраняем номер телефона для проверки режима обслуживания
+                await prefs.setString('user_phone', formattedPhone);
+                print('📱 Сохранен номер телефона: $formattedPhone');
+
                 await prefs.remove(_pendingSmsVerificationKey);
               }
 
@@ -330,6 +339,7 @@ class AuthProvider with ChangeNotifier {
 
             if (kDebugMode) {
               print('🎉 Успешная авторизация: ${_currentUser?.fullName}');
+              print('📱 Номер телефона сохранен: $formattedPhone');
             }
 
             return true;

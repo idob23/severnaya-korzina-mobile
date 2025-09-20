@@ -391,6 +391,7 @@ class MyApp extends StatelessWidget {
         home: AppInitializer(),
         debugShowCheckedModeBanner: false,
         routes: {
+          '/': (context) => AppInitializer(), // ДОБАВИТЬ эту строку!
           '/auth': (context) => AuthChoiceScreen(),
           '/home': (context) => HomeScreen(),
           '/catalog': (context) => CatalogScreen(),
