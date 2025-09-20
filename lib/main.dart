@@ -5,6 +5,8 @@ import 'package:severnaya_korzina/providers/cart_provider.dart';
 import 'package:severnaya_korzina/providers/auth_provider.dart';
 import 'package:severnaya_korzina/providers/products_provider.dart';
 import 'package:severnaya_korzina/providers/orders_provider.dart';
+import 'package:severnaya_korzina/screens/maintenance_screen.dart';
+import 'package:severnaya_korzina/services/api_service.dart';
 import 'screens/catalog/catalog_screen.dart';
 import 'screens/cart/cart_screen.dart';
 import 'screens/orders/orders_screen.dart';
@@ -18,6 +20,13 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+// Проверяем режим обслуживания
+  final shouldContinue = await _checkMaintenanceStatus();
+
+  if (!shouldContinue) {
+    return; // Если режим обслуживания, не продолжаем
+  }
+
   // Инициализация сервиса обновлений
   try {
     await UpdateService().init();
@@ -27,6 +36,42 @@ void main() async {
   }
 
   runApp(MyApp());
+}
+
+// ДОБАВИТЬ эту функцию:
+Future<bool> _checkMaintenanceStatus() async {
+  try {
+    final apiService = ApiService();
+    final statusResponse = await apiService.checkAppStatus();
+
+    // Проверяем только режим обслуживания
+    if (statusResponse['maintenance'] == true) {
+      final maintenanceDetails = statusResponse['maintenance_details'];
+
+      // Запускаем приложение с экраном обслуживания
+      runApp(MaterialApp(
+        title: 'Северная Корзина',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          fontFamily: 'Inter', // или ваш текущий шрифт
+        ),
+        home: MaintenanceScreen(
+          message: maintenanceDetails?['message'] ??
+              'Проводятся технические работы. Приложение временно недоступно.',
+          endTime: maintenanceDetails?['end_time'],
+        ),
+        debugShowCheckedModeBanner: false,
+      ));
+
+      return false; // Не продолжаем загрузку
+    }
+
+    return true; // Продолжаем нормальную загрузку
+  } catch (e) {
+    print('Ошибка проверки статуса: $e');
+    // При ошибке продолжаем работу
+    return true;
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -66,123 +111,125 @@ class MyApp extends StatelessWidget {
 
         theme: ThemeData(
           primarySwatch: Colors.blue,
-          fontFamily: 'MarckScript',
+          fontFamily: 'Inter',
 
           // 🔴 ЗНАЧИТЕЛЬНО УВЕЛИЧЕННЫЕ РАЗМЕРЫ ШРИФТОВ
           textTheme: TextTheme(
             // Очень крупные заголовки
             displayLarge: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 42,
-              fontWeight: FontWeight.w400,
-              height: 1.3,
+              fontFamily: 'Inter',
+              fontSize: 32, // Уменьшено с 42
+              fontWeight: FontWeight.w700,
+              height: 1.2,
             ),
             displayMedium: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 38,
-              fontWeight: FontWeight.w400,
-              height: 1.3,
+              fontFamily: 'Inter',
+              fontSize: 28, // Уменьшено с 38
+              fontWeight: FontWeight.w700,
+              height: 1.2,
             ),
             displaySmall: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 34,
-              fontWeight: FontWeight.w400,
-              height: 1.3,
+              fontFamily: 'Inter',
+              fontSize: 24, // Уменьшено с 34
+              fontWeight: FontWeight.w600,
+              height: 1.2,
             ),
 
             // Заголовки экранов и разделов
             headlineLarge: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 32,
-              fontWeight: FontWeight.w400,
+              fontFamily: 'Inter',
+              fontSize: 22, // Уменьшено с 32
+              fontWeight: FontWeight.w600,
               height: 1.3,
             ),
             headlineMedium: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 30,
-              fontWeight: FontWeight.w400,
+              fontFamily: 'Inter',
+              fontSize: 20, // Уменьшено с 30
+              fontWeight: FontWeight.w600,
               height: 1.3,
             ),
             headlineSmall: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 28,
-              fontWeight: FontWeight.w400,
+              fontFamily: 'Inter',
+              fontSize: 18, // Уменьшено с 28
+              fontWeight: FontWeight.w600,
               height: 1.3,
             ),
 
             // Заголовки в списках и карточках
             titleLarge: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 26,
-              fontWeight: FontWeight.w400,
+              fontFamily: 'Inter',
+              fontSize: 18, // Уменьшено с 26
+              fontWeight: FontWeight.w600,
               height: 1.3,
             ),
             titleMedium: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 24,
-              fontWeight: FontWeight.w400,
+              fontFamily: 'Inter',
+              fontSize: 16, // Уменьшено с 24
+              fontWeight: FontWeight.w500,
               height: 1.3,
             ),
             titleSmall: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 22,
-              fontWeight: FontWeight.w400,
+              fontFamily: 'Inter',
+              fontSize: 14, // Уменьшено с 22
+              fontWeight: FontWeight.w500,
               height: 1.3,
             ),
 
-            // Основной текст - ЗНАЧИТЕЛЬНО УВЕЛИЧЕН
+            // Основной текст - ОПТИМАЛЬНЫЕ РАЗМЕРЫ
             bodyLarge: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 24,
+              fontFamily: 'Inter',
+              fontSize: 16, // Уменьшено с 24 (идеально для чтения)
               fontWeight: FontWeight.w400,
-              height: 1.4,
+              height: 1.5,
+              letterSpacing: 0.15,
             ),
             bodyMedium: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 22,
+              fontFamily: 'Inter',
+              fontSize: 14, // Уменьшено с 22 (стандарт для мобильных)
               fontWeight: FontWeight.w400,
-              height: 1.4,
+              height: 1.5,
+              letterSpacing: 0.15,
             ),
             bodySmall: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 20,
+              fontFamily: 'Inter',
+              fontSize: 12, // Уменьшено с 20
               fontWeight: FontWeight.w400,
-              height: 1.4,
+              height: 1.5,
+              letterSpacing: 0.15,
             ),
 
             // Кнопки и метки - УВЕЛИЧЕНЫ
             labelLarge: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 22,
-              fontWeight: FontWeight.w400,
-              letterSpacing: 0.5,
+              fontFamily: 'Inter',
+              fontSize: 16, // Уменьшено с 22
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.1,
             ),
             labelMedium: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 20,
-              fontWeight: FontWeight.w400,
-              letterSpacing: 0.5,
+              fontFamily: 'Inter',
+              fontSize: 14, // Уменьшено с 20
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.1,
             ),
             labelSmall: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 18,
-              fontWeight: FontWeight.w400,
-              letterSpacing: 0.5,
+              fontFamily: 'Inter',
+              fontSize: 12, // Уменьшено с 18
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.1,
             ),
           ),
 
-          // 🔴 AppBar - увеличенный заголовок и высота
+          // 🎯 AppBar - нормальный размер
           appBarTheme: AppBarTheme(
             titleTextStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 30,
-              fontWeight: FontWeight.w400,
+              fontFamily: 'Inter',
+              fontSize: 20, // Уменьшено с 30
+              fontWeight: FontWeight.w600,
               color: Colors.white,
-              letterSpacing: 0.5,
             ),
-            toolbarHeight: 70,
+            toolbarHeight: 56, // Стандартная высота (было 70)
             iconTheme: IconThemeData(
-              size: 28,
+              size: 24, // Стандартный размер (было 28)
               color: Colors.white,
             ),
           ),
@@ -203,139 +250,135 @@ class MyApp extends StatelessWidget {
 
           textButtonTheme: TextButtonThemeData(
             style: TextButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               textStyle: TextStyle(
-                fontFamily: 'MarckScript',
-                fontSize: 22,
-                fontWeight: FontWeight.w400,
-                letterSpacing: 0.5,
+                fontFamily: 'Inter',
+                fontSize: 16, // Уменьшено с 24
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.1,
               ),
             ),
           ),
 
           outlinedButtonTheme: OutlinedButtonThemeData(
             style: OutlinedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               textStyle: TextStyle(
-                fontFamily: 'MarckScript',
-                fontSize: 22,
-                fontWeight: FontWeight.w400,
-                letterSpacing: 0.5,
+                fontFamily: 'Inter',
+                fontSize: 16, // Уменьшено с 24
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.1,
               ),
             ),
           ),
 
-          // 🔴 Поля ввода - увеличенный текст
+          // 📝 Поля ввода
           inputDecorationTheme: InputDecorationTheme(
             labelStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 22,
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
             ),
             hintStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 21,
-              color: Colors.grey,
-            ),
-            helperStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 18,
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: Colors.grey[600],
             ),
             errorStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 18,
-              color: Colors.red,
+              fontFamily: 'Inter',
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
             ),
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),
 
-          // 🔴 ListTile - увеличенные размеры для списков
-          listTileTheme: ListTileThemeData(
-            titleTextStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 24,
-              color: Colors.black87,
-            ),
-            subtitleTextStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 20,
-              color: Colors.black54,
-              height: 1.3,
-            ),
-            minVerticalPadding: 14,
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          ),
-
-          // 🔴 Карточки - увеличенные отступы
+          // 📦 Карточки
           cardTheme: CardThemeData(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             elevation: 2,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
           ),
 
-          // 🔴 Чипы (теги категорий)
+          // 🏷️ Чипы
           chipTheme: ChipThemeData(
             labelStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 20,
+              fontFamily: 'Inter',
+              fontSize: 14, // Уменьшено с 20
+              fontWeight: FontWeight.w500,
             ),
-            labelPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            padding: EdgeInsets.all(8),
+            labelPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+            padding: EdgeInsets.all(6),
           ),
 
-          // 🔴 Табы
-          tabBarTheme: const TabBarThemeData(
+          // 📑 Табы
+          tabBarTheme: TabBarThemeData(
             labelStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 22,
-              fontWeight: FontWeight.w400,
+              fontFamily: 'Inter',
+              fontSize: 16, // Уменьшено с 22
+              fontWeight: FontWeight.w600,
             ),
             unselectedLabelStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 21,
+              fontFamily: 'Inter',
+              fontSize: 15, // Уменьшено с 21
               fontWeight: FontWeight.w400,
             ),
             indicatorSize: TabBarIndicatorSize.label,
           ),
 
-          // 🔴 BottomNavigationBar - увеличенные иконки и текст
+          // 🧭 BottomNavigationBar
           bottomNavigationBarTheme: BottomNavigationBarThemeData(
             selectedLabelStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 18,
+              fontFamily: 'Inter',
+              fontSize: 12, // Уменьшено с 18
+              fontWeight: FontWeight.w500,
             ),
             unselectedLabelStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 17,
+              fontFamily: 'Inter',
+              fontSize: 11, // Уменьшено с 17
+              fontWeight: FontWeight.w400,
             ),
-            selectedIconTheme: IconThemeData(size: 32),
-            unselectedIconTheme: IconThemeData(size: 30),
+            selectedIconTheme: IconThemeData(size: 28), // Было 32
+            unselectedIconTheme: IconThemeData(size: 26), // Было 30
             type: BottomNavigationBarType.fixed,
           ),
 
-          // 🔴 Диалоги
-          dialogTheme: const DialogThemeData(
+          // 💬 Диалоги
+          dialogTheme: DialogThemeData(
             titleTextStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 26,
-              fontWeight: FontWeight.w400,
+              fontFamily: 'Inter',
+              fontSize: 20, // Уменьшено с 26
+              fontWeight: FontWeight.w600,
               color: Colors.black87,
             ),
             contentTextStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 22,
+              fontFamily: 'Inter',
+              fontSize: 16, // Уменьшено с 22
+              fontWeight: FontWeight.w400,
               color: Colors.black87,
               height: 1.4,
             ),
           ),
-
-          // 🔴 SnackBar
+          // 🍞 SnackBar
           snackBarTheme: SnackBarThemeData(
             contentTextStyle: TextStyle(
-              fontFamily: 'MarckScript',
-              fontSize: 20,
-              color: Colors.white,
+              fontFamily: 'Inter',
+              fontSize: 14, // Уменьшено с 20
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+
+          // 🎯 ListTile
+          listTileTheme: ListTileThemeData(
+            titleTextStyle: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+            subtitleTextStyle: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: Colors.grey[700],
             ),
           ),
 

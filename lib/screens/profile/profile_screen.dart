@@ -262,6 +262,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             '• После оплаты заказ автоматически попадает в обработку',
                             '• Корзина очищается только после успешной оплаты',
                             '• Оплаченные заказы нельзя отменить, за исключением случаев, когда не набрана общая целевая сумма закупки',
+                            '• После успешной оплаты в окне ЮKassa закройте его и вернитесь в приложение.',
                           ],
                         ),
 
@@ -805,22 +806,23 @@ class _ProfileScreenState extends State<ProfileScreen>
           // ПАНЕЛЬ ЦЕЛЕВОЙ СУММЫ - ГЛАВНАЯ ФИЧА
           _buildBatchProgressCard(),
 
-          SizedBox(height: 16),
+          SizedBox(height: 12),
 
           // Информация о пользователе
           _buildUserInfoCard(user),
 
-          SizedBox(height: 16),
+          SizedBox(height: 12),
 
           // Настройки и действия
           _buildSettingsCard(context, authProvider),
 
-          SizedBox(height: 16),
+          SizedBox(height: 12),
 
           // ДОБАВЬТЕ ЭТУ СТРОКУ - WhatsApp группа
           _buildWhatsAppGroupCard(),
 
           _buildAboutSection(), // НОВАЯ СЕКЦИЯ
+          // _buildAboutSectionAlternative(), // Вариант 2: одна строка с двумя кнопками
           SizedBox(height: 16),
 
           // Кнопка выхода
@@ -830,61 +832,255 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // НОВЫЙ ВИДЖЕТ - секция "О приложении"
+  // КОМПАКТНАЯ секция "О приложении"
   Widget _buildAboutSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
+    return Column(
+      children: [
+        // Кнопка "О приложении"
+        InkWell(
+          onTap: _showAboutDialog,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            margin: EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.info_outline,
+                    color: Colors.blue,
+                    size: 20,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'О приложении',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      Text(
+                        'Версия $_appVersion',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 8),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey[400],
+                  size: 20,
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          ListTile(
-            leading: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.info_outline, color: Colors.blue, size: 20),
+        ),
+
+        // Кнопка "Проверить обновления"
+        InkWell(
+          onTap: _checkForUpdates,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
-            title: Text(
-              'О приложении',
-              style: TextStyle(fontWeight: FontWeight.w600),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.system_update,
+                    color: Colors.green,
+                    size: 20,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Проверить обновления',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey[400],
+                  size: 20,
+                ),
+              ],
             ),
-            subtitle: Text('Версия $_appVersion'),
-            trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-            onTap: _showAboutDialog,
           ),
-          Divider(height: 1),
-          ListTile(
-            leading: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.system_update, color: Colors.green, size: 20),
-            ),
-            title: Text(
-              'Проверить обновления',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text('Проверить наличие новой версии'),
-            trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-            onTap: _checkForUpdates,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
+
+  // // АЛЬТЕРНАТИВНЫЙ ВАРИАНТ - Еще более компактный (одна строка с двумя кнопками)
+  // Widget _buildAboutSectionAlternative() {
+  //   return Row(
+  //     children: [
+  //       // Кнопка "О приложении"
+  //       Expanded(
+  //         child: InkWell(
+  //           onTap: _showAboutDialog,
+  //           borderRadius: BorderRadius.circular(12),
+  //           child: Container(
+  //             padding: EdgeInsets.all(12),
+  //             decoration: BoxDecoration(
+  //               color: Colors.white,
+  //               borderRadius: BorderRadius.circular(12),
+  //               border: Border.all(color: Colors.grey[300]!),
+  //               boxShadow: [
+  //                 BoxShadow(
+  //                   color: Colors.black.withOpacity(0.03),
+  //                   blurRadius: 8,
+  //                   offset: Offset(0, 2),
+  //                 ),
+  //               ],
+  //             ),
+  //             child: Column(
+  //               children: [
+  //                 Container(
+  //                   padding: EdgeInsets.all(10),
+  //                   decoration: BoxDecoration(
+  //                     color: Colors.blue[50],
+  //                     borderRadius: BorderRadius.circular(10),
+  //                   ),
+  //                   child: Icon(
+  //                     Icons.info_outline,
+  //                     color: Colors.blue,
+  //                     size: 24,
+  //                   ),
+  //                 ),
+  //                 SizedBox(height: 8),
+  //                 Text(
+  //                   'О приложении',
+  //                   style: TextStyle(
+  //                     fontSize: 12,
+  //                     fontWeight: FontWeight.w600,
+  //                     color: Colors.grey[800],
+  //                   ),
+  //                   textAlign: TextAlign.center,
+  //                 ),
+  //                 SizedBox(height: 2),
+  //                 Text(
+  //                   'v$_appVersion',
+  //                   style: TextStyle(
+  //                     fontSize: 10,
+  //                     color: Colors.grey[500],
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         ),
+  //       ),
+
+  //       SizedBox(width: 12),
+
+  //       // Кнопка "Обновления"
+  //       Expanded(
+  //         child: InkWell(
+  //           onTap: _checkForUpdates,
+  //           borderRadius: BorderRadius.circular(12),
+  //           child: Container(
+  //             padding: EdgeInsets.all(12),
+  //             decoration: BoxDecoration(
+  //               color: Colors.white,
+  //               borderRadius: BorderRadius.circular(12),
+  //               border: Border.all(color: Colors.grey[300]!),
+  //               boxShadow: [
+  //                 BoxShadow(
+  //                   color: Colors.black.withOpacity(0.03),
+  //                   blurRadius: 8,
+  //                   offset: Offset(0, 2),
+  //                 ),
+  //               ],
+  //             ),
+  //             child: Column(
+  //               children: [
+  //                 Container(
+  //                   padding: EdgeInsets.all(10),
+  //                   decoration: BoxDecoration(
+  //                     color: Colors.green[50],
+  //                     borderRadius: BorderRadius.circular(10),
+  //                   ),
+  //                   child: Icon(
+  //                     Icons.system_update,
+  //                     color: Colors.green,
+  //                     size: 24,
+  //                   ),
+  //                 ),
+  //                 SizedBox(height: 8),
+  //                 Text(
+  //                   'Обновления',
+  //                   style: TextStyle(
+  //                     fontSize: 12,
+  //                     fontWeight: FontWeight.w600,
+  //                     color: Colors.grey[800],
+  //                   ),
+  //                   textAlign: TextAlign.center,
+  //                 ),
+  //                 SizedBox(height: 2),
+  //                 Text(
+  //                   'Проверить',
+  //                   style: TextStyle(
+  //                     fontSize: 10,
+  //                     color: Colors.grey[500],
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 
   // ================== ПАНЕЛЬ ЦЕЛЕВОЙ СУММЫ - ОБНОВЛЕННАЯ ==================
   Widget _buildBatchProgressCard() {
@@ -1169,28 +1365,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
 
                   SizedBox(height: 16),
-// // Кнопка действия по центру
-//                   Center(
-//                     child: SizedBox(
-//                       width:
-//                           200, // Фиксированная ширина для центрированной кнопки
-//                       child: OutlinedButton.icon(
-//                         onPressed: () {
-//                           _showBatchDetails();
-//                         },
-//                         icon: Icon(Icons.info_outline, size: 18),
-//                         label: Text('Подробнее'),
-//                         style: OutlinedButton.styleFrom(
-//                           foregroundColor: getProgressColor(),
-//                           side: BorderSide(color: getProgressColor(), width: 2),
-//                           padding: EdgeInsets.symmetric(vertical: 14),
-//                           shape: RoundedRectangleBorder(
-//                             borderRadius: BorderRadius.circular(12),
-//                           ),
-//                         ),
-//                       ),
-//                     ),
-//                   ),
                 ],
               ),
             ),
@@ -1316,117 +1490,120 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  // Компактная кнопка обновления данных вместо большой карточки настроек
   Widget _buildSettingsCard(BuildContext context, AuthProvider authProvider) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return InkWell(
+      onTap: () {
+        _loadActiveBatch();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Данные обновлены'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
           children: [
-            Row(
-              children: [
-                Icon(Icons.settings, color: Colors.grey[600], size: 24),
-                SizedBox(width: 8),
-                Text(
-                  'Настройки',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.refresh,
+                color: Colors.blue,
+                size: 20,
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Обновить данные',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
+                    ),
                   ),
-                ),
-              ],
+                  Text(
+                    'Обновить информацию о закупке',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            SizedBox(height: 16),
-            // ДОБАВИТЬ КНОПКУ ОБНОВЛЕНИЯ ДАННЫХ:
-            _buildSettingItem(
-              icon: Icons.refresh,
-              title: 'Обновить данные',
-              subtitle: 'Перезагрузить информацию о закупке',
-              onTap: () {
-                _loadActiveBatch();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Данные обновлены')),
-                );
-              },
+            Icon(
+              Icons.chevron_right,
+              color: Colors.grey[400],
+              size: 20,
             ),
-            // _buildSettingItem(
-            //   icon: Icons.edit,
-            //   title: 'Редактировать профиль',
-            //   subtitle: 'Изменить имя, email',
-            //   onTap: () => _showEditProfileDialog(context, authProvider),
-            // ),
-            // _buildSettingItem(
-            //   icon: Icons.location_on,
-            //   title: 'Адреса доставки',
-            //   subtitle: 'Управление адресами',
-            //   onTap: () {
-            //     // Переход к управлению адресами
-            //   },
-            // ),
-            // _buildSettingItem(
-            //   icon: Icons.notifications,
-            //   title: 'Уведомления',
-            //   subtitle: 'Push, Email, SMS',
-            //   onTap: () {
-            //     // Настройки уведомлений
-            //   },
-            // ),
-            // _buildSettingItem(
-            //   icon: Icons.help,
-            //   title: 'Помощь и поддержка',
-            //   subtitle: 'FAQ, контакты',
-            //   onTap: () {
-            //     // Поддержка
-            //   },
-            // ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSettingItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Container(
-        padding: EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: Colors.grey[600], size: 20),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: Colors.grey[800],
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(
-          fontSize: 12,
-          color: Colors.grey[500],
-        ),
-      ),
-      trailing: Icon(
-        Icons.chevron_right,
-        color: Colors.grey[400],
-      ),
-      onTap: onTap,
-    );
-  }
+  // Widget _buildSettingItem({
+  //   required IconData icon,
+  //   required String title,
+  //   required String subtitle,
+  //   required VoidCallback onTap,
+  // }) {
+  //   return ListTile(
+  //     contentPadding: EdgeInsets.zero,
+  //     leading: Container(
+  //       padding: EdgeInsets.all(8),
+  //       decoration: BoxDecoration(
+  //         color: Colors.grey[100],
+  //         borderRadius: BorderRadius.circular(8),
+  //       ),
+  //       child: Icon(icon, color: Colors.grey[600], size: 20),
+  //     ),
+  //     title: Text(
+  //       title,
+  //       style: TextStyle(
+  //         fontWeight: FontWeight.w600,
+  //         color: Colors.grey[800],
+  //       ),
+  //     ),
+  //     subtitle: Text(
+  //       subtitle,
+  //       style: TextStyle(
+  //         fontSize: 12,
+  //         color: Colors.grey[500],
+  //       ),
+  //     ),
+  //     trailing: Icon(
+  //       Icons.chevron_right,
+  //       color: Colors.grey[400],
+  //     ),
+  //     onTap: onTap,
+  //   );
+  // }
 
   Widget _buildLogoutButton(BuildContext context, AuthProvider authProvider) {
     return SizedBox(
@@ -1576,36 +1753,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
 
               Spacer(),
-
-              // // Кнопки
-              // Row(
-              //   children: [
-              //     Expanded(
-              //       child: OutlinedButton(
-              //         onPressed: () {
-              //           Navigator.pop(context);
-              //           // Поделиться закупкой
-              //         },
-              //         child: Text('Поделиться'),
-              //       ),
-              //     ),
-              //     SizedBox(width: 12),
-              //     Expanded(
-              //       child: ElevatedButton(
-              //         onPressed: () {
-              //           Navigator.pop(context);
-              //           // Переход к каталогу
-              //           DefaultTabController.of(context)?.animateTo(0);
-              //         },
-              //         style: ElevatedButton.styleFrom(
-              //           backgroundColor: Colors.blue,
-              //           foregroundColor: Colors.white,
-              //         ),
-              //         child: Text('Добавить заказ'),
-              //       ),
-              //     ),
-              //   ],
-              // ),
             ],
           ),
         ),

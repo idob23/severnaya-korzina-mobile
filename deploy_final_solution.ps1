@@ -1,5 +1,5 @@
-# Деплой с автоматической очисткой старых версий и поддержкой шрифта MarckScript
-Write-Host "Deploying with automatic cleanup and MarckScript font..." -ForegroundColor Green
+# Деплой с автоматической очисткой старых версий и поддержкой шрифта Inter 
+Write-Host "Deploying with automatic cleanup and Inter  font..." -ForegroundColor Green
 
 $timestamp = [DateTimeOffset]::Now.ToString("MMddHHmm")
 $NEW_VERSION = "6.$timestamp"
@@ -215,26 +215,51 @@ $indexHtml = @"
   <link rel="icon" type="image/png" href="favicon.png">
   
   <style>
-    /* ПОДКЛЮЧЕНИЕ ШРИФТА MarckScript */
-    @font-face {
-      font-family: 'MarckScript';
-      src: url('assets/fonts/MarckScript-Regular.ttf') format('truetype');
-      font-weight: 400;
-      font-style: normal;
-      font-display: swap;
-    }
+    /* ПОДКЛЮЧЕНИЕ ШРИФТА Inter */
+@font-face {
+  font-family: 'Inter';
+  src: url('assets/fonts/Inter-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
-    /* ОСНОВНЫЕ СТИЛИ */
-    * {
-      font-family: 'MarckScript', cursive, sans-serif !important;
-    }
+@font-face {
+  font-family: 'Inter';
+  src: url('assets/fonts/Inter-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
 
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'MarckScript', cursive, sans-serif;
-      font-size: 16px;
-    }
+@font-face {
+  font-family: 'Inter';
+  src: url('assets/fonts/Inter-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('assets/fonts/Inter-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ОСНОВНЫЕ СТИЛИ */
+* {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
 
     /* Загрузочный экран */
     #loading {
@@ -262,21 +287,21 @@ $indexHtml = @"
       font-size: 28px;
       margin-bottom: 10px; 
       font-weight: bold;
-      font-family: 'MarckScript', cursive, sans-serif;
+      font-family: 'Inter', sans-serif;
     }
     
     .loading-version { 
       color: rgba(255,255,255,0.8); 
       font-size: 16px;
       margin-bottom: 20px;
-      font-family: 'MarckScript', cursive, sans-serif;
+      font-family: 'Inter', sans-serif;
     }
     
     .loading-message {
       color: rgba(255,255,255,0.9);
       font-size: 14px;
       margin-bottom: 30px;
-      font-family: 'MarckScript', cursive, sans-serif;
+      font-family: 'Inter', sans-serif;
       text-align: center;
       max-width: 300px;
       animation: fadeInOut 2s ease-in-out infinite;
@@ -329,7 +354,7 @@ $indexHtml = @"
       border: none;
       border-radius: 8px;
       font-size: 16px;
-      font-family: 'MarckScript', cursive, sans-serif;
+      font-family: 'Inter', sans-serif;
       cursor: pointer;
       font-weight: bold;
       transition: transform 0.2s;
@@ -432,19 +457,30 @@ $indexHtml = @"
 [System.IO.File]::WriteAllText("build\web\index.html", $indexHtml, $utf8NoBOM)
 Write-Host "  index.html updated with version $NEW_VERSION" -ForegroundColor Green
 
-# Копирование шрифта в сборку
-Write-Host "Copying MarckScript font..." -ForegroundColor Cyan
-if (Test-Path "assets\fonts\MarckScript-Regular.ttf") {
-    # Создаем папку для шрифтов если её нет
-    if (-not (Test-Path "build\web\assets\fonts")) {
-        New-Item -ItemType Directory -Force -Path "build\web\assets\fonts"
-    }
-    
-    # Копируем шрифт
-    Copy-Item "assets\fonts\MarckScript-Regular.ttf" "build\web\assets\fonts\MarckScript-Regular.ttf" -Force
-    Write-Host "  Font copied successfully" -ForegroundColor Green
-} else {
-    Write-Host "  WARNING: Font file not found at assets\fonts\MarckScript-Regular.ttf" -ForegroundColor Red
+# Копирование шрифтов Inter в сборку
+Write-Host "Copying Inter fonts..." -ForegroundColor Cyan
+
+# Создаем папку для шрифтов если её нет
+if (-not (Test-Path "build\web\assets\fonts")) {
+  New-Item -ItemType Directory -Force -Path "build\web\assets\fonts"
+}
+
+# Копируем все веса шрифта Inter
+$fontFiles = @(
+  "Inter-Regular.ttf",
+  "Inter-Medium.ttf", 
+  "Inter-SemiBold.ttf",
+  "Inter-Bold.ttf"
+)
+
+foreach ($font in $fontFiles) {
+  if (Test-Path "assets\fonts\$font") {
+    Copy-Item "assets\fonts\$font" "build\web\assets\fonts\$font" -Force
+    Write-Host "  $font copied successfully" -ForegroundColor Green
+  }
+  else {
+    Write-Host "  WARNING: Font file not found at assets\fonts\$font" -ForegroundColor Red
+  }
 }
 
 # Service Worker
@@ -461,7 +497,10 @@ self.addEventListener('install', event => {
           '/main-$NEW_VERSION.js', 
           '/flutter-$NEW_VERSION.js', 
           '/app-$NEW_VERSION.js',
-          '/assets/fonts/MarckScript-Regular.ttf'
+          '/assets/fonts/Inter-Regular.ttf',
+'/assets/fonts/Inter-Medium.ttf',
+'/assets/fonts/Inter-SemiBold.ttf',
+'/assets/fonts/Inter-Bold.ttf'
         ]);
       })
       .then(() => self.skipWaiting())
@@ -507,7 +546,7 @@ Cleanup-OldVersions "build\web"
 Write-Host "`nDEPLOY WITH CLEANUP COMPLETED!" -ForegroundColor Green -BackgroundColor Black
 Write-Host "Version: $NEW_VERSION" -ForegroundColor Yellow
 Write-Host "Old versions automatically cleaned (keeping 3 latest)" -ForegroundColor Cyan
-Write-Host "MarckScript font included in build" -ForegroundColor Magenta
+Write-Host "Inter  font included in build" -ForegroundColor Magenta
 Write-Host "`nIMPORTANT: index.html has been updated with correct version numbers!" -ForegroundColor Yellow
 
 pause

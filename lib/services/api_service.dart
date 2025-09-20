@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
@@ -429,6 +431,48 @@ class ApiService {
       return {
         'success': false,
         'checkoutEnabled': true,
+      };
+    }
+  }
+
+  /// Проверка статуса приложения и режима обслуживания
+  Future<Map<String, dynamic>> checkAppStatus() async {
+    try {
+      // Получаем номер телефона и версию приложения
+      final prefs = await SharedPreferences.getInstance();
+      final phone = prefs.getString('user_phone') ?? '';
+
+      // Получаем версию приложения
+      String version = '1.0.0';
+      try {
+        final packageInfo = await PackageInfo.fromPlatform();
+        version = packageInfo.version;
+      } catch (e) {
+        print('Не удалось получить версию приложения: $e');
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/app/status?phone=$phone&version=$version'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        // При ошибке разрешаем работу
+        return {
+          'success': true,
+          'maintenance': false,
+        };
+      }
+    } catch (e) {
+      print('Ошибка проверки статуса: $e');
+      // При ошибке разрешаем работу
+      return {
+        'success': true,
+        'maintenance': false,
       };
     }
   }

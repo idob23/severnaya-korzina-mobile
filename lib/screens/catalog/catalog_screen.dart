@@ -1112,162 +1112,261 @@ class _CatalogScreenState extends State<CatalogScreen> {
     super.dispose();
   }
 
-  // Метод для показа красивого меню категорий
+  // Метод для показа красивого меню категорий - ЦЕНТРИРОВАННЫЙ ДИАЛОГ
   void _showCategoryMenu(
       BuildContext context, ProductsProvider productsProvider) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      barrierDismissible: true,
       builder: (BuildContext context) {
-        return Container(
-          padding: EdgeInsets.only(top: 12, bottom: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Индикатор для свайпа
-              Container(
-                width: 40,
-                height: 4,
-                margin: EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              // Заголовок
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Row(
-                  children: [
-                    Icon(Icons.category, color: Colors.blue, size: 24),
-                    SizedBox(width: 12),
-                    Text(
-                      'Выберите категорию',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 8,
+          backgroundColor: Colors.white,
+          child: Container(
+            width:
+                MediaQuery.of(context).size.width * 0.85, // 85% ширины экрана
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height *
+                  0.7, // Максимум 70% высоты
+              maxWidth: 400, // Максимальная ширина для планшетов
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Заголовок с закругленным верхом
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blue, Colors.blue.shade700],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  ],
-                ),
-              ),
-              Divider(),
-              // Список категорий
-              Container(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.5,
-                ),
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    // Пункт "Все товары"
-                    ListTile(
-                      leading: Container(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  padding: EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
                         padding: EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: productsProvider.selectedCategoryId == null
-                              ? Colors.blue[100]
-                              : Colors.grey[100],
+                          color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
-                          Icons.apps,
-                          color: productsProvider.selectedCategoryId == null
-                              ? Colors.blue
-                              : Colors.grey[600],
-                          size: 20,
+                          Icons.category,
+                          color: Colors.white,
+                          size: 24,
                         ),
                       ),
-                      title: Text(
-                        'Все товары',
-                        style: TextStyle(
-                          fontWeight:
-                              productsProvider.selectedCategoryId == null
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                          color: productsProvider.selectedCategoryId == null
-                              ? Colors.blue
-                              : null,
-                        ),
-                      ),
-                      trailing: productsProvider.selectedCategoryId == null
-                          ? Icon(Icons.check_circle, color: Colors.blue)
-                          : null,
-                      onTap: () {
-                        productsProvider.filterByCategory(null);
-                        Navigator.pop(context);
-                      },
-                    ),
-                    // Остальные категории
-                    ...productsProvider.categories.map((category) {
-                      final isSelected =
-                          productsProvider.selectedCategoryId == category.id;
-                      return ListTile(
-                        leading: Container(
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? Colors.blue[100]
-                                : Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.category,
-                            color: isSelected ? Colors.blue : Colors.grey[600],
-                            size: 20,
-                          ),
-                        ),
-                        title: Text(
-                          category.name,
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Выберите категорию',
                           style: TextStyle(
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: isSelected ? Colors.blue : null,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (category.productsCount != null)
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  '${category.productsCount}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            if (isSelected) ...[
-                              SizedBox(width: 8),
-                              Icon(Icons.check_circle, color: Colors.blue),
-                            ],
-                          ],
-                        ),
-                        onTap: () {
-                          productsProvider.filterByCategory(category.id);
-                          Navigator.pop(context);
-                        },
-                      );
-                    }).toList(),
-                  ],
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+
+                // Список категорий
+                Flexible(
+                  child: Container(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.5,
+                    ),
+                    child: ListView(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      physics: BouncingScrollPhysics(),
+                      children: [
+                        // Пункт "Все товары"
+                        _buildCategoryTile(
+                          context: context,
+                          icon: Icons.apps,
+                          title: 'Все товары',
+                          isSelected:
+                              productsProvider.selectedCategoryId == null,
+                          onTap: () {
+                            productsProvider.filterByCategory(null);
+                            Navigator.pop(context);
+                          },
+                        ),
+
+                        // Разделитель
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Divider(height: 1),
+                        ),
+
+                        // Остальные категории
+                        ...productsProvider.categories.map((category) {
+                          final isSelected =
+                              productsProvider.selectedCategoryId ==
+                                  category.id;
+                          return _buildCategoryTile(
+                            context: context,
+                            icon: Icons.category,
+                            title: category.name,
+                            isSelected: isSelected,
+                            count: category.productsCount,
+                            onTap: () {
+                              productsProvider.filterByCategory(category.id);
+                              Navigator.pop(context);
+                            },
+                          );
+                        }).toList(),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Нижняя панель с действиями
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                  ),
+                  padding: EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () {
+                            productsProvider.filterByCategory(null);
+                            Navigator.pop(context);
+                          },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                          ),
+                          child: Text(
+                            'Сбросить',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14, // Уменьшен размер шрифта
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            padding: EdgeInsets.symmetric(
+                                vertical: 8), // Уменьшен padding
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'Готово',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14, // Уменьшен размер шрифта
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  // Вспомогательный метод для создания элемента категории
+  Widget _buildCategoryTile({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required bool isSelected,
+    int? count,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Colors.blue : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.blue : Colors.grey[200],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: isSelected ? Colors.white : Colors.grey[600],
+                size: 20,
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected ? Colors.blue : Colors.black87,
+                ),
+              ),
+            ),
+            if (count != null)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.blue : Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: isSelected ? Colors.white : Colors.grey[700],
+                  ),
+                ),
+              ),
+            if (isSelected) ...[
+              SizedBox(width: 8),
+              Icon(Icons.check_circle, color: Colors.blue, size: 20),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
