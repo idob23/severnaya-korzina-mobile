@@ -16,6 +16,8 @@ import 'package:severnaya_korzina/screens/auth/auth_choice_screen.dart';
 import 'screens/payment/payment_success_screen.dart';
 import 'package:severnaya_korzina/services/update_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'design_system/colors/app_colors.dart';
+import 'design_system/colors/gradients.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -519,7 +521,7 @@ class _AppInitializerState extends State<AppInitializer> {
                 style: TextStyle(
                   fontSize: 20,
                   color: Colors.grey[600],
-                  fontFamily: 'MarckScript',
+                  fontFamily: 'Inter',
                 ),
               ),
             ],
