@@ -452,7 +452,7 @@ class ApiService {
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/api/app/status?phone=$phone&version=$version'),
+        Uri.parse('$baseUrl/app/status?phone=$phone&version=$version'),
         headers: {
           'Content-Type': 'application/json',
         },

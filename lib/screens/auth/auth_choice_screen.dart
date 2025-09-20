@@ -179,6 +179,11 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
+import '../maintenance_screen.dart';
+import '../home/home_screen.dart';
 
 class AuthChoiceScreen extends StatelessWidget {
   @override

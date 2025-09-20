@@ -90,6 +90,15 @@ class AuthProvider with ChangeNotifier {
             _currentUser = User.fromJson(userMap);
             _apiService.setAuthToken(token);
 
+            // ============= ДОБАВИТЬ ЭТИ СТРОКИ =============
+            // Восстанавливаем номер телефона для проверки режима обслуживания
+            if (_currentUser?.phone != null) {
+              await prefs.setString('user_phone', _currentUser!.phone);
+              print(
+                  '📱 Восстановлен номер телефона из User: ${_currentUser!.phone}');
+            }
+            // ============= КОНЕЦ ДОБАВЛЕНИЯ =============
+
             // Проверяем токен на сервере
             try {
               final checkResult =
@@ -155,6 +164,16 @@ class AuthProvider with ChangeNotifier {
           if (checkResult['success'] == true && checkResult['user'] != null) {
             _currentUser = User.fromJson(checkResult['user']);
             _isAuthenticated = true;
+
+            // ============= ДОБАВИТЬ ЭТИ СТРОКИ =============
+            // Восстанавливаем номер телефона для проверки режима обслуживания
+            if (_currentUser?.phone != null) {
+              await prefs.setString('user_phone', _currentUser!.phone);
+              print(
+                  '📱 Восстановлен номер телефона из User: ${_currentUser!.phone}');
+            }
+            // ============= КОНЕЦ ДОБАВЛЕНИЯ =============
+
             await _saveUserToPrefs(_currentUser!);
 
             if (kDebugMode) {
@@ -289,7 +308,6 @@ class AuthProvider with ChangeNotifier {
               print('🔧 Создаем пользователя из данных сервера...');
             }
 
-            // Создаем пользователя
             _currentUser = User.fromJson(userData);
             _isAuthenticated = true;
 
@@ -339,8 +357,6 @@ class AuthProvider with ChangeNotifier {
             if (kDebugMode) {
               print('🎉 Успешная авторизация: ${_currentUser?.fullName}');
               // Добавить проверку что номер действительно сохранен
-              final savedPhone = prefs.getString('user_phone');
-              print('📱 Проверка: номер сохранен как: $savedPhone');
             }
 
             return true;
