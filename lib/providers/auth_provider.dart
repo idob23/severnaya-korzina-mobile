@@ -293,6 +293,14 @@ class AuthProvider with ChangeNotifier {
             _currentUser = User.fromJson(userData);
             _isAuthenticated = true;
 
+            // ============= ИЗМЕНЕНИЕ НАЧАЛО =============
+            // ПЕРЕНЕСТИ ЭТИ 3 СТРОКИ СЮДА (до разделения на kIsWeb):
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('user_phone', formattedPhone);
+            print(
+                '📱 Номер телефона сохранен ДЛЯ ВСЕХ ПЛАТФОРМ: $formattedPhone');
+            // ============= ИЗМЕНЕНИЕ КОНЕЦ =============
+
             // Сохраняем токен
             if (token != null) {
               // Для веб-версии делаем несколько попыток сохранения
@@ -300,11 +308,8 @@ class AuthProvider with ChangeNotifier {
                 bool saved = false;
                 for (int i = 0; i < 3 && !saved; i++) {
                   try {
-                    final prefs = await SharedPreferences.getInstance();
+                    // final prefs = await SharedPreferences.getInstance();
                     await prefs.setString(_authTokenKey, token);
-
-                    // ВАЖНО: Сохраняем номер телефона для проверки режима обслуживания
-                    await prefs.setString('user_phone', formattedPhone);
 
                     await prefs.remove(_pendingSmsVerificationKey);
                     saved = true;
@@ -315,12 +320,7 @@ class AuthProvider with ChangeNotifier {
                   }
                 }
               } else {
-                final prefs = await SharedPreferences.getInstance();
                 await prefs.setString(_authTokenKey, token);
-
-                // ВАЖНО: Сохраняем номер телефона для проверки режима обслуживания
-                await prefs.setString('user_phone', formattedPhone);
-                print('📱 Сохранен номер телефона: $formattedPhone');
 
                 await prefs.remove(_pendingSmsVerificationKey);
               }
@@ -333,13 +333,14 @@ class AuthProvider with ChangeNotifier {
 
             // Автологин
             if (rememberMe) {
-              final prefs = await SharedPreferences.getInstance();
               await prefs.setString(_autoLoginPhoneKey, formattedPhone);
             }
 
             if (kDebugMode) {
               print('🎉 Успешная авторизация: ${_currentUser?.fullName}');
-              print('📱 Номер телефона сохранен: $formattedPhone');
+              // Добавить проверку что номер действительно сохранен
+              final savedPhone = prefs.getString('user_phone');
+              print('📱 Проверка: номер сохранен как: $savedPhone');
             }
 
             return true;
