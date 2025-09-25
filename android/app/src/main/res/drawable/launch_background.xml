@@ -1,22 +1,8 @@
-
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Убираем белый фон, добавляем градиент в стиле Aurora -->
-    <item>
-        <shape android:shape="rectangle">
-            <gradient
-                android:startColor="#0F172A"
-                android:centerColor="#1E3A8A"
-                android:endColor="#059669"
-                android:angle="135"/>
-        </shape>
-    </item>
-
-    <!-- Изображение на весь экран -->
     <item>
         <bitmap
-            android:gravity="fill"
-            android:src="@mipmap/ic_launcher" />
+            android:src="@drawable/splash_screen"
+            android:gravity="fill" />
     </item>
 </layer-list>
