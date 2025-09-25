@@ -1,8 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Градиент северного сияния -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#004D40"
+                android:centerColor="#00695C"
+                android:endColor="#00897B"
+                android:angle="135" />
+        </shape>
+    </item>
+    
+    <!-- Логотип по центру -->
     <item>
         <bitmap
-            android:src="@drawable/splash_screen"
-            android:gravity="fill" />
+            android:src="@mipmap/ic_launcher"
+            android:gravity="center" />
+    </item>
+    
+    <!-- Полоска загрузки внизу -->
+    <item
+        android:bottom="150dp"
+        android:gravity="bottom|center_horizontal">
+        <shape android:shape="rectangle">
+            <size
+                android:width="100dp"
+                android:height="4dp" />
+            <corners android:radius="2dp" />
+            <solid android:color="#40FFFFFF" />
+        </shape>
+    </item>
+    
+    <!-- Заполненная часть полоски -->
+    <item
+        android:bottom="150dp"
+        android:gravity="bottom|center_horizontal">
+        <shape android:shape="rectangle">
+            <size
+                android:width="40dp"
+                android:height="4dp" />
+            <corners android:radius="2dp" />
+            <solid android:color="#FFFFFF" />
+        </shape>
     </item>
 </layer-list>

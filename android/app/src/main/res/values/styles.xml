@@ -2,9 +2,7 @@
 <resources>
     <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">@drawable/launch_background</item>
-        <!-- Отключаем иконку Android 12 -->
-        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
-        <item name="android:windowSplashScreenBackground">@drawable/launch_background</item>
+        <item name="android:windowFullscreen">true</item>
     </style>
     
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">

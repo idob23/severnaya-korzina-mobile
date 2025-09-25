@@ -627,476 +627,349 @@ class _SMSVerificationScreenState extends State<SMSVerificationScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.background,
-              AppColors.ice,
-              AppColors.aurora3.withOpacity(0.1),
+              AppColors.primaryDark,
+              AppColors.primaryLight,
+              AppColors.aurora1,
             ],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // Кастомный AppBar с градиентом
+              // AppBar фиксированный
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                decoration: BoxDecoration(
-                  gradient: AppGradients.primary,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryDark.withOpacity(0.2),
-                      blurRadius: 10,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
+                height: 56,
+                padding: EdgeInsets.symmetric(horizontal: 4),
                 child: Row(
                   children: [
                     IconButton(
                       icon: Icon(Icons.arrow_back_ios, color: Colors.white),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.pop(context);
+                      },
                     ),
                     Expanded(
                       child: Text(
                         'Подтверждение',
                         style: TextStyle(
-                          color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
+                          color: Colors.white,
                         ),
                         textAlign: TextAlign.center,
                       ),
                     ),
-                    SizedBox(width: 48),
+                    SizedBox(width: 48), // Балансировка
                   ],
                 ),
               ),
 
+              // Scrollable контент
               Expanded(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Padding(
-                    padding: EdgeInsets.all(24.0),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Анимированная иконка SMS с градиентом
-                              ScaleTransition(
-                                scale: _scaleAnimation,
-                                child: TweenAnimationBuilder(
-                                  tween: Tween<double>(begin: 0, end: 1),
-                                  duration: Duration(milliseconds: 1200),
-                                  builder: (context, double value, child) {
-                                    return Transform.rotate(
-                                      angle: value * 0.1,
-                                      child: Container(
-                                        width: 100,
-                                        height: 100,
-                                        decoration: BoxDecoration(
-                                          gradient: AppGradients.aurora,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppColors.aurora2
-                                                  .withOpacity(0.4),
-                                              blurRadius: 20,
-                                              spreadRadius: 5,
-                                            ),
-                                          ],
-                                        ),
-                                        child: Icon(
-                                          Icons.sms,
-                                          size: 45,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              SizedBox(height: 32),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: 24),
+                  child: Consumer<AuthProvider>(
+                    builder: (context, authProvider, child) {
+                      return Column(
+                        children: [
+                          SizedBox(height: 40),
 
-                              // Заголовок с тенью
-                              Text(
-                                'Введите код из SMS',
-                                style: TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary,
-                                  shadows: [
-                                    Shadow(
-                                      color: AppColors.shadowLight,
-                                      blurRadius: 4,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 12),
-
-                              // Описание с градиентным фоном
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 20, vertical: 10),
+                          // Анимированная иконка
+                          FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: ScaleTransition(
+                              scale: _scaleAnimation,
+                              child: Container(
+                                width: 100,
+                                height: 100,
                                 decoration: BoxDecoration(
-                                  color: AppColors.info.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'Код отправлен на номер',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      widget.phone,
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.primaryLight,
-                                      ),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      AppColors.aurora1.withOpacity(0.3),
+                                      AppColors.aurora2.withOpacity(0.1),
+                                    ],
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.aurora1.withOpacity(0.3),
+                                      blurRadius: 30,
+                                      spreadRadius: 5,
                                     ),
                                   ],
                                 ),
+                                child: Icon(
+                                  Icons.sms_outlined,
+                                  size: 48,
+                                  color: Colors.white,
+                                ),
                               ),
-                              SizedBox(height: 40),
+                            ),
+                          ),
 
-                              // Премиум поля ввода кода
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: List.generate(4, (index) {
-                                  return AnimatedContainer(
-                                    duration: Duration(milliseconds: 300),
-                                    margin: EdgeInsets.symmetric(horizontal: 8),
-                                    width: 65,
-                                    height: 65,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                        color:
-                                            _controllers[index].text.isNotEmpty
-                                                ? AppColors.success
-                                                : AppColors.border,
-                                        width:
-                                            _controllers[index].text.isNotEmpty
-                                                ? 2
-                                                : 1,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: _controllers[index]
-                                                  .text
-                                                  .isNotEmpty
-                                              ? AppColors.success
-                                                  .withOpacity(0.3)
-                                              : AppColors.shadowLight,
-                                          blurRadius: 12,
-                                          offset: Offset(0, 4),
-                                        ),
+                          SizedBox(height: 32),
+
+                          // Заголовок
+                          Text(
+                            'Введите код из SMS',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+
+                          SizedBox(height: 16),
+
+                          // Описание
+                          Column(
+                            children: [
+                              Text(
+                                'Код отправлен на номер',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                widget.phone,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: 40),
+
+                          // Поля ввода кода - исправленные стили
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(4, (index) {
+                              return Container(
+                                margin: EdgeInsets.symmetric(horizontal: 8),
+                                width: 65,
+                                height: 65,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: _controllers[index].text.isNotEmpty
+                                        ? AppColors.success
+                                        : AppColors.border,
+                                    width: _controllers[index].text.isNotEmpty
+                                        ? 2
+                                        : 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _controllers[index].text.isNotEmpty
+                                          ? AppColors.success.withOpacity(0.3)
+                                          : Colors.black.withOpacity(0.1),
+                                      blurRadius: 10,
+                                      offset: Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: TextFormField(
+                                    controller: _controllers[index],
+                                    focusNode: _focusNodes[index],
+                                    keyboardType: TextInputType.number,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    maxLength: 1,
+                                    decoration: InputDecoration(
+                                      counterText: '',
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                    ],
+                                    onChanged: (value) {
+                                      if (value.isNotEmpty) {
+                                        _codeAnimationControllers[index]
+                                            .forward();
+                                        if (index < 3) {
+                                          _focusNodes[index + 1].requestFocus();
+                                        } else {
+                                          _focusNodes[index].unfocus();
+                                        }
+                                      } else {
+                                        _codeAnimationControllers[index]
+                                            .reverse();
+                                        if (index > 0) {
+                                          _focusNodes[index - 1].requestFocus();
+                                        }
+                                      }
+
+                                      _updateEnteredCode();
+
+                                      if (_enteredCode.length == 4) {
+                                        Future.delayed(
+                                            Duration(milliseconds: 500), () {
+                                          _verifyCode();
+                                        });
+                                      }
+                                    },
+                                    onTap: () {
+                                      _controllers[index].clear();
+                                      _updateEnteredCode();
+                                    },
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+
+                          SizedBox(height: 32),
+
+                          // Кнопка подтверждения
+                          Container(
+                            width: double.infinity,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              gradient: _enteredCode.length == 4
+                                  ? AppGradients.aurora
+                                  : LinearGradient(
+                                      colors: [
+                                        Colors.grey.withOpacity(0.5),
+                                        Colors.grey.withOpacity(0.3),
                                       ],
                                     ),
-                                    child: Center(
-                                      child: TextFormField(
-                                        controller: _controllers[index],
-                                        focusNode: _focusNodes[index],
-                                        keyboardType: TextInputType.number,
-                                        textAlign: TextAlign.center,
-                                        textAlignVertical:
-                                            TextAlignVertical.center,
-                                        style: TextStyle(
-                                          fontSize: 28,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.textPrimary,
-                                          height:
-                                              1.0, // Фиксированная высота строки
-                                        ),
-                                        maxLength: 1,
-                                        decoration: InputDecoration(
-                                          counterText: '',
-                                          border: InputBorder.none,
-                                          contentPadding: EdgeInsets
-                                              .zero, // Убираем внутренние отступы
-                                          isDense:
-                                              true, // Компактное отображение
-                                        ),
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter
-                                              .digitsOnly,
-                                          LengthLimitingTextInputFormatter(1),
-                                        ],
-                                        onChanged: (value) {
-                                          if (value.isNotEmpty) {
-                                            // Анимация при вводе
-                                            _codeAnimationControllers[index]
-                                                .forward();
-                                            HapticFeedback.lightImpact();
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: _enteredCode.length == 4
+                                  ? [
+                                      BoxShadow(
+                                        color:
+                                            AppColors.aurora1.withOpacity(0.4),
+                                        blurRadius: 20,
+                                        offset: Offset(0, 10),
+                                      ),
+                                    ]
+                                  : [],
+                            ),
+                            child: ElevatedButton(
+                              onPressed: (_enteredCode.length == 4 &&
+                                      !authProvider.isLoading)
+                                  ? _verifyCode
+                                  : null,
+                              child: Text(
+                                authProvider.isLoading
+                                    ? 'Проверяем код...'
+                                    : 'Подтвердить',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: _enteredCode.length == 4
+                                      ? Colors.white
+                                      : Colors.grey[600],
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(28),
+                                ),
+                              ),
+                            ),
+                          ),
 
-                                            // Переход к следующему полю
-                                            if (index < 3) {
-                                              _focusNodes[index + 1]
-                                                  .requestFocus();
-                                            } else {
-                                              // Убираем фокус с последнего поля
-                                              _focusNodes[index].unfocus();
-                                            }
-                                          } else {
-                                            _codeAnimationControllers[index]
-                                                .reverse();
-                                          }
-                                          _updateEnteredCode();
-                                        },
-                                        onTap: () {
-                                          // Очищаем поле при тапе
-                                          _controllers[index].clear();
-                                          _updateEnteredCode();
-                                        },
+                          // Отображение ошибок - оставляем как есть
+                          if (authProvider.lastError != null) ...[
+                            SizedBox(height: 16),
+                            AnimatedContainer(
+                              duration: Duration(milliseconds: 300),
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppColors.error.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.error_outline,
+                                      color: AppColors.error, size: 20),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      authProvider.lastError!,
+                                      style: TextStyle(
+                                        color: AppColors.error,
+                                        fontSize: 14,
                                       ),
                                     ),
-                                  );
-                                }),
-                              ),
-                              SizedBox(height: 40),
-
-                              // Кнопка повторной отправки с градиентом
-                              AnimatedContainer(
-                                duration: Duration(milliseconds: 300),
-                                child: TextButton.icon(
-                                  onPressed: _canResend
-                                      ? () {
-                                          HapticFeedback.mediumImpact();
-                                          _resendSMS();
-                                        }
-                                      : null,
-                                  icon: Icon(
-                                    Icons.refresh,
-                                    color: _canResend
-                                        ? AppColors.primaryLight
-                                        : AppColors.textSecondary,
                                   ),
+                                ],
+                              ),
+                            ),
+                          ],
+
+                          SizedBox(height: 32),
+
+                          // Ссылка для изменения номера
+                          TextButton(
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              Navigator.pop(context);
+                            },
+                            child: Text(
+                              'Изменить номер телефона',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+
+                          SizedBox(height: 16),
+
+                          // Таймер и кнопка повторной отправки
+                          _resendCountdown > 0
+                              ? Text(
+                                  'Повторная отправка через $_resendCountdown сек',
+                                  style: TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 14,
+                                  ),
+                                )
+                              : TextButton.icon(
+                                  onPressed: _canResend ? _resendSMS : null,
+                                  icon:
+                                      Icon(Icons.refresh, color: Colors.white),
                                   label: Text(
-                                    _canResend
-                                        ? 'Отправить код повторно'
-                                        : 'Повторная отправка через $_resendCountdown сек',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      color: _canResend
-                                          ? AppColors.primaryLight
-                                          : AppColors.textSecondary,
-                                    ),
+                                    'Отправить код повторно',
+                                    style: TextStyle(color: Colors.white),
                                   ),
                                   style: TextButton.styleFrom(
                                     padding: EdgeInsets.symmetric(
                                         horizontal: 20, vertical: 12),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(20),
                                     ),
-                                    backgroundColor: _canResend
-                                        ? AppColors.primaryLight
-                                            .withOpacity(0.1)
-                                        : Colors.transparent,
-                                  ),
-                                ),
-                              ),
-
-                              // Информация о запомненной сессии
-                              if (widget.rememberMe) ...[
-                                SizedBox(height: 20),
-                                Container(
-                                  padding: EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        AppColors.success.withOpacity(0.1),
-                                        AppColors.success.withOpacity(0.05),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: AppColors.success.withOpacity(0.3),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.check_circle,
-                                              color: AppColors.success,
-                                              size: 20),
-                                          SizedBox(width: 8),
-                                          Text(
-                                            'Автоподключение активно',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.success,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        'После подтверждения вы останетесь в системе на 30 дней',
-                                        style: TextStyle(
-                                          color: AppColors.textSecondary,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-
-                        // Блок с кнопкой подтверждения и ошибками
-                        Consumer<AuthProvider>(
-                          builder: (context, authProvider, _) {
-                            return Column(
-                              children: [
-                                // Градиентная кнопка "Подтвердить"
-                                Container(
-                                  width: double.infinity,
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    gradient: _enteredCode.length == 4
-                                        ? AppGradients.button
-                                        : null,
-                                    color: _enteredCode.length != 4
-                                        ? Colors.grey[300]
-                                        : null,
-                                    borderRadius: BorderRadius.circular(28),
-                                    boxShadow: _enteredCode.length == 4
-                                        ? [
-                                            BoxShadow(
-                                              color: AppColors.primaryLight
-                                                  .withOpacity(0.4),
-                                              blurRadius: 12,
-                                              offset: Offset(0, 4),
-                                            ),
-                                          ]
-                                        : [],
-                                  ),
-                                  child: ElevatedButton.icon(
-                                    onPressed: _enteredCode.length == 4 &&
-                                            !authProvider.isLoading
-                                        ? () {
-                                            HapticFeedback.mediumImpact();
-                                            _verifyCode();
-                                          }
-                                        : null,
-                                    icon: authProvider.isLoading
-                                        ? SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation<Color>(
-                                                      Colors.white),
-                                            ),
-                                          )
-                                        : Icon(Icons.check_circle,
-                                            color: _enteredCode.length == 4
-                                                ? Colors.white
-                                                : Colors.grey[600]),
-                                    label: Text(
-                                      authProvider.isLoading
-                                          ? 'Проверяем код...'
-                                          : 'Подтвердить',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: _enteredCode.length == 4
-                                            ? Colors.white
-                                            : Colors.grey[600],
-                                      ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(28),
-                                      ),
-                                    ),
+                                    backgroundColor:
+                                        Colors.white.withOpacity(0.1),
                                   ),
                                 ),
 
-                                // Отображение ошибок с анимацией
-                                if (authProvider.lastError != null) ...[
-                                  SizedBox(height: 16),
-                                  AnimatedContainer(
-                                    duration: Duration(milliseconds: 300),
-                                    padding: EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.error.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: AppColors.error.withOpacity(0.3),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.error_outline,
-                                            color: AppColors.error, size: 20),
-                                        SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            authProvider.lastError!,
-                                            style: TextStyle(
-                                              color: AppColors.error,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            );
-                          },
-                        ),
-
-                        SizedBox(height: 20),
-
-                        // Кнопка "Изменить номер" с анимацией
-                        TweenAnimationBuilder(
-                          tween: Tween<double>(begin: 0, end: 1),
-                          duration: Duration(milliseconds: 1500),
-                          builder: (context, double value, child) {
-                            return Opacity(
-                              opacity: value,
-                              child: TextButton(
-                                onPressed: () {
-                                  HapticFeedback.lightImpact();
-                                  Navigator.pop(context);
-                                },
-                                child: Text(
-                                  'Изменить номер телефона',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 16,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
+                          SizedBox(height: 20), // Отступ внизу
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),

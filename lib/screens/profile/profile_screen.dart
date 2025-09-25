@@ -728,16 +728,14 @@ class _ProfileScreenState extends State<ProfileScreen>
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.orange[200]!),
         ),
-        child: Column(
+        child: Row(
           children: [
-            Icon(Icons.info_outline, color: Colors.orange, size: 48),
-            SizedBox(height: 12),
-            Text(
-              _batchError!,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.orange[700],
+            Icon(Icons.warning, color: Colors.orange[700], size: 24),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _batchError!,
+                style: TextStyle(color: Colors.orange[700]),
               ),
             ),
           ],
@@ -745,180 +743,379 @@ class _ProfileScreenState extends State<ProfileScreen>
       );
     }
 
-    if (_batchData != null) {
-      return GestureDetector(
-        onTap: () => _showBatchDetailsDialog(),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadowLight,
-                blurRadius: 10,
-                offset: Offset(0, 5),
+    if (_batchData == null) {
+      return Container(
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.grey[100]!, Colors.grey[50]!],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.grey[600], size: 24),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Нет активных закупок',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 16,
+                ),
               ),
-              BoxShadow(
-                color: AppColors.aurora1.withOpacity(0.1),
-                blurRadius: 20,
-                offset: Offset(0, 10),
-              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: _showBatchDetailsDialog,
+      child: Container(
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              AppColors.aurora1.withOpacity(0.05),
             ],
           ),
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: _getProgress() >= 1.0
+                ? Colors.green[300]!
+                : AppColors.aurora1.withOpacity(0.3),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _getProgress() >= 1.0
+                  ? Colors.green.withOpacity(0.1)
+                  : AppColors.aurora1.withOpacity(0.1),
+              blurRadius: 20,
+              offset: Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Заголовок с иконкой и суммой
+            Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: AppGradients.aurora,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.shopping_cart,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: _getProgress() >= 1.0
+                          ? [Colors.green.shade400, Colors.green.shade600]
+                          : [AppColors.aurora1, AppColors.aurora2],
                     ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Закупка #${_batchData!['id']}',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          Text(
-                            '${_formatCurrency((_batchData!['currentAmount'] ?? 0).toInt())} из ${_formatCurrency((_batchData!['targetAmount'] ?? 0).toInt())}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (_getProgress() >= 1.0
+                                ? Colors.green
+                                : AppColors.aurora1)
+                            .withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: Icon(
+                    _getProgress() >= 1.0
+                        ? Icons.check_circle
+                        : Icons.shopping_cart,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
-                SizedBox(height: 16),
-                Stack(
-                  children: [
-                    Container(
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    AnimatedBuilder(
-                      animation: _progressAnimation,
-                      builder: (context, child) {
-                        return FractionallySizedBox(
-                          widthFactor: _progressAnimation.value,
-                          child: Container(
-                            height: 12,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: _getProgress() >= 1.0
-                                    ? [
-                                        Colors.green.shade400,
-                                        Colors.green.shade600
-                                      ]
-                                    : [AppColors.aurora1, AppColors.aurora2],
-                              ),
-                              borderRadius: BorderRadius.circular(6),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: (_getProgress() >= 1.0
-                                          ? Colors.green
-                                          : AppColors.aurora1)
-                                      .withOpacity(0.3),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    Positioned.fill(
-                      child: Center(
-                        child: Text(
-                          '${(_getProgress() * 100).toStringAsFixed(0)}%',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: _getProgress() > 0.5
-                                ? Colors.white
-                                : Colors.black54,
-                          ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Закупка #${_batchData!['id']}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
                         ),
                       ),
+                      Text(
+                        '${_formatCurrency((_batchData!['currentAmount'] ?? 0).toInt())} из ${_formatCurrency((_batchData!['targetAmount'] ?? 0).toInt())}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            SizedBox(height: 20),
+
+            // УЛУЧШЕННЫЙ ПРОГРЕСС-БАР
+            Column(
+              children: [
+                // Метки прогресса
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Прогресс сбора',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      '${(_getProgress() * 100).toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: getProgressColor(),
+                      ),
                     ),
                   ],
                 ),
-                SizedBox(height: 16),
+                SizedBox(height: 8),
+
+                // Сам прогресс-бар
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  height: 24,
                   decoration: BoxDecoration(
-                    color: getProgressColor().withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: Text(
-                    getMotivationalText(),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: getProgressColor(),
-                    ),
+                  child: Stack(
+                    children: [
+                      // Фоновая полоска с делениями
+                      CustomPaint(
+                        size: Size(double.infinity, 24),
+                        painter: ProgressBarBackgroundPainter(),
+                      ),
+
+                      // Анимированный прогресс
+                      AnimatedBuilder(
+                        animation: _progressAnimation,
+                        builder: (context, child) {
+                          return FractionallySizedBox(
+                            widthFactor: _progressAnimation.value,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: _getProgress() >= 1.0
+                                      ? [
+                                          Colors.green.shade400,
+                                          Colors.green.shade600
+                                        ]
+                                      : _getProgress() >= 0.8
+                                          ? [
+                                              Colors.orange.shade400,
+                                              Colors.orange.shade600
+                                            ]
+                                          : _getProgress() >= 0.5
+                                              ? [
+                                                  Colors.blue.shade400,
+                                                  Colors.blue.shade600
+                                                ]
+                                              : [
+                                                  AppColors.aurora1,
+                                                  AppColors.aurora2
+                                                ],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: getProgressColor().withOpacity(0.4),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 0),
+                                  ),
+                                ],
+                              ),
+                              child: Stack(
+                                children: [
+                                  // Блики на прогресс-баре
+                                  Positioned(
+                                    top: 2,
+                                    left: 8,
+                                    right: 8,
+                                    child: Container(
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Colors.white.withOpacity(0.4),
+                                            Colors.white.withOpacity(0.1),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      // Текст прогресса в центре бара
+                      if (_getProgress() > 0.15)
+                        Positioned.fill(
+                          child: Center(
+                            child: Text(
+                              '${_formatCurrency((_batchData!['currentAmount'] ?? 0).toInt())}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: _getProgress() > 0.5
+                                    ? Colors.white
+                                    : AppColors.textPrimary,
+                                shadows: _getProgress() > 0.5
+                                    ? [
+                                        Shadow(
+                                          blurRadius: 2,
+                                          color: Colors.black.withOpacity(0.3),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                SizedBox(height: 16),
+
+                // Метки под прогресс-баром
+                SizedBox(height: 8),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: _buildStatItem(
-                        icon: Icons.people,
-                        label: 'Участников',
-                        value: '${_batchData!['participantsCount'] ?? 0}',
-                        color: Colors.blue,
+                    Text(
+                      '0₽',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.textSecondary,
                       ),
                     ),
-                    Container(
-                      width: 1,
-                      height: 40,
-                      color: Colors.grey[300],
-                    ),
-                    Expanded(
-                      child: _buildStatItem(
-                        icon: Icons.account_balance_wallet,
-                        label: 'Ваш вклад',
-                        value: _formatCurrency(
-                            _safeDouble(_batchData!['userContribution'])
-                                .toInt()),
-                        color: Colors.green,
+                    if (_getProgress() >= 0.25 && _getProgress() < 0.75)
+                      Text(
+                        '50%',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    Text(
+                      _formatCurrency(
+                          (_batchData!['targetAmount'] ?? 0).toInt()),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
               ],
             ),
-          ),
-        ),
-      );
-    }
 
-    return SizedBox.shrink();
+            SizedBox(height: 16),
+
+            // Мотивационный текст с градиентом
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    getProgressColor().withOpacity(0.1),
+                    getProgressColor().withOpacity(0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: getProgressColor().withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _getProgress() >= 1.0
+                        ? Icons.celebration
+                        : _getProgress() >= 0.8
+                            ? Icons.local_fire_department
+                            : _getProgress() >= 0.5
+                                ? Icons.trending_up
+                                : Icons.rocket_launch,
+                    color: getProgressColor(),
+                    size: 18,
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      getMotivationalText(),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: getProgressColor(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 16),
+
+            // Статистика в карточках
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatItem(
+                    icon: Icons.people,
+                    label: 'Участников',
+                    value: '${_batchData!['participantsCount'] ?? 0}',
+                    color: Colors.blue,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatItem(
+                    icon: Icons.account_balance_wallet,
+                    label: 'Ваш вклад',
+                    value: _formatCurrency(
+                        (_batchData!['userContribution'] ?? 0).toInt()),
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildStatItem({
@@ -950,6 +1147,54 @@ class _ProfileScreenState extends State<ProfileScreen>
       ],
     );
   }
+
+  // // Добавьте этот вспомогательный виджет для красивых статистик
+  // Widget _buildStatItem({
+  //   required IconData icon,
+  //   required String label,
+  //   required String value,
+  //   required Color color,
+  // }) {
+  //   return Container(
+  //     padding: EdgeInsets.all(12),
+  //     decoration: BoxDecoration(
+  //       color: color.withOpacity(0.1),
+  //       borderRadius: BorderRadius.circular(12),
+  //       border: Border.all(
+  //         color: color.withOpacity(0.2),
+  //         width: 1,
+  //       ),
+  //     ),
+  //     child: Row(
+  //       children: [
+  //         Icon(icon, color: color, size: 20),
+  //         SizedBox(width: 8),
+  //         Expanded(
+  //           child: Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Text(
+  //                 value,
+  //                 style: TextStyle(
+  //                   fontSize: 16,
+  //                   fontWeight: FontWeight.bold,
+  //                   color: color,
+  //                 ),
+  //               ),
+  //               Text(
+  //                 label,
+  //                 style: TextStyle(
+  //                   fontSize: 11,
+  //                   color: AppColors.textSecondary,
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildUserInfoCard(user) {
     return Container(
@@ -1737,4 +1982,27 @@ class _ProfileScreenState extends State<ProfileScreen>
       },
     );
   }
+}
+
+// Добавьте этот класс для рисования фона прогресс-бара с делениями
+class ProgressBarBackgroundPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.grey.withOpacity(0.2)
+      ..strokeWidth = 1;
+
+    // Рисуем деления каждые 25%
+    for (int i = 1; i < 4; i++) {
+      final x = size.width * (i * 0.25);
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x, size.height),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -1,7 +1,8 @@
-// lib/screens/orders/orders_screen.dart - ПРЕМИУМ ВЕРСИЯ
+// lib/screens/orders/orders_screen.dart - УЛУЧШЕННАЯ ПРЕМИУМ ВЕРСИЯ
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'dart:math' as math;
 import '../../providers/auth_provider.dart';
 import '../../providers/orders_provider.dart';
 import '../../models/order.dart';
@@ -20,6 +21,12 @@ class _OrdersScreenState extends State<OrdersScreen>
   late TabController _tabController;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  late AnimationController _shimmerController;
+  late Animation<double> _shimmerAnimation;
+
+  // Для pull-to-refresh
+  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
+      GlobalKey<RefreshIndicatorState>();
 
   @override
   void initState() {
@@ -40,6 +47,20 @@ class _OrdersScreenState extends State<OrdersScreen>
     ));
     _fadeController.forward();
 
+    // Анимация shimmer для загрузки
+    _shimmerController = AnimationController(
+      duration: Duration(seconds: 2),
+      vsync: this,
+    )..repeat();
+
+    _shimmerAnimation = Tween<double>(
+      begin: -2.0,
+      end: 2.0,
+    ).animate(CurvedAnimation(
+      parent: _shimmerController,
+      curve: Curves.easeInOut,
+    ));
+
     // Добавляем haptic при смене табов
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
@@ -51,12 +72,23 @@ class _OrdersScreenState extends State<OrdersScreen>
   @override
   void dispose() {
     _fadeController.dispose();
+    _shimmerController.dispose();
     _tabController.dispose();
     super.dispose();
   }
 
+  Future<void> _onRefresh() async {
+    HapticFeedback.mediumImpact();
+    final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
+    await ordersProvider.refresh();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isTablet = screenSize.width > 600;
+    final isSmallScreen = screenSize.height < 700;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Container(
@@ -73,9 +105,14 @@ class _OrdersScreenState extends State<OrdersScreen>
         child: SafeArea(
           child: Column(
             children: [
-              // Премиум заголовок с градиентом
+              // Адаптивный премиум заголовок с градиентом
               Container(
-                padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+                padding: EdgeInsets.fromLTRB(
+                  isTablet ? 32 : 20,
+                  isSmallScreen ? 16 : 20,
+                  isTablet ? 32 : 20,
+                  0,
+                ),
                 decoration: BoxDecoration(
                   gradient: AppGradients.aurora,
                   boxShadow: [
@@ -88,11 +125,11 @@ class _OrdersScreenState extends State<OrdersScreen>
                 ),
                 child: Column(
                   children: [
-                    // Заголовок с иконкой
+                    // Заголовок с иконкой - адаптивные размеры
                     Row(
                       children: [
                         Container(
-                          padding: EdgeInsets.all(10),
+                          padding: EdgeInsets.all(isTablet ? 12 : 10),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(12),
@@ -100,23 +137,34 @@ class _OrdersScreenState extends State<OrdersScreen>
                           child: Icon(
                             Icons.receipt_long,
                             color: Colors.white,
-                            size: 24,
+                            size: isTablet ? 28 : 24,
                           ),
                         ),
                         SizedBox(width: 12),
-                        Text(
-                          'Мои заказы',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                        Expanded(
+                          child: Text(
+                            'Мои заказы',
+                            style: TextStyle(
+                              fontSize: isTablet ? 28 : 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        // Кнопка обновления
+                        IconButton(
+                          onPressed: _onRefresh,
+                          icon: Icon(
+                            Icons.refresh_rounded,
+                            color: Colors.white.withOpacity(0.9),
+                            size: isTablet ? 28 : 24,
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 20),
+                    SizedBox(height: isSmallScreen ? 16 : 20),
 
-                    // Премиум табы
+                    // Адаптивные премиум табы
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.1),
@@ -145,48 +193,36 @@ class _OrdersScreenState extends State<OrdersScreen>
                         unselectedLabelColor: Colors.white70,
                         labelStyle: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: isTablet ? 16 : 14,
                         ),
-                        isScrollable: false,
+                        isScrollable: screenSize.width < 400,
                         tabs: [
                           Tab(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.access_time, size: 18),
-                                SizedBox(width: 4),
-                                Text('Активные'),
-                              ],
+                            child: _buildTabContent(
+                              Icons.access_time,
+                              'Активные',
+                              isTablet,
                             ),
                           ),
                           Tab(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.local_shipping, size: 18),
-                                SizedBox(width: 4),
-                                Text('В пути'),
-                              ],
+                            child: _buildTabContent(
+                              Icons.local_shipping,
+                              'В пути',
+                              isTablet,
                             ),
                           ),
                           Tab(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.check_circle, size: 18),
-                                SizedBox(width: 4),
-                                Text('Готовые'),
-                              ],
+                            child: _buildTabContent(
+                              Icons.check_circle,
+                              'Готовые',
+                              isTablet,
                             ),
                           ),
                           Tab(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.history, size: 18),
-                                SizedBox(width: 4),
-                                Text('История'),
-                              ],
+                            child: _buildTabContent(
+                              Icons.history,
+                              'История',
+                              isTablet,
                             ),
                           ),
                         ],
@@ -196,7 +232,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                 ),
               ),
 
-              // Тело экрана с анимацией
+              // Тело экрана с анимацией и pull-to-refresh
               Expanded(
                 child: FadeTransition(
                   opacity: _fadeAnimation,
@@ -206,14 +242,21 @@ class _OrdersScreenState extends State<OrdersScreen>
                         return _buildPremiumUnauthenticatedView();
                       }
 
-                      return TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildActiveOrders(),
-                          _buildInTransitOrders(),
-                          _buildReadyOrders(),
-                          _buildHistoryOrders(),
-                        ],
+                      return RefreshIndicator(
+                        key: _refreshIndicatorKey,
+                        onRefresh: _onRefresh,
+                        color: AppColors.primaryLight,
+                        backgroundColor: Colors.white,
+                        child: TabBarView(
+                          controller: _tabController,
+                          physics: NeverScrollableScrollPhysics(),
+                          children: [
+                            _buildActiveOrders(),
+                            _buildInTransitOrders(),
+                            _buildReadyOrders(),
+                            _buildHistoryOrders(),
+                          ],
+                        ),
                       );
                     },
                   ),
@@ -226,10 +269,28 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
+  // Вспомогательный метод для создания содержимого таба
+  Widget _buildTabContent(IconData icon, String text, bool isTablet) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: isTablet ? 20 : 18),
+          SizedBox(width: 4),
+          Text(text),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPremiumUnauthenticatedView() {
+    final screenSize = MediaQuery.of(context).size;
+    final isTablet = screenSize.width > 600;
+
     return Center(
-      child: Padding(
-        padding: EdgeInsets.all(24),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(isTablet ? 48 : 24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -241,7 +302,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                 return Transform.scale(
                   scale: value,
                   child: Container(
-                    padding: EdgeInsets.all(24),
+                    padding: EdgeInsets.all(isTablet ? 32 : 24),
                     decoration: BoxDecoration(
                       gradient: AppGradients.aurora,
                       shape: BoxShape.circle,
@@ -255,7 +316,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                     ),
                     child: Icon(
                       Icons.shopping_bag,
-                      size: 60,
+                      size: isTablet ? 80 : 60,
                       color: Colors.white,
                     ),
                   ),
@@ -267,8 +328,9 @@ class _OrdersScreenState extends State<OrdersScreen>
             // Заголовок с градиентом
             Text(
               'Войдите для просмотра заказов',
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 22,
+                fontSize: isTablet ? 26 : 22,
                 fontWeight: FontWeight.bold,
                 color: AppColors.primaryDark,
               ),
@@ -280,7 +342,7 @@ class _OrdersScreenState extends State<OrdersScreen>
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 16,
+                fontSize: isTablet ? 18 : 16,
                 height: 1.5,
               ),
             ),
@@ -296,7 +358,10 @@ class _OrdersScreenState extends State<OrdersScreen>
                 );
               },
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 48, vertical: 18),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isTablet ? 56 : 48,
+                  vertical: isTablet ? 20 : 18,
+                ),
                 decoration: BoxDecoration(
                   gradient: AppGradients.button,
                   borderRadius: BorderRadius.circular(30),
@@ -311,13 +376,14 @@ class _OrdersScreenState extends State<OrdersScreen>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.login, color: Colors.white, size: 20),
+                    Icon(Icons.login,
+                        color: Colors.white, size: isTablet ? 24 : 20),
                     SizedBox(width: 12),
                     Text(
                       'Войти в аккаунт',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 16,
+                        fontSize: isTablet ? 18 : 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -427,145 +493,30 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
-  // Премиум состояние загрузки с shimmer эффектом
-  Widget _buildPremiumLoadingState() {
-    return ListView.builder(
-      padding: EdgeInsets.all(16),
-      itemCount: 3,
-      itemBuilder: (context, index) {
-        return Container(
-          margin: EdgeInsets.only(bottom: 16),
-          child: ShaderMask(
-            shaderCallback: (bounds) {
-              return LinearGradient(
-                begin: Alignment(-1.5, -0.5),
-                end: Alignment(1.5, 0.5),
-                colors: [
-                  Colors.grey[300]!,
-                  Colors.grey[100]!,
-                  Colors.grey[300]!,
-                ],
-                stops: [
-                  0.0,
-                  0.5,
-                  1.0,
-                ],
-                transform: GradientRotation(0.5),
-              ).createShader(bounds);
-            },
-            blendMode: BlendMode.srcATop,
-            child: Container(
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // Премиум состояние ошибки
-  Widget _buildPremiumErrorState(OrdersProvider ordersProvider) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.red.shade400, Colors.red.shade600],
-                ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.red.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Icon(Icons.error_outline, size: 48, color: Colors.white),
-            ),
-            SizedBox(height: 24),
-            Text(
-              'Ошибка загрузки',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            SizedBox(height: 12),
-            Text(
-              ordersProvider.error ?? 'Произошла ошибка при загрузке заказов',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
-              ),
-            ),
-            SizedBox(height: 24),
-            GestureDetector(
-              onTapDown: (_) => HapticFeedback.lightImpact(),
-              onTap: () {
-                ordersProvider.clearError();
-                ordersProvider.loadOrders();
-              },
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                decoration: BoxDecoration(
-                  gradient: AppGradients.button,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryLight.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  'Попробовать снова',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Премиум пустое состояние
+  // Премиум пустое состояние с анимацией
   Widget _buildPremiumEmptyState({
     required IconData icon,
     required String title,
     required String subtitle,
     required List<Color> gradientColors,
   }) {
+    final screenSize = MediaQuery.of(context).size;
+    final isTablet = screenSize.width > 600;
+
     return Center(
-      child: Padding(
-        padding: EdgeInsets.all(32),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(isTablet ? 48 : 32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            TweenAnimationBuilder(
-              duration: Duration(milliseconds: 800),
-              tween: Tween<double>(begin: 0, end: 1),
+            TweenAnimationBuilder<double>(
+              duration: Duration(milliseconds: 1000),
+              tween: Tween(begin: 0, end: 1),
               builder: (context, double value, child) {
                 return Transform.scale(
                   scale: value,
                   child: Container(
-                    padding: EdgeInsets.all(24),
+                    padding: EdgeInsets.all(isTablet ? 28 : 24),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(colors: gradientColors),
                       shape: BoxShape.circle,
@@ -577,7 +528,11 @@ class _OrdersScreenState extends State<OrdersScreen>
                         ),
                       ],
                     ),
-                    child: Icon(icon, size: 56, color: Colors.white),
+                    child: Icon(
+                      icon,
+                      size: isTablet ? 64 : 56,
+                      color: Colors.white,
+                    ),
                   ),
                 );
               },
@@ -585,8 +540,9 @@ class _OrdersScreenState extends State<OrdersScreen>
             SizedBox(height: 24),
             Text(
               title,
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 20,
+                fontSize: isTablet ? 24 : 20,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
               ),
@@ -597,7 +553,7 @@ class _OrdersScreenState extends State<OrdersScreen>
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: isTablet ? 16 : 14,
               ),
             ),
           ],
@@ -606,31 +562,71 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
-  // Список заказов с анимацией
+  // Список заказов с анимацией - адаптивная версия
   Widget _buildOrdersList(List<Order> orders) {
-    return ListView.builder(
-      padding: EdgeInsets.all(16),
-      itemCount: orders.length,
-      itemBuilder: (context, index) {
-        return TweenAnimationBuilder(
-          duration: Duration(milliseconds: 300 + (index * 100)),
-          tween: Tween<double>(begin: 0, end: 1),
-          builder: (context, double value, child) {
-            return Transform.translate(
-              offset: Offset(0, 20 * (1 - value)),
-              child: Opacity(
-                opacity: value,
-                child: _buildPremiumOrderCard(orders[index]),
-              ),
-            );
-          },
-        );
+    final screenSize = MediaQuery.of(context).size;
+    final isTablet = screenSize.width > 600;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (isTablet && constraints.maxWidth > 800) {
+          // Для планшетов - сетка из 2 колонок
+          return GridView.builder(
+            padding: EdgeInsets.all(isTablet ? 24 : 16),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.8,
+            ),
+            itemCount: orders.length,
+            itemBuilder: (context, index) {
+              return TweenAnimationBuilder(
+                duration: Duration(milliseconds: 300 + (index * 50)),
+                tween: Tween<double>(begin: 0, end: 1),
+                builder: (context, double value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, 20 * (1 - value)),
+                    child: Opacity(
+                      opacity: value,
+                      child: _buildPremiumOrderCard(orders[index]),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        } else {
+          // Для телефонов - список
+          return ListView.builder(
+            padding: EdgeInsets.all(isTablet ? 24 : 16),
+            itemCount: orders.length,
+            itemBuilder: (context, index) {
+              return TweenAnimationBuilder(
+                duration: Duration(milliseconds: 300 + (index * 100)),
+                tween: Tween<double>(begin: 0, end: 1),
+                builder: (context, double value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, 20 * (1 - value)),
+                    child: Opacity(
+                      opacity: value,
+                      child: _buildPremiumOrderCard(orders[index]),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        }
       },
     );
   }
 
-  // Премиум карточка заказа
+  // Премиум карточка заказа - адаптивная версия
   Widget _buildPremiumOrderCard(Order order) {
+    final screenSize = MediaQuery.of(context).size;
+    final isTablet = screenSize.width > 600;
+
     return GestureDetector(
       onTapDown: (_) => HapticFeedback.lightImpact(),
       onTap: () {
@@ -663,7 +659,7 @@ class _OrdersScreenState extends State<OrdersScreen>
           children: [
             // Верхняя часть с градиентом
             Container(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(isTablet ? 20 : 16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: _getStatusGradientColors(order.status)
@@ -678,51 +674,59 @@ class _OrdersScreenState extends State<OrdersScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Номер заказа с иконкой
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: _getStatusGradientColors(order.status),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          _getStatusIcon(order.status),
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Заказ #${order.id}',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(isTablet ? 10 : 8),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: _getStatusGradientColors(order.status),
                             ),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          SizedBox(height: 2),
-                          Text(
-                            _formatDate(order.createdAt),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
+                          child: Icon(
+                            _getStatusIcon(order.status),
+                            color: Colors.white,
+                            size: isTablet ? 20 : 18,
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Заказ #${order.id}',
+                                style: TextStyle(
+                                  fontSize: isTablet ? 18 : 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                _formatDate(order.createdAt),
+                                style: TextStyle(
+                                  fontSize: isTablet ? 14 : 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
                   // Статус с анимацией
                   AnimatedContainer(
                     duration: Duration(milliseconds: 300),
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isTablet ? 14 : 12,
+                      vertical: isTablet ? 8 : 6,
+                    ),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: _getStatusGradientColors(order.status),
@@ -741,7 +745,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                       order.statusText,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 12,
+                        fontSize: isTablet ? 14 : 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -752,7 +756,7 @@ class _OrdersScreenState extends State<OrdersScreen>
 
             // Информация о заказе
             Padding(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(isTablet ? 20 : 16),
               child: Column(
                 children: [
                   // Адрес доставки
@@ -761,7 +765,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                       children: [
                         Icon(
                           Icons.location_on,
-                          size: 16,
+                          size: isTablet ? 18 : 16,
                           color: AppColors.textSecondary,
                         ),
                         SizedBox(width: 8),
@@ -769,8 +773,8 @@ class _OrdersScreenState extends State<OrdersScreen>
                           child: Text(
                             order.address?['address'] ?? 'Адрес не указан',
                             style: TextStyle(
-                              fontSize: 14,
                               color: AppColors.textSecondary,
+                              fontSize: isTablet ? 16 : 14,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -788,25 +792,25 @@ class _OrdersScreenState extends State<OrdersScreen>
                       Row(
                         children: [
                           Icon(
-                            Icons.shopping_bag,
-                            size: 16,
+                            Icons.shopping_bag_outlined,
+                            size: isTablet ? 18 : 16,
                             color: AppColors.textSecondary,
                           ),
                           SizedBox(width: 8),
                           Text(
-                            '${order.itemsCount} ${_getItemsText(order.itemsCount)}',
+                            '${order.totalItems} товаров',
                             style: TextStyle(
-                              fontSize: 14,
                               color: AppColors.textSecondary,
+                              fontSize: isTablet ? 16 : 14,
                             ),
                           ),
                         ],
                       ),
-
-                      // Сумма с градиентом
                       Container(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isTablet ? 14 : 12,
+                          vertical: isTablet ? 8 : 6,
+                        ),
                         decoration: BoxDecoration(
                           gradient: AppGradients.success,
                           borderRadius: BorderRadius.circular(12),
@@ -814,7 +818,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                         child: Text(
                           order.formattedAmount,
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: isTablet ? 18 : 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -831,15 +835,140 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
+  // Премиум состояние загрузки с shimmer эффектом
+  Widget _buildPremiumLoadingState() {
+    final screenSize = MediaQuery.of(context).size;
+    final isTablet = screenSize.width > 600;
+
+    return AnimatedBuilder(
+      animation: _shimmerAnimation,
+      builder: (context, child) {
+        return ListView.builder(
+          padding: EdgeInsets.all(isTablet ? 24 : 16),
+          itemCount: 3,
+          itemBuilder: (context, index) {
+            return Container(
+              margin: EdgeInsets.only(bottom: 16),
+              child: ShaderMask(
+                shaderCallback: (bounds) {
+                  return LinearGradient(
+                    begin: Alignment(_shimmerAnimation.value - 1, 0),
+                    end: Alignment(_shimmerAnimation.value + 1, 0),
+                    colors: [
+                      Colors.grey[300]!,
+                      Colors.grey[100]!,
+                      Colors.grey[300]!,
+                    ],
+                    stops: [0.0, 0.5, 1.0],
+                  ).createShader(bounds);
+                },
+                blendMode: BlendMode.srcATop,
+                child: Container(
+                  height: isTablet ? 140 : 120,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Премиум состояние ошибки
+  Widget _buildPremiumErrorState(OrdersProvider ordersProvider) {
+    final screenSize = MediaQuery.of(context).size;
+    final isTablet = screenSize.width > 600;
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(isTablet ? 48 : 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.all(isTablet ? 24 : 20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.red.shade400, Colors.red.shade600],
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.error_outline,
+                size: isTablet ? 56 : 48,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(height: 24),
+            Text(
+              'Ошибка загрузки',
+              style: TextStyle(
+                fontSize: isTablet ? 24 : 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              ordersProvider.error ?? 'Произошла ошибка при загрузке заказов',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: isTablet ? 16 : 14,
+              ),
+            ),
+            SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                ordersProvider.refresh();
+              },
+              icon: Icon(Icons.refresh, size: isTablet ? 22 : 20),
+              label: Text(
+                'Повторить',
+                style: TextStyle(fontSize: isTablet ? 18 : 16),
+              ),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isTablet ? 32 : 24,
+                  vertical: isTablet ? 16 : 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                backgroundColor: AppColors.primaryLight,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // Вспомогательные методы
   Color _getStatusColor(String status) {
     switch (status) {
       case 'pending':
         return Colors.orange;
       case 'processing':
+      case 'paid':
         return Colors.blue;
+      case 'shipped':
+        return Colors.indigo;
       case 'ready':
         return Colors.green;
+      case 'delivered':
       case 'completed':
         return Colors.grey;
       case 'cancelled':
@@ -854,9 +983,13 @@ class _OrdersScreenState extends State<OrdersScreen>
       case 'pending':
         return [Colors.orange.shade400, Colors.orange.shade600];
       case 'processing':
+      case 'paid':
         return [AppColors.aurora1, AppColors.aurora2];
+      case 'shipped':
+        return [Colors.indigo.shade400, Colors.indigo.shade600];
       case 'ready':
         return [Colors.green.shade400, Colors.green.shade600];
+      case 'delivered':
       case 'completed':
         return [Colors.grey.shade400, Colors.grey.shade600];
       case 'cancelled':
@@ -871,15 +1004,19 @@ class _OrdersScreenState extends State<OrdersScreen>
       case 'pending':
         return Icons.access_time;
       case 'processing':
-        return Icons.sync;
+      case 'paid':
+        return Icons.payment;
+      case 'shipped':
+        return Icons.local_shipping;
       case 'ready':
         return Icons.check_circle;
+      case 'delivered':
       case 'completed':
-        return Icons.archive;
+        return Icons.done_all;
       case 'cancelled':
         return Icons.cancel;
       default:
-        return Icons.info;
+        return Icons.receipt;
     }
   }
 
@@ -888,25 +1025,13 @@ class _OrdersScreenState extends State<OrdersScreen>
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
-      return 'Сегодня, ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+      return 'Сегодня в ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     } else if (difference.inDays == 1) {
-      return 'Вчера, ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+      return 'Вчера в ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     } else if (difference.inDays < 7) {
-      return '${difference.inDays} ${_getDaysText(difference.inDays)} назад';
+      return '${difference.inDays} дней назад';
     } else {
       return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
     }
-  }
-
-  String _getItemsText(int count) {
-    if (count == 1) return 'товар';
-    if (count >= 2 && count <= 4) return 'товара';
-    return 'товаров';
-  }
-
-  String _getDaysText(int count) {
-    if (count == 1) return 'день';
-    if (count >= 2 && count <= 4) return 'дня';
-    return 'дней';
   }
 }
