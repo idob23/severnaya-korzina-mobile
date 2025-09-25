@@ -52,7 +52,6 @@ class _CheckoutScreenState extends State<CheckoutScreen>
     super.dispose();
   }
 
-  // Существующий метод createOrder остается без изменений
   Future<void> _createOrder() async {
     if (_isProcessing) return;
 
@@ -71,54 +70,38 @@ class _CheckoutScreenState extends State<CheckoutScreen>
         throw Exception('Пользователь не авторизован');
       }
 
-      final orderData = {
-        'userId': user!.id,
-        'items': cartProvider.itemsList
-            .map((item) => {
-                  'productId': item.productId,
-                  'quantity': item.quantity,
-                  'price': item.price,
-                })
-            .toList(),
-        'total': cartProvider.totalAmount,
-        'deliveryTime': _selectedDeliveryTime,
-        'notes': _notes,
-        'addressId': 1, // Добавляем обязательный параметр addressId
-      };
+      // ВАЖНО: Сохраняем все данные ДО очистки корзины!
+      final double totalAmount = cartProvider.totalAmount;
+      final List<Map<String, dynamic>> items = cartProvider.itemsList
+          .map((item) => {
+                'productId': item.productId,
+                'quantity': item.quantity,
+                'price': item.price,
+              })
+          .toList();
 
-      // Вызываем createOrder с именованными параметрами
-      final response = await _apiService.createOrder(
-        addressId: 1, // используем дефолтный адрес
-        items: cartProvider.itemsList
-            .map((item) => {
-                  'productId': item.productId,
-                  'quantity': item.quantity,
-                  'price': item.price,
-                })
-            .toList(),
-        notes: _notes,
+      // НЕ создаем заказ здесь, а сразу переходим к оплате
+      // Заказ будет создан на бэкенде при создании платежа
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PaymentScreen(
+            orderData: {
+              'totalAmount': totalAmount,
+              'items': items,
+              'notes': _notes,
+              'addressId': 1,
+              'deliveryTime': _selectedDeliveryTime,
+            },
+          ),
+        ),
       );
 
-      if (response['success']) {
-        // Используем clearCart вместо clear или removeAll
-        cartProvider.clearCart();
-
-        if (!mounted) return;
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PaymentScreen(
-              orderData: {
-                'orderId': response['order']['id'],
-                'totalAmount': cartProvider.totalAmount,
-              },
-            ),
-          ),
-        );
-      } else {
-        throw Exception(response['message'] ?? 'Ошибка создания заказа');
-      }
+      // Очищаем корзину ПОСЛЕ перехода
+      cartProvider.clearCart();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

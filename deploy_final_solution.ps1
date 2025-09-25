@@ -74,7 +74,46 @@ function Cleanup-OldVersions {
 # Очистка старой сборки
 if (Test-Path "build") { 
   Cleanup-OldVersions "build\web"
-  Remove-Item -Recurse -Force "build" 
+
+  # ========== ВСТАВИТЬ СЮДА КОМБИНИРОВАННЫЙ КОД ==========
+  Write-Host "Preparing for deployment..." -ForegroundColor Cyan
+  
+  # 1. Завершаем Java процессы
+  Write-Host "Stopping background processes..." -ForegroundColor Yellow
+  Get-Process java,dart -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+  Start-Sleep -Seconds 2
+  
+  # 2. Пытаемся удалить папку build с повторными попытками
+  $maxAttempts = 3
+  $attempt = 0
+  $buildDeleted = $false
+  
+  while ($attempt -lt $maxAttempts -and -not $buildDeleted) {
+    try {
+      Remove-Item -Recurse -Force "build" -ErrorAction Stop
+      Write-Host "Build folder cleaned successfully" -ForegroundColor Green
+      $buildDeleted = $true
+    } catch {
+      $attempt++
+      if ($attempt -eq $maxAttempts) {
+        Write-Host "Warning: Could not fully clean build folder. Some files may be locked." -ForegroundColor Yellow
+        Write-Host "Trying alternative cleanup..." -ForegroundColor Yellow
+        
+        # Альтернативный метод - удаляем только web папку
+        if (Test-Path "build/web") {
+          Remove-Item -Recurse -Force "build/web" -ErrorAction SilentlyContinue
+          Write-Host "Web folder cleaned" -ForegroundColor Yellow
+        }
+      } else {
+        Write-Host "Attempt $attempt failed. Waiting..." -ForegroundColor Yellow
+        # Ждем и пробуем завершить Java процессы еще раз
+        Get-Process java,dart -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 3
+      }
+    }
+  }
+  # ========== КОНЕЦ ВСТАВКИ ==========
+  # Remove-Item -Recurse -Force "build" 
 }
 
 # СНАЧАЛА делаем Flutter build (он создаст стандартный index.html)
