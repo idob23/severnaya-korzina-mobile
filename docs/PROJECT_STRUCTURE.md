@@ -4,7 +4,7 @@
 
 ```
 🌐 GitHub: https://github.com/idob23/
-├── 📱 severnaya_korzina/              # Мобильное приложение Flutter
+├── 📱 severnaya_korzina/              # Мобильное и веб-приложение Flutter
 ├── 🔧 severnaya_korzina_admin/        # Админ панель Flutter Web  
 └── 🗄️ severnaya-korzina-backend/     # Backend API Node.js
 ```
@@ -16,7 +16,7 @@
 ### 📂 Полная структура проекта:
 ```
 severnaya-korzina-backend/
-├── 📄 package.json              # Зависимости Node.js
+├── 📄 package.json              # Версия 1.0.0
 ├── 📄 package-lock.json         # Фиксированные версии
 ├── 📄 .env                      # Переменные окружения (НЕ В GIT!)
 ├── 📄 .gitignore               # Исключения Git
@@ -25,25 +25,25 @@ severnaya-korzina-backend/
 ├── 📄 README.md                # Документация
 │
 ├── 🗄️ prisma/                  # База данных
-│   ├── schema.prisma           # Схема БД (8 таблиц)
+│   ├── schema.prisma           # Схема БД (9 таблиц)
 │   ├── seed.js                 # Начальные данные
 │   └── migrations/             # История миграций
 │       ├── 20250726100336_init/
 │       └── migration_lock.toml
 │
 ├── 📁 src/                     # Исходный код
-│   ├── 🌐 server.js            # Главный файл (400+ строк)
+│   ├── 🌐 server.js            # Главный файл (~500 строк)
 │   ├── 📁 routes/              # API маршруты
-│   │   ├── auth.js             # Авторизация и админ-endpoints
+│   │   ├── auth.js             # Авторизация и регистрация
 │   │   ├── users.js            # CRUD пользователей
 │   │   ├── products.js         # Управление товарами
 │   │   ├── orders.js           # Обработка заказов
-│   │   ├── payments.js         # ЮKassa интеграция
+│   │   ├── payments.js         # ЮKassa + фискализация
 │   │   ├── batches.js          # Управление партиями
 │   │   ├── addresses.js        # Адреса доставки
-│   │   ├── admin.js            # Админские функции (600+ строк)
+│   │   ├── admin.js            # Админские функции (700+ строк)
 │   │   ├── sms.js              # SMS Aero интеграция
-│   │   ├── settings.js         # Настройки системы
+│   │   ├── settings.js         # Системные настройки
 │   │   └── app.js              # API обновлений приложения
 │   │
 │   ├── 📁 middleware/          # Промежуточное ПО
@@ -53,24 +53,27 @@ severnaya-korzina-backend/
 │   └── 📁 utils/               # Утилиты
 │       └── batchCalculations.js # Расчеты партий
 │
-└── 📁 public/                  # Статические файлы
-    ├── index.html              # Лендинг
-    └── downloads/              # APK файлы
-        └── severnaya-korzina-1.2.0.apk
+├── 📁 public/                  # Статические файлы
+│   ├── index.html              # Лендинг
+│   ├── unsupported-browser.html
+│   └── downloads/              # APK файлы
+│       └── severnaya-korzina-1.2.0.apk
+│
+├── 📁 uploads/                 # Загруженные файлы
+├── 📁 logs/                    # Логи приложения
+└── 📁 web/                     # Flutter Web файлы
+    └── index.html
 ```
 
-### 🔧 API Endpoints (основные):
+### 🔧 API Endpoints:
 
 #### Авторизация (`/api/auth/`)
 ```
 POST   /login                 # Вход по SMS
-POST   /register              # Регистрация
+POST   /register              # Регистрация с согласием
 GET    /profile               # Профиль пользователя
 POST   /admin-login           # Вход админа
 GET    /admin-stats           # Статистика для админа
-GET    /admin-orders          # Все заказы (админ)
-GET    /admin-products        # Все товары (админ)
-GET    /admin-batches         # Все партии (админ)
 ```
 
 #### Пользователи (`/api/users/`)
@@ -90,6 +93,7 @@ POST   /                      # Создание (админ)
 PUT    /:id                   # Обновление (админ)
 DELETE /:id                   # Удаление (админ)
 GET    /categories            # Список категорий
+POST   /categories            # Создание категории
 ```
 
 #### Заказы (`/api/orders/`)
@@ -97,16 +101,18 @@ GET    /categories            # Список категорий
 GET    /                      # Заказы пользователя
 POST   /                      # Создание заказа
 GET    /:id                   # Детали заказа
-PUT    /:id                   # Обновление статуса
+PUT    /:id/status            # Обновление статуса
+DELETE /:id                   # Отмена заказа
 ```
 
 #### Партии (`/api/batches/`)
 ```
 GET    /                      # Активные партии
-GET    /:id                   # Детали партии
+GET    /:id                   # Детали партии с товарами
 POST   /                      # Создание (админ)
 PUT    /:id                   # Обновление (админ)
 DELETE /:id                   # Удаление (админ)
+GET    /:id/progress          # Прогресс партии
 ```
 
 #### Админ функции (`/api/admin/`)
@@ -118,18 +124,29 @@ POST   /batches/:id/deliver          # Доставка товаров
 GET    /batches/:id/total-order      # Общий заказ партии
 GET    /batches/:id/orders-by-users  # Заказы по пользователям
 POST   /sms/send                     # SMS рассылка
+GET    /settings                     # Системные настройки
+PUT    /settings                     # Обновление настроек
+POST   /maintenance/toggle           # Режим обслуживания
 ```
 
 #### Платежи (`/api/payments/`)
 ```
-POST   /create                # Создание платежа
+POST   /create                # Создание платежа с фискализацией
 GET    /status/:paymentId     # Статус платежа
 POST   /webhook               # Webhook от ЮKassa
 ```
 
+#### Приложение (`/api/app/`)
+```
+GET    /check-update          # Проверка обновлений
+GET    /download/:version     # Скачивание APK
+GET    /changelog/:version    # История изменений
+GET    /status                # Статус и режим обслуживания
+```
+
 ---
 
-## 📱 МОБИЛЬНОЕ ПРИЛОЖЕНИЕ (severnaya_korzina)
+## 📱 МОБИЛЬНОЕ И ВЕБ-ПРИЛОЖЕНИЕ (severnaya_korzina)
 
 ### 📂 Структура Flutter приложения:
 ```
@@ -140,12 +157,14 @@ severnaya_korzina/
 ├── 📁 lib/                     # Код приложения
 │   ├── 🎯 main.dart           # Точка входа с UpdateService
 │   │
-│   ├── 📱 screens/            # Экраны приложения
+│   ├── 📱 screens/            # Экраны приложения (15+ экранов)
 │   │   ├── home/
-│   │   │   └── home_screen.dart         # Главный экран с навигацией
+│   │   │   └── home_screen.dart         # Главный с навигацией
 │   │   ├── auth/
 │   │   │   ├── auth_choice_screen.dart  # Выбор типа входа
-│   │   │   └── login_screen.dart        # SMS-авторизация
+│   │   │   ├── login_screen.dart        # SMS-авторизация
+│   │   │   ├── register_screen.dart     # Регистрация
+│   │   │   └── sms_verification_screen.dart
 │   │   ├── catalog/
 │   │   │   └── catalog_screen.dart      # Каталог с поиском
 │   │   ├── cart/
@@ -153,19 +172,22 @@ severnaya_korzina/
 │   │   ├── checkout/
 │   │   │   └── checkout_screen.dart     # Оформление заказа
 │   │   ├── orders/
-│   │   │   └── orders_screen.dart       # История заказов
+│   │   │   ├── orders_screen.dart       # История заказов
+│   │   │   └── order_details_screen.dart # Детали заказа
 │   │   ├── profile/
 │   │   │   └── profile_screen.dart      # Профиль и настройки
 │   │   └── payment/
 │   │       ├── payment_screen.dart      # Платежная форма
-│   │       ├── payment_service.dart     # Сервис ЮKassa
 │   │       ├── payment_success_screen.dart
 │   │       └── universal_payment_screen.dart
 │   │
 │   ├── 🔧 services/           # API сервисы
 │   │   ├── api_service.dart            # Основной API клиент
 │   │   ├── update_service.dart         # OTA обновления
-│   │   └── auth_service.dart           # Авторизация
+│   │   ├── auth_service.dart           # Авторизация
+│   │   ├── sms_service.dart            # SMS верификация
+│   │   ├── notification_service.dart   # Уведомления
+│   │   └── payment_service.dart        # Платежи
 │   │
 │   ├── 📊 models/             # Модели данных
 │   │   ├── user.dart                   # Пользователь
@@ -185,12 +207,23 @@ severnaya_korzina/
 │   │   ├── product_card.dart           # Карточка товара
 │   │   ├── cart_item.dart              # Элемент корзины
 │   │   ├── order_card.dart             # Карточка заказа
-│   │   └── loading_indicator.dart      # Индикатор загрузки
+│   │   ├── loading_indicator.dart      # Индикатор загрузки
+│   │   └── premium_loading.dart        # Премиум загрузка
+│   │
+│   ├── 🎨 design_system/      # Дизайн-система
+│   │   ├── theme/
+│   │   │   └── app_theme.dart          # Тема приложения
+│   │   ├── colors/
+│   │   │   ├── app_colors.dart         # Цветовая схема
+│   │   │   └── gradients.dart          # Градиенты
+│   │   └── spacing/
+│   │       └── app_spacing.dart        # Отступы
 │   │
 │   └── 🎨 constants/          # Константы
-│       ├── colors.dart                 # Цветовая схема
+│       ├── colors.dart                 # Цвета (legacy)
 │       ├── text_styles.dart            # Стили текста
-│       └── api_constants.dart          # API endpoints
+│       ├── api_constants.dart          # API endpoints
+│       └── order_status.dart           # Статусы заказов
 │
 ├── 🤖 android/                # Android конфигурация
 │   ├── app/
@@ -201,10 +234,8 @@ severnaya_korzina/
 │
 ├── 🍎 ios/                    # iOS конфигурация
 ├── 🌐 web/                    # Web конфигурация
-│   └── index.html             # PWA настройки
-│
-├── 📁 test/                   # Тесты
-│   └── test_update.dart       # Тест UpdateService
+│   ├── index.html             # PWA настройки
+│   └── manifest.json          # Web манифест
 │
 └── 📁 build/                  # Скомпилированные файлы
     └── app/outputs/flutter-apk/
@@ -218,23 +249,25 @@ severnaya_korzina/
 ### 📂 Структура админки:
 ```
 severnaya_korzina_admin/
-├── 📄 pubspec.yaml             # Версия 1.1.0
+├── 📄 pubspec.yaml             # Версия 1.0.0+1
 ├── 📄 README.md                # Документация
 │
 ├── 📁 lib/                     # Код админки
 │   ├── 🎯 main.dart           # Точка входа
 │   │
 │   ├── 📊 screens/            # Экраны админки
-│   │   ├── dashboard_screen.dart        # Главный экран со статистикой
-│   │   ├── add_product_screen.dart      # Добавление товаров
-│   │   ├── admin/
-│   │   │   ├── batch_details_screen.dart     # Детали партии
-│   │   │   ├── orders_management_screen.dart # Управление заказами
-│   │   │   └── users_management_screen.dart  # Управление пользователями
-│   │   └── login_screen.dart            # Вход для админа
+│   │   ├── dashboard_screen.dart             # Главный со статистикой
+│   │   ├── add_product_screen.dart           # Добавление товаров
+│   │   ├── login_screen.dart                 # Вход для админа
+│   │   └── admin/
+│   │       ├── batch_details_screen.dart     # Детали партии
+│   │       ├── orders_management_screen.dart # Управление заказами
+│   │       ├── users_management_screen.dart  # Управление пользователями
+│   │       ├── system_settings_screen.dart   # Системные настройки
+│   │       └── maintenance_control_screen.dart # Режим обслуживания
 │   │
 │   ├── 🔧 services/           # API сервисы
-│   │   └── admin_api_service.dart       # API админки (1000+ строк)
+│   │   └── admin_api_service.dart       # API админки (1500+ строк)
 │   │
 │   ├── 📈 widgets/            # UI компоненты
 │   │   ├── stat_card.dart              # Карточка статистики
@@ -243,18 +276,18 @@ severnaya_korzina_admin/
 │   │   └── batch_progress.dart         # Прогресс партии
 │   │
 │   ├── 🔄 providers/          # Управление состоянием
-│   │   ├── admin_provider.dart         # Состояние админа
+│   │   ├── auth_provider.dart          # Состояние админа
 │   │   └── dashboard_provider.dart     # Данные dashboard
 │   │
 │   └── 🎨 constants/          # Константы
-│       └── api_endpoints.dart          # Endpoints админки
+│       ├── api_endpoints.dart          # Endpoints админки
+│       └── order_status.dart           # Статусы заказов
 │
 ├── 🌐 web/                    # Web конфигурация
 │   ├── index.html             # Точка входа
 │   └── manifest.json          # PWA манифест
 │
 └── 🍎 macos/                  # macOS конфигурация
-    └── Runner.xcodeproj/      # Xcode проект
 ```
 
 ---
@@ -263,7 +296,7 @@ severnaya_korzina_admin/
 
 ### Схема данных (Prisma):
 ```prisma
-// 8 основных таблиц
+// 9 основных таблиц
 model User {
   id              Int       @id @default(autoincrement())
   phone           String    @unique
@@ -275,103 +308,21 @@ model User {
   acceptedTermsAt DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  addresses       Address[]
-  orders          Order[]
 }
 
-model Address {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  title     String
-  address   String
-  isDefault Boolean  @default(false)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders    Order[]
-}
-
-model Category {
-  id          Int       @id @default(autoincrement())
-  name        String
+model SystemSettings {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  value       String
   description String?
-  imageUrl    String?
-  isActive    Boolean   @default(true)
-  products    Product[]
-}
-
-model Product {
-  id          Int         @id @default(autoincrement())
-  categoryId  Int
-  name        String
-  description String?
-  imageUrl    String?
-  price       Decimal     @db.Decimal(10, 2)
-  unit        String
-  minQuantity Int         @default(1)
-  maxQuantity Int?        // Остатки на складе
-  isActive    Boolean     @default(true)
-  category    Category    @relation(fields: [categoryId], references: [id])
-  batchItems  BatchItem[]
-  orderItems  OrderItem[]
+  updatedAt   DateTime @updatedAt
 }
 
 model Batch {
-  id                  Int         @id @default(autoincrement())
-  title               String
-  description         String?
-  startDate           DateTime
-  endDate             DateTime
-  deliveryDate        DateTime?
-  minParticipants     Int         @default(5)
-  maxParticipants     Int?
-  status              String      @default("active")
-  pickupAddress       String?
-  targetAmount        Decimal     @default(3000000)
-  currentAmount       Decimal     @default(0)
-  participantsCount   Int         @default(0)
-  progressPercent     Int         @default(0)
-  lastCalculated      DateTime    @default(now())
-  autoLaunch          Boolean     @default(true)
-  marginPercent       Decimal     @default(20)
+  marginPercent       Decimal  @default(20)
   collectionStartDate DateTime?
-  batchItems          BatchItem[]
-  orders              Order[]
-}
-
-model BatchItem {
-  id        Int     @id @default(autoincrement())
-  batchId   Int
-  productId Int
-  price     Decimal @db.Decimal(10, 2)
-  discount  Decimal @default(0)
-  isActive  Boolean @default(true)
-  batch     Batch   @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id])
-}
-
-model Order {
-  id          Int         @id @default(autoincrement())
-  userId      Int
-  batchId     Int?
-  addressId   Int
-  status      String      @default("pending") // pending, paid, shipped, delivered, cancelled
-  totalAmount Decimal     @db.Decimal(10, 2)
-  notes       String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  orderItems  OrderItem[]
-  address     Address     @relation(fields: [addressId], references: [id])
-  batch       Batch?      @relation(fields: [batchId], references: [id])
-  user        User        @relation(fields: [userId], references: [id])
-}
-
-model OrderItem {
-  id        Int     @id @default(autoincrement())
-  orderId   Int
-  productId Int
-  quantity  Int
-  price     Decimal @db.Decimal(10, 2)
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id])
+  progressPercent     Int      @default(0)
+  // ... другие поля
 }
 ```
 
@@ -387,16 +338,11 @@ version: 1.2.0+12
 # 2. Сборка APK
 flutter build apk --release
 
-# 3. Переименование файла
-mv build/app/outputs/flutter-apk/app-release.apk severnaya-korzina-1.2.0.apk
+# 3. Загрузка на сервер
+scp build/app/outputs/flutter-apk/app-release.apk ubuntu@84.201.149.245:/home/ubuntu/severnaya-korzina/public/downloads/
 
-# 4. Загрузка на сервер
-scp severnaya-korzina-1.2.0.apk ubuntu@84.201.149.245:/home/ubuntu/severnaya-korzina/public/downloads/
-
-# 5. Обновление конфигурации версий
+# 4. Обновление конфигурации
 nano src/routes/app.js  # Обновить CURRENT_APP_CONFIG
-
-# 6. Перезапуск сервера
 pm2 restart severnaya-backend
 ```
 
@@ -405,10 +351,7 @@ pm2 restart severnaya-backend
 # 1. Сборка web версии
 flutter build web --release
 
-# 2. Деплой через PowerShell скрипт
-.\deploy_with_cleanup.ps1
-
-# 3. Загрузка на сервер
+# 2. Деплой
 scp -r build/web/* ubuntu@84.201.149.245:/home/ubuntu/severnaya-korzina/public/app/
 ```
 
@@ -417,20 +360,18 @@ scp -r build/web/* ubuntu@84.201.149.245:/home/ubuntu/severnaya-korzina/public/a
 # 1. Подключение к серверу
 ssh ubuntu@84.201.149.245
 
-# 2. Переход в директорию
+# 2. Обновление кода
 cd ~/severnaya-korzina
-
-# 3. Обновление кода
 git pull origin main
 
-# 4. Установка зависимостей
+# 3. Установка зависимостей
 npm install
 
-# 5. Миграции БД
+# 4. Миграции БД
 npx prisma migrate deploy
 npx prisma generate
 
-# 6. Перезапуск
+# 5. Перезапуск
 pm2 restart severnaya-backend
 pm2 save
 ```
@@ -442,17 +383,17 @@ pm2 save
 ### Размеры компонентов:
 | Компонент | Размер | Файлов | Строк кода |
 |-----------|--------|--------|------------|
-| Backend | ~20 MB | ~60 | ~7,000 JS |
-| Mobile APK | ~35 MB | ~100 | ~20,000 Dart |
-| Web App | ~10 MB | - | - |
+| Backend | ~20 MB | ~60 | ~8,000 JS |
+| Mobile/Web | ~35 MB | ~120 | ~25,000 Dart |
 | Admin Panel | ~12 MB | ~90 | ~15,000 Dart |
-| Database | ~100 MB | - | ~500 SQL |
+| Database | ~100 MB | 9 таблиц | ~600 SQL |
 
 ### Производительность:
 - **API Response Time**: <100ms
 - **Build Time Mobile**: ~3 min
-- **Build Time Web**: ~1 min
+- **Build Time Web**: ~2 min
 - **Database Queries**: <50ms
+- **Uptime**: 99.9%
 
 ---
 
@@ -460,13 +401,13 @@ pm2 save
 
 ### Каскадное удаление (CASCADE):
 - `addresses` → `users` - адреса удаляются при удалении пользователя
-- `batch_items` → `batches` - элементы партии удаляются при удалении партии  
-- `order_items` → `orders` - позиции заказа удаляются при удалении заказа
+- `batch_items` → `batches` - элементы партии при удалении партии  
+- `order_items` → `orders` - позиции при удалении заказа
 
 ### Ограничение удаления (RESTRICT):
 - `orders` → `users` - нельзя удалить пользователя с заказами
 - `products` → `categories` - нельзя удалить категорию с товарами
-- `order_items` → `products` - нельзя удалить товар если он в заказах
+- `order_items` → `products` - нельзя удалить товар в заказах
 
 ### SET NULL:
 - `orders` → `batches` - при удалении партии заказы сохраняются
@@ -492,7 +433,7 @@ SMS_AERO_API_KEY="your-api-key"
 
 # YooKassa
 YOOKASSA_SHOP_ID="1148812"
-YOOKASSA_SECRET_KEY="test_jSLEuLPMPW58_iRfez3W_ToHsrMv2XS_cgqIYpNMa5A"
+YOOKASSA_SECRET_KEY="test_xxxxxxxxxxxxx"
 
 # Admin
 ADMIN_PASSWORD="your-admin-password"
@@ -500,4 +441,23 @@ ADMIN_PASSWORD="your-admin-password"
 
 ---
 
-> 📌 **Примечание**: Структура актуальна на январь 2025. При добавлении новых функций обновляйте этот документ!
+## 📝 Дополнительные файлы
+
+### Лендинг (index.html)
+- Информация о проекте
+- Инструкции по установке
+- Ссылки на приложения
+- Контакты
+
+### Документы
+- agreement.html - Пользовательское соглашение
+- privacy.html - Политика конфиденциальности
+- offer.html - Договор-оферта
+
+### Скрипты
+- create_files.bat - Создание структуры
+- deploy_with_cleanup.ps1 - Деплой скрипт
+
+---
+
+> 📌 **Примечание**: Структура актуальна на сентябрь 2025. При добавлении новых функций обновляйте этот документ!
