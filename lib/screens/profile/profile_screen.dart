@@ -149,6 +149,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     });
 
     try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (authProvider.token != null) {
+        _apiService.setAuthToken(authProvider.token);
+      }
+
       final response = await _apiService.getActiveBatch();
 
       if (response['success'] == true && response['batch'] != null) {

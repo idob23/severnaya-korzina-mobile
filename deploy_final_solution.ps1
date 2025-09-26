@@ -1,5 +1,5 @@
 # Деплой с автоматической очисткой старых версий и поддержкой шрифта Inter 
-Write-Host "Deploying with automatic cleanup and Inter  font..." -ForegroundColor Green
+Write-Host "Deploying with automatic cleanup and Inter font..." -ForegroundColor Green
 
 $timestamp = [DateTimeOffset]::Now.ToString("MMddHHmm")
 $NEW_VERSION = "6.$timestamp"
@@ -75,12 +75,11 @@ function Cleanup-OldVersions {
 if (Test-Path "build") { 
   Cleanup-OldVersions "build\web"
 
-  # ========== ВСТАВИТЬ СЮДА КОМБИНИРОВАННЫЙ КОД ==========
   Write-Host "Preparing for deployment..." -ForegroundColor Cyan
   
   # 1. Завершаем Java процессы
   Write-Host "Stopping background processes..." -ForegroundColor Yellow
-  Get-Process java,dart -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+  Get-Process java, dart -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
   Start-Sleep -Seconds 2
   
   # 2. Пытаемся удалить папку build с повторными попытками
@@ -93,7 +92,8 @@ if (Test-Path "build") {
       Remove-Item -Recurse -Force "build" -ErrorAction Stop
       Write-Host "Build folder cleaned successfully" -ForegroundColor Green
       $buildDeleted = $true
-    } catch {
+    }
+    catch {
       $attempt++
       if ($attempt -eq $maxAttempts) {
         Write-Host "Warning: Could not fully clean build folder. Some files may be locked." -ForegroundColor Yellow
@@ -104,16 +104,15 @@ if (Test-Path "build") {
           Remove-Item -Recurse -Force "build/web" -ErrorAction SilentlyContinue
           Write-Host "Web folder cleaned" -ForegroundColor Yellow
         }
-      } else {
+      }
+      else {
         Write-Host "Attempt $attempt failed. Waiting..." -ForegroundColor Yellow
         # Ждем и пробуем завершить Java процессы еще раз
-        Get-Process java,dart -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+        Get-Process java, dart -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
         Start-Sleep -Seconds 3
       }
     }
   }
-  # ========== КОНЕЦ ВСТАВКИ ==========
-  # Remove-Item -Recurse -Force "build" 
 }
 
 # СНАЧАЛА делаем Flutter build (он создаст стандартный index.html)
@@ -139,6 +138,10 @@ if (Test-Path "build\web\flutter_service_worker.js") {
   Move-Item "build\web\flutter_service_worker.js" "build\web\flutter_service_worker-$NEW_VERSION.js" -Force
   Write-Host "  flutter_service_worker.js -> flutter_service_worker-$NEW_VERSION.js" -ForegroundColor Green
 }
+
+# Устанавливаем правильную кодировку для PowerShell
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
 # Создаем app-updater.js
 $appUpdaterJs = @"
@@ -188,7 +191,7 @@ function hideUpdateNotification() {
 function updateApp() {
   const updateBtn = document.getElementById('update-btn');
   if (updateBtn) {
-    updateBtn.textContent = 'Перезагрузка...';
+    updateBtn.textContent = 'Reloading...';
     updateBtn.disabled = true;
   }
   
@@ -227,7 +230,7 @@ window.addEventListener('load', function() {
     updateBtn.addEventListener('click', updateApp);
   }
   
-  setTimeout(() => document.body.classList.add('loaded'), 1500);
+  // УБРАНА строка которая конфликтовала: setTimeout(() => document.body.classList.add('loaded'), 1500);
 });
 "@
 
@@ -255,70 +258,104 @@ $indexHtml = @"
   
   <style>
     /* ПОДКЛЮЧЕНИЕ ШРИФТА Inter */
-@font-face {
-  font-family: 'Inter';
-  src: url('assets/fonts/Inter-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
+    @font-face {
+      font-family: 'Inter';
+      src: url('assets/fonts/Inter-Regular.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
 
-@font-face {
-  font-family: 'Inter';
-  src: url('assets/fonts/Inter-Medium.ttf') format('truetype');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
+    @font-face {
+      font-family: 'Inter';
+      src: url('assets/fonts/Inter-Medium.ttf') format('truetype');
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
 
-@font-face {
-  font-family: 'Inter';
-  src: url('assets/fonts/Inter-SemiBold.ttf') format('truetype');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
+    @font-face {
+      font-family: 'Inter';
+      src: url('assets/fonts/Inter-SemiBold.ttf') format('truetype');
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+    }
 
-@font-face {
-  font-family: 'Inter';
-  src: url('assets/fonts/Inter-Bold.ttf') format('truetype');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
+    @font-face {
+      font-family: 'Inter';
+      src: url('assets/fonts/Inter-Bold.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
 
-/* ОСНОВНЫЕ СТИЛИ */
-* {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-}
+    /* ОСНОВНЫЕ СТИЛИ */
+    * {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    }
 
-body {
-  margin: 0;
-  padding: 0;
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
-  -webkit-font-smoothing: antialiased;
-}
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      background: #DC2626 !important;
+      overflow: hidden;
+    }
+
+    /* КРИТИЧНО: Скрываем ВСЕ Flutter элементы до полной загрузки */
+    flt-glass-pane {
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+    }
+
+    /* Показываем Flutter только после загрузки */
+    body.flutter-ready flt-glass-pane {
+      display: block !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* После полной загрузки */
+    body.flutter-ready {
+      background: white !important;
+      overflow: auto !important;
+    }
 
     /* Загрузочный экран */
     #loading {
-      position: fixed; 
-      top: 0; 
-      left: 0; 
-      width: 100%; 
+      position: fixed !important;
+      top: 0;
+      left: 0;
+      width: 100%;
       height: 100%;
       background: linear-gradient(135deg, #DC2626, #EF4444);
-      display: flex; 
-      flex-direction: column; 
-      justify-content: center; 
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
       align-items: center;
-      z-index: 9999; 
+      z-index: 999999 !important;
       transition: opacity 0.5s ease;
+      pointer-events: all;
     }
-    
-    body.loaded #loading { 
-      opacity: 0; 
-      pointer-events: none; 
+
+    body.flutter-ready #loading {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    body.flutter-ready.loading-hidden #loading {
+      display: none !important;
     }
     
     .loading-text { 
@@ -360,7 +397,6 @@ body {
       animation: spin 1s linear infinite;
     }
     
-    /* Прогресс загрузки */
     .loading-progress {
       width: 200px;
       height: 4px;
@@ -383,7 +419,6 @@ body {
       100% { width: 100%; }
     }
     
-    /* Кнопка перезагрузки (скрыта по умолчанию) */
     .reload-button {
       display: none;
       margin-top: 20px;
@@ -411,6 +446,62 @@ body {
       0% { transform: rotate(0deg); } 
       100% { transform: rotate(360deg); } 
     }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.7; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.05); }
+    }
+
+    /* УВЕДОМЛЕНИЕ ОБ ОБНОВЛЕНИИ */
+    #update-notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #DC2626;
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      z-index: 1000000;
+      display: none;
+      text-align: center;
+      min-width: 320px;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .notification-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    
+    .notification-text {
+      margin: 10px 0 20px 0;
+      opacity: 0.9;
+    }
+    
+    #update-btn {
+      background: white;
+      color: #DC2626;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      min-width: 120px;
+      font-family: 'Inter', sans-serif;
+      transition: transform 0.2s;
+    }
+    
+    #update-btn:hover {
+      transform: scale(1.05);
+    }
+    
+    #update-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -427,49 +518,160 @@ body {
     </button>
   </div>
   
-  <div id="app"></div>
+  <!-- Update notification -->
+  <div id="update-notification">
+    <div class="notification-title">New version available!</div>
+    <div class="notification-text">Click to update</div>
+    <button id="update-btn">Update</button>
+  </div>
   
   <script>
-    // Таймер для отображения кнопки перезагрузки
+    // Timer and state variables
     let loadingTimeout;
     let loadingStartTime = Date.now();
+    let flutterInitialized = false;
+    let flutterReady = false;
     
-    // Показываем кнопку перезагрузки через 15 секунд
+    // Progressive loading messages
+    setTimeout(function() {
+      if (!flutterReady) {
+        const loadingMessage = document.querySelector('.loading-message');
+        if (loadingMessage) {
+          loadingMessage.textContent = 'Initializing app...';
+        }
+      }
+    }, 2000);
+    
+    setTimeout(function() {
+      if (!flutterReady) {
+        const loadingMessage = document.querySelector('.loading-message');
+        if (loadingMessage) {
+          loadingMessage.textContent = 'Loading components...';
+        }
+      }
+    }, 4000);
+    
+    setTimeout(function() {
+      if (!flutterReady) {
+        const loadingMessage = document.querySelector('.loading-message');
+        if (loadingMessage) {
+          loadingMessage.textContent = 'Almost ready...';
+        }
+      }
+    }, 6000);
+    
+    // Show reload button after 15 seconds
     loadingTimeout = setTimeout(function() {
       const reloadBtn = document.getElementById('reloadBtn');
       const loadingMessage = document.querySelector('.loading-message');
       
-      if (reloadBtn && !document.body.classList.contains('loaded')) {
+      if (reloadBtn && !flutterReady) {
         reloadBtn.classList.add('show');
         if (loadingMessage) {
-          loadingMessage.textContent = 'Loading takes longer than usual. Try reloading the page.';
+          loadingMessage.textContent = 'Loading takes longer than usual. Try reloading.';
         }
       }
     }, 15000);
     
-    // Функция для скрытия загрузочного экрана
+    // Function to hide loading screen PROPERLY
     function hideLoading() {
+      console.log('Hiding loader...');
+      flutterReady = true;
       clearTimeout(loadingTimeout);
-      document.body.classList.add('loaded');
-      console.log('Loading completed in', Date.now() - loadingStartTime, 'ms');
+      
+      // Добавляем класс для показа Flutter
+      document.body.classList.add('flutter-ready');
+      
+      // Убираем загрузчик через 500ms после показа Flutter
+      setTimeout(function() {
+        document.body.classList.add('loading-hidden');
+        console.log('Loading completed in', Date.now() - loadingStartTime, 'ms');
+      }, 500);
     }
     
-    // Слушаем событие загрузки Flutter
-    window.addEventListener('flutter-initialized', hideLoading);
-    
-    // Запасной вариант - скрываем через 20 секунд в любом случае
-    setTimeout(function() {
-      if (!document.body.classList.contains('loaded')) {
+    // Ждем инициализации Flutter Engine
+    window.addEventListener('flutter-first-frame', function() {
+      console.log('Flutter first frame detected!');
+      if (!flutterReady) {
         hideLoading();
       }
-    }, 20000);
+    });
+    
+    // Альтернативный способ детекции Flutter
+    let flutterCheckCount = 0;
+    let checkFlutterInterval = setInterval(function() {
+      flutterCheckCount++;
+      
+      // Проверяем наличие Flutter элементов и их содержимого
+      const flutterView = document.querySelector('flt-glass-pane');
+      const flutterScene = document.querySelector('flt-scene');
+      const flutterCanvas = document.querySelector('canvas');
+      
+      // Проверяем что Flutter действительно отрендерил контент
+      if (flutterView && (flutterScene || flutterCanvas)) {
+        // Дополнительная проверка - есть ли дочерние элементы
+        const hasChildren = flutterView.children.length > 0 || 
+                          (flutterScene && flutterScene.children.length > 0);
+        
+        if (hasChildren) {
+          console.log('Flutter content fully rendered!');
+          clearInterval(checkFlutterInterval);
+          
+          // Даем Flutter еще немного времени для финальной отрисовки
+          setTimeout(function() {
+            if (!flutterReady) {
+              hideLoading();
+            }
+          }, 300);
+        }
+      }
+      
+      // Останавливаем проверку после 300 попыток (30 секунд)
+      if (flutterCheckCount > 300) {
+        clearInterval(checkFlutterInterval);
+        console.log('Flutter check timeout, force showing content');
+        if (!flutterReady) {
+          hideLoading();
+        }
+      }
+    }, 100);
+    
+    // Используем Flutter loader API если доступен
+    if (window._flutter) {
+      window._flutter.loader.loadEntrypoint({
+        onEntrypointLoaded: async function(engineInitializer) {
+          console.log('Flutter entrypoint loaded');
+          flutterInitialized = true;
+          const appRunner = await engineInitializer.initializeEngine();
+          
+          // Ждем запуска приложения
+          appRunner.runApp().then(function() {
+            console.log('Flutter app running');
+            // Даем время на первый рендер
+            setTimeout(function() {
+              if (!flutterReady) {
+                hideLoading();
+              }
+            }, 500);
+          });
+        }
+      });
+    }
+    
+    // Запасной вариант - принудительно скрываем через 30 секунд
+    setTimeout(function() {
+      if (!flutterReady) {
+        console.log('Force hiding loader after 30 seconds');
+        hideLoading();
+      }
+    }, 30000);
     
     // Обработка ошибок загрузки
     window.addEventListener('error', function(e) {
       console.error('Loading error:', e);
       const loadingMessage = document.querySelector('.loading-message');
-      if (loadingMessage && !document.body.classList.contains('loaded')) {
-        loadingMessage.textContent = 'An error occurred while loading. Please refresh the page.';
+      if (loadingMessage && !flutterReady) {
+        loadingMessage.textContent = 'An error occurred. Please reload the page.';
         const reloadBtn = document.getElementById('reloadBtn');
         if (reloadBtn) {
           reloadBtn.classList.add('show');
@@ -479,21 +681,15 @@ body {
   </script>
   
   <script src="flutter-$NEW_VERSION.js" defer></script>
-  <script>
-    window.addEventListener('load', function(ev) {
-      setTimeout(function() {
-        document.body.classList.add('loaded');
-      }, 100);
-    });
-  </script>
   <script src="app-$NEW_VERSION.js"></script>
   <script src="main-$NEW_VERSION.js" defer></script>
 </body>
 </html>
 "@
 
-# Перезаписываем index.html ПОСЛЕ сборки
-[System.IO.File]::WriteAllText("build\web\index.html", $indexHtml, $utf8NoBOM)
+# Перезаписываем index.html ПОСЛЕ сборки с правильной кодировкой
+$utf8WithBOM = New-Object System.Text.UTF8Encoding $True
+[System.IO.File]::WriteAllText("build\web\index.html", $indexHtml, $utf8WithBOM)
 Write-Host "  index.html updated with version $NEW_VERSION" -ForegroundColor Green
 
 # Копирование шрифтов Inter в сборку
@@ -537,9 +733,9 @@ self.addEventListener('install', event => {
           '/flutter-$NEW_VERSION.js', 
           '/app-$NEW_VERSION.js',
           '/assets/fonts/Inter-Regular.ttf',
-'/assets/fonts/Inter-Medium.ttf',
-'/assets/fonts/Inter-SemiBold.ttf',
-'/assets/fonts/Inter-Bold.ttf'
+          '/assets/fonts/Inter-Medium.ttf',
+          '/assets/fonts/Inter-SemiBold.ttf',
+          '/assets/fonts/Inter-Bold.ttf'
         ]);
       })
       .then(() => self.skipWaiting())
@@ -585,7 +781,7 @@ Cleanup-OldVersions "build\web"
 Write-Host "`nDEPLOY WITH CLEANUP COMPLETED!" -ForegroundColor Green -BackgroundColor Black
 Write-Host "Version: $NEW_VERSION" -ForegroundColor Yellow
 Write-Host "Old versions automatically cleaned (keeping 3 latest)" -ForegroundColor Cyan
-Write-Host "Inter  font included in build" -ForegroundColor Magenta
+Write-Host "Inter font included in build" -ForegroundColor Magenta
 Write-Host "`nIMPORTANT: index.html has been updated with correct version numbers!" -ForegroundColor Yellow
 
 pause

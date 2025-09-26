@@ -741,6 +741,10 @@ class _AppInitializerState extends State<AppInitializer> {
 
     try {
       final updateService = UpdateService();
+
+      // НОВОЕ: Сначала проверяем незавершенные обновления
+      await updateService.checkPendingUpdate(context);
+
       final updateInfo = await updateService.checkForUpdate(silent: true);
 
       if (updateInfo != null && mounted) {

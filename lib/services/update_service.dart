@@ -23,6 +23,13 @@ class UpdateService {
   PackageInfo? _packageInfo;
   CancelToken? _currentDownloadToken;
 
+  // НОВОЕ: Флаг защиты от множественных нажатий
+  bool _isDownloading = false;
+
+  // НОВОЕ: Для восстановления после прерывания
+  String? _pendingUpdatePath;
+  String? _pendingUpdateVersion;
+
   String get baseUrl => ApiService.baseUrl.replaceAll('/api', '');
   UpdateInfo? _availableUpdate;
   Function(double)? onDownloadProgress;
@@ -79,6 +86,12 @@ class UpdateService {
     try {
       final fileSize = await file.length();
       final fileSizeMb = fileSize / (1024 * 1024);
+
+      // НОВОЕ: Проверяем минимальный размер (1 МБ)
+      if (fileSizeMb < 1.0) {
+        print('❌ APK too small (${fileSizeMb}MB), likely corrupted');
+        return false;
+      }
 
       // Проверяем размер (допускаем отклонение 10%)
       final minSize = expectedSizeMb * 0.9;
@@ -394,6 +407,18 @@ class UpdateService {
     BuildContext context,
     UpdateInfo updateInfo,
   ) async {
+    if (_isDownloading) {
+      print('⚠️ Загрузка уже в процессе, игнорируем повторное нажатие');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Обновление уже загружается...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    _isDownloading = true; // Устанавливаем флаг
     // Проверяем разрешение на установку
     if (Platform.isAndroid) {
       final status = await Permission.requestInstallPackages.status;
@@ -485,6 +510,7 @@ class UpdateService {
           },
           responseType: ResponseType.bytes,
           followRedirects: true,
+          receiveTimeout: Duration(minutes: 5), // НОВОЕ: Таймаут 5 минут
         ),
       );
 
@@ -502,6 +528,9 @@ class UpdateService {
         await file.delete();
         throw Exception('Загруженный файл поврежден или неполный');
       }
+
+      // НОВОЕ: Очищаем информацию о pending update после успешной загрузки
+      await _clearPendingUpdateInfo();
 
       // Показываем уведомление об успешной загрузке
       if (context.mounted) {
@@ -559,6 +588,101 @@ class UpdateService {
       _handleDownloadError(context, e.toString(), updateInfo);
     } finally {
       _currentDownloadToken = null;
+      _isDownloading = false; // ВАЖНО: Сбрасываем флаг
+    }
+  }
+
+  // НОВЫЕ МЕТОДЫ: Для сохранения и восстановления состояния загрузки
+  Future<void> _savePendingUpdateInfo(String path, String version) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('pending_update_path', path);
+    await prefs.setString('pending_update_version', version);
+    await prefs.setString(
+        'pending_update_time', DateTime.now().toIso8601String());
+  }
+
+  Future<void> _clearPendingUpdateInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('pending_update_path');
+    await prefs.remove('pending_update_version');
+    await prefs.remove('pending_update_time');
+  }
+
+  // НОВЫЙ МЕТОД: Проверка незавершенных обновлений
+  Future<void> checkPendingUpdate(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final pendingPath = prefs.getString('pending_update_path');
+    final pendingVersion = prefs.getString('pending_update_version');
+    final pendingTime = prefs.getString('pending_update_time');
+
+    if (pendingPath != null && pendingVersion != null) {
+      final file = File(pendingPath);
+
+      // Проверяем, что файл существует и не слишком старый (24 часа)
+      if (await file.exists()) {
+        bool shouldShowResume = true;
+
+        if (pendingTime != null) {
+          final savedTime = DateTime.parse(pendingTime);
+          final hoursSinceDownload =
+              DateTime.now().difference(savedTime).inHours;
+          if (hoursSinceDownload > 24) {
+            // Если прошло больше 24 часов, удаляем файл
+            await file.delete();
+            await _clearPendingUpdateInfo();
+            shouldShowResume = false;
+          }
+        }
+
+        if (shouldShowResume && context.mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text('Незавершенное обновление'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.download_done, color: Colors.blue, size: 48),
+                  SizedBox(height: 16),
+                  Text(
+                      'Обновление версии $pendingVersion было загружено ранее.'),
+                  SizedBox(height: 8),
+                  Text('Хотите установить его сейчас?'),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    await file.delete();
+                    await _clearPendingUpdateInfo();
+                  },
+                  child: Text('Удалить'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    final result = await OpenFile.open(
+                      pendingPath,
+                      type: 'application/vnd.android.package-archive',
+                    );
+
+                    if (result.type != ResultType.done && context.mounted) {
+                      _showManualInstallDialog(
+                          context, pendingPath, pendingPath.split('/').last);
+                    }
+                  },
+                  child: Text('Установить'),
+                ),
+              ],
+            ),
+          );
+        }
+      } else {
+        // Файл не существует, очищаем информацию
+        await _clearPendingUpdateInfo();
+      }
     }
   }
 

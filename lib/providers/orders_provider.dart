@@ -88,6 +88,8 @@ class OrdersProvider with ChangeNotifier {
     }
 
     try {
+      await _initializeApiToken(); // Обновляем токен перед запросом
+
       if (kDebugMode) {
         print('🔄 OrdersProvider: Загружаем заказы...');
       }
@@ -328,6 +330,7 @@ class OrdersProvider with ChangeNotifier {
 
   /// Обновляет данные
   Future<void> refresh() async {
+    await _initializeApiToken(); // Обновляем токен перед обновлением
     await loadOrders(status: _selectedStatus == 'all' ? null : _selectedStatus);
   }
 
