@@ -1,63 +1,15 @@
-// lib/screens/payment/payment_service.dart - ПОЛНЫЙ ФАЙЛ
+// lib/screens/payment/payment_service.dart - ОЧИЩЕННАЯ ВЕРСИЯ (только Точка Банк)
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 class PaymentService {
-  // Используем ваш бэкенд вместо прямых запросов к ЮKassa
+  // Backend API endpoint (Точка Банк)
   static const String _baseUrl = 'http://84.201.149.245:3000';
 
-  // Старые константы ЮKassa оставляем для мобильных платформ (fallback)
-  static const String _yooKassaBaseUrl = 'https://api.yookassa.ru/v3';
-  static const String _shopId = '1148812';
-  static const String _secretKey =
-      'test_jSLEuLPMPW58_iRfez3W_ToHsrMv2XS_cgqIYpNMa5A';
-
-  /// Создание платежа (универсальный метод)
+  /// Создание платежа через backend (Точка Банк)
   Future<PaymentResult> createPayment({
-    required double amount,
-    required String orderId,
-    required String customerPhone,
-    required String customerName,
-    String? token,
-    List<Map<String, dynamic>>? orderItems,
-    String? notes,
-    int? addressId,
-    int? batchId,
-  }) async {
-    if (kIsWeb) {
-      // Для веб-версии используем бэкенд
-      return _createPaymentViaBackend(
-        amount: amount,
-        orderId: orderId,
-        customerPhone: customerPhone,
-        customerName: customerName,
-        token: token,
-        orderItems: orderItems,
-        notes: notes,
-        addressId: addressId,
-        batchId: batchId,
-      );
-    } else {
-      // Для мобильных платформ тоже используем бэкенд для создания заказа
-      return _createPaymentViaBackend(
-        amount: amount,
-        orderId: orderId,
-        customerPhone: customerPhone,
-        customerName: customerName,
-        token: token,
-        orderItems: orderItems,
-        notes: notes,
-        addressId: addressId,
-        batchId: batchId,
-      );
-    }
-  }
-
-  /// Создание платежа через ваш бэкенд
-  Future<PaymentResult> _createPaymentViaBackend({
     required double amount,
     required String orderId,
     required String customerPhone,
@@ -85,7 +37,6 @@ class PaymentService {
           'orderId': orderId,
           'customerPhone': customerPhone,
           'customerName': customerName,
-          // Данные для создания заказа:
           'addressId': addressId ?? 1,
           'items': orderItems ?? [],
           'notes': notes,
@@ -102,7 +53,7 @@ class PaymentService {
             status: data['status'],
             confirmationUrl: data['confirmationUrl'],
             message: data['message'],
-            realOrderId: data['realOrderId'], // Получаем реальный orderId
+            realOrderId: data['realOrderId'],
             orderCreated: data['orderCreated'] ?? false,
           );
         } else {
@@ -126,18 +77,8 @@ class PaymentService {
     }
   }
 
-  /// Проверка статуса платежа (универсальный метод)
+  /// Проверка статуса платежа через backend
   Future<PaymentStatus> checkPaymentStatus(String paymentId,
-      {String? token}) async {
-    if (kIsWeb) {
-      return _checkPaymentStatusViaBackend(paymentId, token: token);
-    } else {
-      return _checkPaymentStatusViaBackend(paymentId, token: token);
-    }
-  }
-
-  /// Проверка статуса через бэкенд
-  Future<PaymentStatus> _checkPaymentStatusViaBackend(String paymentId,
       {String? token}) async {
     try {
       final headers = {
@@ -175,42 +116,6 @@ class PaymentService {
     }
   }
 
-  /// Проверка статуса напрямую (для мобильных) - оставляем как fallback
-  Future<PaymentStatus> _checkPaymentStatusDirectly(String paymentId) async {
-    try {
-      final basicAuth = base64Encode(utf8.encode('$_shopId:$_secretKey'));
-
-      final response = await http.get(
-        Uri.parse('$_yooKassaBaseUrl/payments/$paymentId'),
-        headers: {
-          'Authorization': 'Basic $basicAuth',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final status = data['status'];
-
-        return PaymentStatus(
-          paymentId: paymentId,
-          status: status,
-          isPaid: status == 'succeeded',
-          isCanceled: status == 'canceled',
-          isPending: status == 'pending',
-          amount: double.parse(data['amount']['value']),
-          createdAt: DateTime.parse(data['created_at']),
-          paidAt:
-              data['paid_at'] != null ? DateTime.parse(data['paid_at']) : null,
-        );
-      } else {
-        throw Exception('Ошибка проверки статуса: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Ошибка подключения при проверке статуса');
-    }
-  }
-
   /// Открытие платежной формы в браузере
   Future<bool> openPaymentForm(String confirmationUrl) async {
     try {
@@ -223,9 +128,6 @@ class PaymentService {
       return false;
     }
   }
-
-  /// Проверка тестового режима
-  static bool isTestMode() => _secretKey.startsWith('test_');
 }
 
 /// Результат создания платежа
@@ -235,8 +137,8 @@ class PaymentResult {
   final String? status;
   final String? confirmationUrl;
   final String? message;
-  final String? realOrderId; // Добавлено
-  final bool orderCreated; // Добавлено
+  final String? realOrderId;
+  final bool orderCreated;
 
   PaymentResult({
     required this.success,

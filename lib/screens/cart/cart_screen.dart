@@ -655,7 +655,7 @@ class _CartScreenState extends State<CartScreen> {
                 ),
                 SizedBox(width: 6),
                 Text(
-                  'Безопасная оплата через ЮKassa',
+                  'Безопасная оплата картой или СБП',
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
