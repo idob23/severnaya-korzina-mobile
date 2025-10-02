@@ -43,7 +43,7 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
   bool _paymentCompleted = false; // ✅ НОВОЕ: Флаг завершения оплаты
   int _checkAttempts = 0;
   static const int _maxAttempts = 40;
-  static const int _autoRollbackMinutes = 5; // ✅ Автоотмена через 5 минут
+  static const int _autoRollbackMinutes = 2; // ✅ Короче для Web
 
   @override
   void initState() {
@@ -138,8 +138,12 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
 
   // ✅ НОВОЕ: Автоматическая отмена через N минут без активности
   void _startAutoRollbackTimer() {
+    // ✅ Для Web делаем более короткий таймер (2 минуты)
+    final rollbackDuration =
+        kIsWeb ? Duration(minutes: 2) : Duration(minutes: _autoRollbackMinutes);
+
     _autoRollbackTimer = Timer(
-      Duration(minutes: _autoRollbackMinutes),
+      rollbackDuration,
       () {
         if (!_paymentCompleted && mounted) {
           print('⏰ Время ожидания оплаты истекло, выполняем автоотмену');

@@ -11,6 +11,8 @@ import '../../models/user.dart';
 import '../../services/api_service.dart';
 import '../../design_system/colors/app_colors.dart';
 import '../../design_system/colors/gradients.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class CheckoutScreen extends StatefulWidget {
   @override
@@ -23,6 +25,8 @@ class _CheckoutScreenState extends State<CheckoutScreen>
   String _selectedDeliveryTime = 'В любое время';
   String _notes = '';
   bool _isProcessing = false;
+  double _marginPercent = 50.0;
+  bool _isLoadingMargin = true;
 
   final TextEditingController _notesController = TextEditingController();
 
@@ -42,6 +46,41 @@ class _CheckoutScreenState extends State<CheckoutScreen>
       curve: Curves.easeIn,
     );
     _animationController.forward();
+
+    _loadMarginPercent(); // ✅ НОВОЕ
+  }
+
+  // ДОБАВЬТЕ этот метод:
+  Future<void> _loadMarginPercent() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = authProvider.token;
+
+      final batchResponse = await http.get(
+        Uri.parse('http://84.201.149.245:3000/api/batches/active'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (batchResponse.statusCode == 200 && mounted) {
+        final batchData = json.decode(batchResponse.body);
+        setState(() {
+          _marginPercent = double.tryParse(
+                  batchData['batch']?['marginPercent']?.toString() ?? '50') ??
+              50.0;
+          _isLoadingMargin = false;
+        });
+      }
+    } catch (e) {
+      print('⚠️ Ошибка получения маржи: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingMargin = false;
+        });
+      }
+    }
   }
 
   @override
@@ -70,7 +109,9 @@ class _CheckoutScreenState extends State<CheckoutScreen>
       }
 
       // ✅ ВАЖНО: Сохраняем все данные ДО перехода
-      final double totalAmount = cartProvider.totalAmount;
+      final double baseAmount = cartProvider.totalAmount;
+      final double marginAmount = baseAmount * (_marginPercent / 100);
+      final double totalAmount = baseAmount + marginAmount; // ✅ С маржой!
       final List<Map<String, dynamic>> items = cartProvider.itemsList
           .map((item) => {
                 'productId': item.productId,
@@ -367,8 +408,13 @@ class _CheckoutScreenState extends State<CheckoutScreen>
   }
 
   Widget _buildTotalCard(CartProvider cartProvider) {
+    // Расчет сумм
+    final baseAmount = cartProvider.totalAmount;
+    final marginAmount = baseAmount * (_marginPercent / 100);
+    final totalWithMargin = baseAmount + marginAmount;
+
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -382,26 +428,145 @@ class _CheckoutScreenState extends State<CheckoutScreen>
           width: 2,
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Итого к оплате:',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
+      child: _isLoadingMargin
+          ? Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          : Column(
+              children: [
+                // Товары (базовая цена)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.shopping_basket,
+                            color: AppColors.textSecondary, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Товары:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '${baseAmount.toStringAsFixed(0)} ₽',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 12),
+
+                // Услуга организации (маржа)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.local_shipping,
+                            color: AppColors.textSecondary, size: 18),
+                        SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Услуга организации:',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            Text(
+                              '(${_marginPercent.toStringAsFixed(0)}% наценка)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary.withOpacity(0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '${marginAmount.toStringAsFixed(0)} ₽',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.aurora3,
+                      ),
+                    ),
+                  ],
+                ),
+
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(
+                    color: AppColors.primaryLight.withOpacity(0.3),
+                    thickness: 1,
+                  ),
+                ),
+
+                // ИТОГО к оплате
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Итого к оплате:',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      '${totalWithMargin.toStringAsFixed(0)} ₽',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 8),
+
+                // Пояснение
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: Colors.blue.shade700, size: 16),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Наценка покрывает доставку и организацию закупки',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ),
-          Text(
-            '${cartProvider.totalAmount.toStringAsFixed(0)} ₽',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryLight,
-            ),
-          ),
-        ],
-      ),
     );
   }
 

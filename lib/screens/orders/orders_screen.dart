@@ -31,7 +31,7 @@ class _OrdersScreenState extends State<OrdersScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
 
     // Анимация появления
     _fadeController = AnimationController(
@@ -218,13 +218,13 @@ class _OrdersScreenState extends State<OrdersScreen>
                               isTablet,
                             ),
                           ),
-                          Tab(
-                            child: _buildTabContent(
-                              Icons.history,
-                              'История',
-                              isTablet,
-                            ),
-                          ),
+                          // Tab(
+                          //   child: _buildTabContent(
+                          //     Icons.history,
+                          //     'История',
+                          //     isTablet,
+                          //   ),
+                          // ),
                         ],
                       ),
                     ),
@@ -254,7 +254,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                             _buildActiveOrders(),
                             _buildInTransitOrders(),
                             _buildReadyOrders(),
-                            _buildHistoryOrders(),
+                            // _buildHistoryOrders(),
                           ],
                         ),
                       );
@@ -454,7 +454,7 @@ class _OrdersScreenState extends State<OrdersScreen>
           return _buildPremiumLoadingState();
         }
 
-        final readyOrders = ordersProvider.getOrdersByStatus('ready');
+        final readyOrders = ordersProvider.getOrdersByStatus('delivered');
 
         if (readyOrders.isEmpty) {
           return _buildPremiumEmptyState(
@@ -470,28 +470,28 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
-  Widget _buildHistoryOrders() {
-    return Consumer<OrdersProvider>(
-      builder: (context, ordersProvider, child) {
-        if (ordersProvider.isLoading) {
-          return _buildPremiumLoadingState();
-        }
+  // Widget _buildHistoryOrders() {
+  //   return Consumer<OrdersProvider>(
+  //     builder: (context, ordersProvider, child) {
+  //       if (ordersProvider.isLoading) {
+  //         return _buildPremiumLoadingState();
+  //       }
 
-        final historyOrders = ordersProvider.completedOrders;
+  //       final historyOrders = ordersProvider.completedOrders;
 
-        if (historyOrders.isEmpty) {
-          return _buildPremiumEmptyState(
-            icon: Icons.history,
-            title: 'История пуста',
-            subtitle: 'Завершенные заказы появятся здесь',
-            gradientColors: [AppColors.textSecondary, AppColors.textPrimary],
-          );
-        }
+  //       if (historyOrders.isEmpty) {
+  //         return _buildPremiumEmptyState(
+  //           icon: Icons.history,
+  //           title: 'История пуста',
+  //           subtitle: 'Завершенные заказы появятся здесь',
+  //           gradientColors: [AppColors.textSecondary, AppColors.textPrimary],
+  //         );
+  //       }
 
-        return _buildOrdersList(historyOrders);
-      },
-    );
-  }
+  //       return _buildOrdersList(historyOrders);
+  //     },
+  //   );
+  // }
 
   // Премиум пустое состояние с анимацией
   Widget _buildPremiumEmptyState({
