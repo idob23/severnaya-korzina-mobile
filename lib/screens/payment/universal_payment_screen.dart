@@ -82,8 +82,9 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
   Future<void> _handlePayment() async {
     if (!kIsWeb) {
       await _openPaymentInBrowser();
-      _startStatusChecking();
     }
+    // ✅ Запускаем автопроверку для ВСЕХ платформ (включая Web)
+    _startStatusChecking();
   }
 
   Future<void> _openPaymentManually() async {
@@ -596,6 +597,46 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
                       ),
                     ),
                   ),
+
+                  // // ===== ДОБАВИТЬ ЭТИ СТРОКИ =====
+                  // SizedBox(height: 16),
+                  // SizedBox(
+                  //   width: double.infinity,
+                  //   height: 56,
+                  //   child: ElevatedButton.icon(
+                  //     onPressed: () async {
+                  //       setState(() {
+                  //         _isChecking = true;
+                  //       });
+
+                  //       await Future.delayed(Duration(seconds: 1));
+                  //       await _checkPaymentStatus();
+
+                  //       if (mounted) {
+                  //         setState(() {
+                  //           _isChecking = false;
+                  //         });
+                  //       }
+                  //     },
+                  //     icon: Icon(Icons.check_circle_outline, size: 24),
+                  //     label: Text(
+                  //       'Я завершил оплату',
+                  //       style: TextStyle(
+                  //         fontSize: 18,
+                  //         fontWeight: FontWeight.bold,
+                  //       ),
+                  //     ),
+                  //     style: ElevatedButton.styleFrom(
+                  //       backgroundColor: Colors.blue,
+                  //       foregroundColor: Colors.white,
+                  //       shape: RoundedRectangleBorder(
+                  //         borderRadius: BorderRadius.circular(12),
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
+                  // // ===== КОНЕЦ ДОБАВЛЕНИЯ =====
+
                   SizedBox(height: 24),
                 ],
                 if (_isChecking) ...[
