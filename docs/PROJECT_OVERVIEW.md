@@ -324,7 +324,7 @@ system_settings       -- Системные настройки
 - CPU: 4 cores
 - RAM: 4GB
 - Disk: 50GB SSD
-- Network: 1 Gbps
+- Network: 1 Gbps 
 
 ---
 

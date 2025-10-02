@@ -1,9 +1,12 @@
-// lib/screens/payment/universal_payment_screen.dart - ПОЛНЫЙ ФАЙЛ
+// lib/screens/payment/universal_payment_screen.dart
+// ВЕРСИЯ С ОТКАТОМ НЕОПЛАЧЕННОГО ЗАКАЗА
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'payment_service.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -15,6 +18,8 @@ class UniversalPaymentScreen extends StatefulWidget {
   final String paymentId;
   final String? orderId;
   final bool orderCreated;
+  final Map<String, dynamic>?
+      orderData; // ✅ НОВОЕ: Данные для восстановления корзины
 
   const UniversalPaymentScreen({
     Key? key,
@@ -22,6 +27,7 @@ class UniversalPaymentScreen extends StatefulWidget {
     required this.paymentId,
     this.orderId,
     this.orderCreated = false,
+    this.orderData, // ✅ НОВОЕ
   }) : super(key: key);
 
   @override
@@ -32,32 +38,39 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
     with WidgetsBindingObserver {
   final PaymentService _paymentService = PaymentService();
   Timer? _statusCheckTimer;
+  Timer? _autoRollbackTimer; // ✅ НОВОЕ: Таймер автоотмены
   bool _isChecking = false;
+  bool _paymentCompleted = false; // ✅ НОВОЕ: Флаг завершения оплаты
   int _checkAttempts = 0;
-  static const int _maxAttempts = 40; // 2 минуты проверки (каждые 3 секунды)
+  static const int _maxAttempts = 40;
+  static const int _autoRollbackMinutes = 5; // ✅ Автоотмена через 5 минут
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _handlePayment();
+    _startAutoRollbackTimer(); // ✅ НОВОЕ: Запускаем таймер автоотмены
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _statusCheckTimer?.cancel();
+    _autoRollbackTimer?.cancel(); // ✅ НОВОЕ
     super.dispose();
   }
 
-  // Обработка возврата из фона (для iOS)
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       print('🔄 Приложение вернулось из фона, проверяем статус платежа');
-      // Сразу проверяем статус при возврате
-      _checkPaymentStatus();
-      // Перезапускаем таймер если он был остановлен
+      // ✅ НОВОЕ: Проверяем статус с небольшой задержкой
+      Future.delayed(Duration(seconds: 1), () {
+        if (mounted && !_paymentCompleted) {
+          _checkPaymentStatusOnResume();
+        }
+      });
       if (_statusCheckTimer == null || !_statusCheckTimer!.isActive) {
         _startStatusChecking();
       }
@@ -68,12 +81,9 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
 
   Future<void> _handlePayment() async {
     if (!kIsWeb) {
-      // Для мобильных платформ открываем во внешнем браузере
       await _openPaymentInBrowser();
-      // Начинаем проверку статуса
       _startStatusChecking();
     }
-    // Для веб-версии показываем кнопку в UI
   }
 
   Future<void> _openPaymentManually() async {
@@ -126,8 +136,49 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
     });
   }
 
+  // ✅ НОВОЕ: Автоматическая отмена через N минут без активности
+  void _startAutoRollbackTimer() {
+    _autoRollbackTimer = Timer(
+      Duration(minutes: _autoRollbackMinutes),
+      () {
+        if (!_paymentCompleted && mounted) {
+          print('⏰ Время ожидания оплаты истекло, выполняем автоотмену');
+          _handleAutoRollback();
+        }
+      },
+    );
+  }
+
+  // ✅ НОВОЕ: Автоматический откат заказа
+  Future<void> _handleAutoRollback() async {
+    print('🔄 Автоматический откат заказа...');
+
+    // Проверяем статус еще раз перед откатом
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = authProvider.token;
+
+      final status = await _paymentService.checkPaymentStatus(
+        widget.paymentId,
+        token: token,
+      );
+
+      // Если оплата прошла - не откатываем
+      if (status.isPaid) {
+        _paymentCompleted = true;
+        _handlePaymentSuccess();
+        return;
+      }
+    } catch (e) {
+      print('Ошибка финальной проверки статуса: $e');
+    }
+
+    // Откатываем заказ
+    await _handlePaymentCancelled();
+  }
+
   Future<void> _checkPaymentStatus() async {
-    if (_isChecking) return;
+    if (_isChecking || _paymentCompleted) return;
 
     setState(() {
       _isChecking = true;
@@ -145,11 +196,12 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
       if (!mounted) return;
 
       if (status.isPaid) {
+        _paymentCompleted = true; // ✅ Помечаем как завершенный
         _statusCheckTimer?.cancel();
         _handlePaymentSuccess();
       } else if (status.isCanceled) {
         _statusCheckTimer?.cancel();
-        _handlePaymentCancelled();
+        await _handlePaymentCancelled();
       }
     } catch (e) {
       print('Ошибка проверки статуса: $e');
@@ -162,18 +214,93 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
     }
   }
 
+  // ✅ НОВОЕ: Проверка статуса при возврате из фона с показом диалога
+  Future<void> _checkPaymentStatusOnResume() async {
+    if (_paymentCompleted) return;
+
+    print('🔍 Проверяем статус после возврата из браузера...');
+
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = authProvider.token;
+
+      final status = await _paymentService.checkPaymentStatus(
+        widget.paymentId,
+        token: token,
+      );
+
+      if (!mounted) return;
+
+      if (status.isPaid) {
+        _paymentCompleted = true;
+        _statusCheckTimer?.cancel();
+        _handlePaymentSuccess();
+      } else if (status.isCanceled) {
+        _statusCheckTimer?.cancel();
+        await _handlePaymentCancelled();
+      } else if (status.isPending) {
+        // ✅ ВАЖНО: Если платеж все еще pending, спрашиваем пользователя
+        _showPaymentStatusDialog();
+      }
+    } catch (e) {
+      print('❌ Ошибка проверки статуса при возврате: $e');
+    }
+  }
+
+  // ✅ НОВОЕ: Диалог для уточнения статуса оплаты
+  void _showPaymentStatusDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.help_outline, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Статус оплаты'),
+          ],
+        ),
+        content: Text(
+          'Вы завершили оплату?\n\nЕсли оплата прошла успешно, мы скоро получим подтверждение. Если вы закрыли окно оплаты, заказ будет отменен.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Пользователь закрыл окно - отменяем
+              _handlePaymentCancelled();
+            },
+            child: Text('Я не оплатил, отменить'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Продолжаем проверку статуса
+              print('⏳ Продолжаем ожидание подтверждения оплаты...');
+            },
+            child: Text('Я оплатил, ждать'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _handlePaymentSuccess() async {
-    // Очищаем корзину
+    print('✅ Платеж успешно завершен!');
+
+    // Останавливаем все таймеры
+    _statusCheckTimer?.cancel();
+    _autoRollbackTimer?.cancel();
+
+    // ✅ Корзина уже очищена в checkout_screen, просто обновляем заказы
+    // (Но можно оставить для надежности, clearCart() безопасен для пустой корзины)
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     cartProvider.clearCart();
-    print('✅ Корзина очищена после успешной оплаты');
 
     // Обновляем список заказов
     final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
     await ordersProvider.loadOrders();
-    print('✅ Список заказов обновлен');
 
-    // Показываем диалог успеха и возвращаемся в каталог
     if (mounted) {
       showDialog(
         context: context,
@@ -193,13 +320,13 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
                 Text('Заказ #${widget.orderId} успешно оплачен'),
               SizedBox(height: 8),
               Text(
-                  'Ваш заказ принят в обработку и будет доставлен в указанные сроки.'),
+                'Ваш заказ принят в обработку и будет доставлен в указанные сроки.',
+              ),
             ],
           ),
           actions: [
             ElevatedButton(
               onPressed: () {
-                // Возвращаемся на главный экран
                 Navigator.pushNamedAndRemoveUntil(
                   context,
                   '/',
@@ -214,28 +341,111 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
     }
   }
 
-  void _handlePaymentCancelled() {
-    Navigator.pop(context);
+  // ✅ НОВАЯ ЛОГИКА: Откат неоплаченного заказа
+  Future<void> _handlePaymentCancelled() async {
+    print('❌ Платеж отменен или не завершен');
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.error, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('Платеж отменен'),
+    // Останавливаем все таймеры
+    _statusCheckTimer?.cancel();
+    _autoRollbackTimer?.cancel(); // ✅ НОВОЕ
+
+    // 1. Удаляем заказ с backend (если он был создан)
+    if (widget.orderId != null && widget.orderCreated) {
+      await _deleteUnpaidOrder(widget.orderId!);
+    }
+
+    // 2. Восстанавливаем товары в корзину
+    if (widget.orderData != null) {
+      await _restoreCartItems();
+    }
+
+    if (mounted) {
+      Navigator.pop(context);
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Оплата не завершена'),
+            ],
+          ),
+          content: Text(
+            'Заказ не был оплачен. Товары возвращены в корзину.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('ОК'),
+            ),
           ],
         ),
-        content: Text('Платеж был отменен пользователем.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('ОК'),
-          ),
-        ],
-      ),
-    );
+      );
+    }
+  }
+
+  // ✅ НОВОЕ: Удаление неоплаченного заказа через API
+  Future<void> _deleteUnpaidOrder(String orderId) async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = authProvider.token;
+
+      print('🗑️ Удаляем неоплаченный заказ #$orderId');
+
+      final response = await http.delete(
+        Uri.parse('http://84.201.149.245:3000/api/orders/$orderId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print('✅ Заказ #$orderId успешно удален');
+      } else {
+        print('⚠️ Ошибка удаления заказа: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Ошибка при удалении заказа: $e');
+    }
+  }
+
+  // ✅ НОВОЕ: Восстановление товаров в корзину
+  Future<void> _restoreCartItems() async {
+    try {
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final items = widget.orderData!['items'] as List<Map<String, dynamic>>?;
+
+      if (items != null && items.isNotEmpty) {
+        print('🔄 Восстанавливаем ${items.length} товаров в корзину');
+
+        // ✅ Корзина уже очищена в checkout_screen, просто добавляем товары
+        for (var item in items) {
+          final productId = item['productId'] as int;
+          final quantity = item['quantity'] as int;
+          final price = item['price'] as double;
+
+          // Используем сохраненные name и unit из orderData
+          final name = item['name'] as String? ?? 'Товар #$productId';
+          final unit = item['unit'] as String? ?? 'шт';
+
+          // Добавляем товар обратно в корзину
+          cartProvider.addItem(
+            productId: productId,
+            name: name,
+            price: price,
+            unit: unit,
+            quantity: quantity,
+          );
+        }
+
+        print('✅ Товары восстановлены в корзину (${items.length} позиций)');
+      }
+    } catch (e) {
+      print('❌ Ошибка восстановления корзины: $e');
+    }
   }
 
   void _showTimeoutDialog() {
@@ -248,9 +458,10 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              Navigator.pop(context);
+              // При тайм-ауте тоже откатываем заказ
+              await _handlePaymentCancelled();
             },
             child: Text('Вернуться'),
           ),
@@ -267,116 +478,155 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
     );
   }
 
+  // ✅ НОВОЕ: Обработка кнопки "Назад"
+  Future<bool> _onWillPop() async {
+    // Если платеж завершен - разрешаем выход
+    if (_paymentCompleted) {
+      return true;
+    }
+
+    // Иначе показываем диалог подтверждения
+    final shouldPop = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Отменить оплату?'),
+        content: Text(
+          'Вы уверены, что хотите отменить оплату? Заказ будет удален, а товары вернутся в корзину.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Продолжить оплату'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+            ),
+            child: Text('Отменить'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldPop == true) {
+      await _handlePaymentCancelled();
+    }
+
+    return shouldPop ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Оплата заказа'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.payment,
-                size: 80,
-                color: Colors.green,
-              ),
-              SizedBox(height: 32),
-              Text(
-                kIsWeb ? 'Готово к оплате' : 'Ожидание оплаты',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green[700],
+    return WillPopScope(
+      onWillPop: _onWillPop, // ✅ Обработка кнопки "Назад"
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Оплата заказа'),
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+        ),
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.payment,
+                  size: 80,
+                  color: Colors.green,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 16),
-              Text(
-                kIsWeb
-                    ? 'Нажмите кнопку ниже для открытия формы оплаты.\nПосле оплаты вернитесь в приложение.'
-                    : 'Завершите оплату в браузере.\nМы автоматически отследим результат.',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              if (widget.orderId != null) ...[
-                SizedBox(height: 8),
+                SizedBox(height: 32),
                 Text(
-                  'Заказ #${widget.orderId}',
+                  kIsWeb ? 'Готово к оплате' : 'Ожидание оплаты',
                   style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[500],
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green[700],
                   ),
+                  textAlign: TextAlign.center,
                 ),
-              ],
-              SizedBox(height: 32),
-
-              // Кнопка открытия оплаты - только для веб
-              if (kIsWeb && !_isChecking) ...[
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton.icon(
-                    onPressed: _openPaymentManually,
-                    icon: Icon(Icons.open_in_new, size: 24),
-                    label: Text(
-                      'Открыть форму оплаты',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 24),
-              ],
-
-              if (_isChecking) ...[
-                CircularProgressIndicator(color: Colors.green),
                 SizedBox(height: 16),
                 Text(
-                  'Проверяем статус платежа...',
-                  style: TextStyle(color: Colors.grey[600]),
+                  kIsWeb
+                      ? 'Нажмите кнопку ниже для открытия формы оплаты.\nПосле оплаты вернитесь в приложение.'
+                      : 'Завершите оплату в браузере.\nМы автоматически отследим результат.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 16),
-              ],
-
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        _statusCheckTimer?.cancel();
-                        Navigator.pop(context);
-                      },
-                      child: Text('Отменить'),
+                if (widget.orderId != null) ...[
+                  SizedBox(height: 8),
+                  Text(
+                    'Заказ #${widget.orderId}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
                     ),
                   ),
-                  if (!kIsWeb && !_isChecking) ...[
-                    SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _checkPaymentStatus,
-                        child: Text('Проверить статус'),
+                ],
+                SizedBox(height: 32),
+                if (kIsWeb && !_isChecking) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: _openPaymentManually,
+                      icon: Icon(Icons.open_in_new, size: 24),
+                      label: Text(
+                        'Открыть форму оплаты',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
-                  ],
+                  ),
+                  SizedBox(height: 24),
                 ],
-              ),
-            ],
+                if (_isChecking) ...[
+                  CircularProgressIndicator(color: Colors.green),
+                  SizedBox(height: 16),
+                  Text(
+                    'Проверяем статус платежа...',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                  SizedBox(height: 16),
+                ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          _statusCheckTimer?.cancel();
+                          await _handlePaymentCancelled();
+                        },
+                        child: Text('Отменить'),
+                      ),
+                    ),
+                    if (!kIsWeb && !_isChecking) ...[
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _checkPaymentStatus,
+                          child: Text('Проверить статус'),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

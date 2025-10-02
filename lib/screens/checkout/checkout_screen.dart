@@ -1,13 +1,14 @@
-// lib/screens/checkout/checkout_screen.dart - УЛУЧШЕННАЯ ВЕРСИЯ
+// lib/screens/checkout/checkout_screen.dart
+// ИСПРАВЛЕНО: Корзина НЕ очищается до завершения оплаты
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Для HapticFeedback
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:severnaya_korzina/screens/payment/payment_screen.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
-// Добавляем импорты дизайн-системы
 import '../../design_system/colors/app_colors.dart';
 import '../../design_system/colors/gradients.dart';
 
@@ -25,7 +26,6 @@ class _CheckoutScreenState extends State<CheckoutScreen>
 
   final TextEditingController _notesController = TextEditingController();
 
-  // Добавляем анимации
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -33,7 +33,6 @@ class _CheckoutScreenState extends State<CheckoutScreen>
   void initState() {
     super.initState();
 
-    // Инициализация анимаций
     _animationController = AnimationController(
       duration: Duration(milliseconds: 600),
       vsync: this,
@@ -70,20 +69,24 @@ class _CheckoutScreenState extends State<CheckoutScreen>
         throw Exception('Пользователь не авторизован');
       }
 
-      // ВАЖНО: Сохраняем все данные ДО очистки корзины!
+      // ✅ ВАЖНО: Сохраняем все данные ДО перехода
       final double totalAmount = cartProvider.totalAmount;
       final List<Map<String, dynamic>> items = cartProvider.itemsList
           .map((item) => {
                 'productId': item.productId,
                 'quantity': item.quantity,
                 'price': item.price,
+                'name': item.name, // ✅ НОВОЕ: Сохраняем name
+                'unit': item.unit, // ✅ НОВОЕ: Сохраняем unit
               })
           .toList();
 
-      // НЕ создаем заказ здесь, а сразу переходим к оплате
-      // Заказ будет создан на бэкенде при создании платежа
-
       if (!mounted) return;
+
+      // ✅ ИСПРАВЛЕНО: Очищаем корзину СРАЗУ после сохранения данных
+      // Это гарантирует что при отмене мы восстановим ТОЧНО те товары
+      cartProvider.clearCart();
+      print('🗑️ Корзина очищена перед переходом к оплате');
 
       Navigator.pushReplacement(
         context,
@@ -99,9 +102,6 @@ class _CheckoutScreenState extends State<CheckoutScreen>
           ),
         ),
       );
-
-      // Очищаем корзину ПОСЛЕ перехода
-      cartProvider.clearCart();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -122,11 +122,9 @@ class _CheckoutScreenState extends State<CheckoutScreen>
   Widget build(BuildContext context) {
     final cartProvider = Provider.of<CartProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
-    // Используем currentUser вместо user
     final user = authProvider.currentUser;
 
     return Scaffold(
-      // Добавляем градиентный фон
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -144,7 +142,7 @@ class _CheckoutScreenState extends State<CheckoutScreen>
             opacity: _fadeAnimation,
             child: Column(
               children: [
-                // Премиум AppBar с градиентом
+                // AppBar
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
@@ -159,76 +157,58 @@ class _CheckoutScreenState extends State<CheckoutScreen>
                     boxShadow: [
                       BoxShadow(
                         color: AppColors.primaryLight.withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
+                        blurRadius: 15,
+                        offset: Offset(0, 5),
                       ),
                     ],
                   ),
                   child: Row(
                     children: [
                       IconButton(
-                        icon: Container(
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
+                        icon: Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      Expanded(
+                        child: Text(
+                          'Оформление заказа',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
                           ),
-                          child: Icon(Icons.arrow_back, color: Colors.white),
-                        ),
-                        onPressed: () {
-                          HapticFeedback.lightImpact();
-                          Navigator.pop(context);
-                        },
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Оформление заказа',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          textAlign: TextAlign.center,
                         ),
                       ),
+                      SizedBox(width: 48),
                     ],
                   ),
                 ),
 
                 // Контент
                 Expanded(
-                  child: cartProvider.itemsList.isEmpty
-                      ? _buildEmptyCart()
-                      : SingleChildScrollView(
-                          padding: EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Информация о пользователе с улучшенным дизайном
-                              _buildUserInfoCard(user),
-                              SizedBox(height: 20),
+                  child: ListView(
+                    padding: EdgeInsets.all(16),
+                    children: [
+                      // Информация о пользователе
+                      _buildUserInfoCard(user),
+                      SizedBox(height: 16),
 
-                              // Товары в заказе
-                              _buildOrderItemsCard(cartProvider),
-                              SizedBox(height: 20),
+                      // Детали заказа
+                      _buildOrderDetailsCard(cartProvider),
+                      SizedBox(height: 16),
 
-                              // Время доставки
-                              _buildDeliveryTimeCard(),
-                              SizedBox(height: 20),
+                      // Заметки к заказу
+                      _buildNotesCard(),
+                      SizedBox(height: 16),
 
-                              // Комментарий
-                              _buildNotesCard(),
-                              SizedBox(height: 20),
-
-                              // Итоговая сумма
-                              _buildOrderSummaryCard(cartProvider),
-                              SizedBox(height: 80), // Место для кнопки
-                            ],
-                          ),
-                        ),
+                      // Итоговая сумма
+                      _buildTotalCard(cartProvider),
+                    ],
+                  ),
                 ),
 
-                // Кнопка оформления (если корзина не пуста)
-                if (cartProvider.itemsList.isNotEmpty)
-                  _buildCheckoutButton(cartProvider),
+                // Кнопка оформления
+                _buildCheckoutButton(cartProvider),
               ],
             ),
           ),
@@ -237,89 +217,6 @@ class _CheckoutScreenState extends State<CheckoutScreen>
     );
   }
 
-  // Пустая корзина
-  Widget _buildEmptyCart() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: 1.0),
-            duration: Duration(milliseconds: 800),
-            builder: (context, value, child) {
-              return Transform.scale(
-                scale: value,
-                child: Container(
-                  padding: EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: AppGradients.aurora,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.aurora2.withOpacity(0.3),
-                        blurRadius: 20,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.shopping_cart_outlined,
-                    size: 60,
-                    color: Colors.white,
-                  ),
-                ),
-              );
-            },
-          ),
-          SizedBox(height: 24),
-          Text(
-            'Корзина пуста',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          SizedBox(height: 16),
-          Container(
-            decoration: BoxDecoration(
-              gradient: AppGradients.button,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryLight.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  Navigator.pop(context);
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  child: Text(
-                    'Вернуться в каталог',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Карточка пользователя
   Widget _buildUserInfoCard(User? user) {
     return Container(
       padding: EdgeInsets.all(16),
@@ -334,57 +231,38 @@ class _CheckoutScreenState extends State<CheckoutScreen>
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              gradient: AppGradients.aurora,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                user?.name.substring(0, 1).toUpperCase() ?? 'U',
+          Row(
+            children: [
+              Icon(Icons.person, color: AppColors.primaryLight),
+              SizedBox(width: 8),
+              Text(
+                'Информация о получателе',
                 style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ),
+            ],
           ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user?.fullName ?? 'Пользователь',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  user?.phone ?? 'Телефон не указан',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
+          SizedBox(height: 12),
+          Text(
+            user?.fullName ?? 'Не указано',
+            style: TextStyle(fontSize: 16),
+          ),
+          SizedBox(height: 4),
+          Text(
+            user?.phone ?? 'Не указано',
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           ),
         ],
       ),
     );
   }
 
-  // Карточка товаров
-  Widget _buildOrderItemsCard(CartProvider cartProvider) {
+  Widget _buildOrderDetailsCard(CartProvider cartProvider) {
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -403,163 +281,44 @@ class _CheckoutScreenState extends State<CheckoutScreen>
         children: [
           Row(
             children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: AppGradients.button,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.shopping_bag, color: Colors.white, size: 20),
-              ),
-              SizedBox(width: 12),
+              Icon(Icons.shopping_basket, color: AppColors.primaryLight),
+              SizedBox(width: 8),
               Text(
-                'Товары в заказе',
+                'Состав заказа',
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 16),
-          ...cartProvider.itemsList
-              .map((item) => Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.name,
-                            style: TextStyle(color: AppColors.textPrimary),
-                          ),
-                        ),
-                        Text(
-                          '${item.quantity} × ${item.price.toStringAsFixed(0)}₽',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+          SizedBox(height: 12),
+          ...cartProvider.itemsList.map((item) => Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${item.quantity} x Товар #${item.productId}',
+                        style: TextStyle(fontSize: 14),
+                      ),
                     ),
-                  ))
-              .toList(),
+                    Text(
+                      '${(item.price * item.quantity).toStringAsFixed(0)} ₽',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              )),
         ],
       ),
     );
   }
 
-  // Карточка времени доставки
-  Widget _buildDeliveryTimeCard() {
-    final times = ['В любое время', 'Утром', 'Днем', 'Вечером'];
-
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: AppGradients.aurora,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.access_time, color: Colors.white, size: 20),
-              ),
-              SizedBox(width: 12),
-              Text(
-                'Время получения',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          ...times
-              .map((time) => GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      setState(() {
-                        _selectedDeliveryTime = time;
-                      });
-                    },
-                    child: AnimatedContainer(
-                      duration: Duration(milliseconds: 200),
-                      margin: EdgeInsets.symmetric(vertical: 4),
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: _selectedDeliveryTime == time
-                            ? AppColors.primaryLight.withOpacity(0.1)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _selectedDeliveryTime == time
-                              ? AppColors.primaryLight
-                              : AppColors.border,
-                          width: _selectedDeliveryTime == time ? 2 : 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          AnimatedContainer(
-                            duration: Duration(milliseconds: 200),
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              gradient: _selectedDeliveryTime == time
-                                  ? AppGradients.button
-                                  : null,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: _selectedDeliveryTime == time
-                                    ? Colors.transparent
-                                    : AppColors.border,
-                                width: 2,
-                              ),
-                            ),
-                            child: _selectedDeliveryTime == time
-                                ? Icon(Icons.check,
-                                    size: 12, color: Colors.white)
-                                : null,
-                          ),
-                          SizedBox(width: 12),
-                          Text(
-                            time,
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: _selectedDeliveryTime == time
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ))
-              .toList(),
-        ],
-      ),
-    );
-  }
-
-  // Карточка комментария
   Widget _buildNotesCard() {
     return Container(
       padding: EdgeInsets.all(16),
@@ -579,63 +338,48 @@ class _CheckoutScreenState extends State<CheckoutScreen>
         children: [
           Row(
             children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.warning.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child:
-                    Icon(Icons.edit_note, color: AppColors.warning, size: 20),
-              ),
-              SizedBox(width: 12),
+              Icon(Icons.note, color: AppColors.primaryLight),
+              SizedBox(width: 8),
               Text(
                 'Комментарий к заказу',
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 16),
+          SizedBox(height: 12),
           TextField(
             controller: _notesController,
-            onChanged: (value) => _notes = value,
-            maxLines: 3,
             decoration: InputDecoration(
-              hintText: 'Укажите пожелания к заказу (необязательно)',
-              hintStyle: TextStyle(color: AppColors.textSecondary),
+              hintText: 'Например: позвонить за час до доставки',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.primaryLight, width: 2),
               ),
             ),
+            maxLines: 3,
+            onChanged: (value) => _notes = value,
           ),
         ],
       ),
     );
   }
 
-  // Карточка итоговой суммы
-  Widget _buildOrderSummaryCard(CartProvider cartProvider) {
+  Widget _buildTotalCard(CartProvider cartProvider) {
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.aurora1.withOpacity(0.1),
-            AppColors.aurora2.withOpacity(0.1),
+            AppColors.primaryLight.withOpacity(0.1),
+            AppColors.aurora2.withOpacity(0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.aurora1.withOpacity(0.3),
+          color: AppColors.primaryLight.withOpacity(0.3),
+          width: 2,
         ),
       ),
       child: Row(
@@ -645,94 +389,73 @@ class _CheckoutScreenState extends State<CheckoutScreen>
             'Итого к оплате:',
             style: TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: cartProvider.totalAmount),
-            duration: Duration(milliseconds: 500),
-            builder: (context, value, child) {
-              return ShaderMask(
-                shaderCallback: (bounds) =>
-                    AppGradients.aurora.createShader(bounds),
-                child: Text(
-                  '${value.toStringAsFixed(0)}₽',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              );
-            },
+          Text(
+            '${cartProvider.totalAmount.toStringAsFixed(0)} ₽',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primaryLight,
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Кнопка оформления
   Widget _buildCheckoutButton(CartProvider cartProvider) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: AppColors.shadowMedium,
+            color: AppColors.shadowLight,
             blurRadius: 10,
-            offset: Offset(0, -4),
+            offset: Offset(0, -2),
           ),
         ],
       ),
-      child: SafeArea(
-        top: false,
-        child: Container(
-          height: 56,
-          decoration: BoxDecoration(
-            gradient: _isProcessing ? null : AppGradients.button,
-            color: _isProcessing ? Colors.grey : null,
+      child: Container(
+        width: double.infinity,
+        height: 56,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: _isProcessing ? null : AppGradients.primary,
+          color: _isProcessing ? Colors.grey[300] : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryLight.withOpacity(0.3),
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: _isProcessing ? null : _createOrder,
-              borderRadius: BorderRadius.circular(16),
-              child: Center(
-                child: _isProcessing
-                    ? SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.payment, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text(
-                            'Оформить заказ',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
+            onTap: _isProcessing ? null : _createOrder,
+            child: Center(
+              child: _isProcessing
+                  ? SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
-              ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.payment, color: Colors.white, size: 28),
+                        SizedBox(width: 12),
+                        Text(
+                          'Перейти к оплате',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ),

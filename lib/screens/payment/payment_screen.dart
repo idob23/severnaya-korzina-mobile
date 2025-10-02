@@ -1,7 +1,8 @@
-// lib/screens/payment/payment_screen.dart - УЛУЧШЕННАЯ ВЕРСИЯ с визуальными эффектами
+// lib/screens/payment/payment_screen.dart - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// УБРАНО ДВОЙНОЕ СОЗДАНИЕ ЗАКАЗА
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Добавлено для HapticFeedback
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../models/user.dart';
 import '../../providers/cart_provider.dart';
@@ -11,7 +12,6 @@ import 'payment_service.dart';
 import 'universal_payment_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-// Добавляем импорты дизайн-системы
 import '../../design_system/colors/app_colors.dart';
 import '../../design_system/colors/gradients.dart';
 
@@ -30,7 +30,6 @@ class _PaymentScreenState extends State<PaymentScreen>
   bool _isProcessing = false;
   String? _currentPaymentId;
 
-  // Добавляем анимации
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
@@ -39,7 +38,6 @@ class _PaymentScreenState extends State<PaymentScreen>
   void initState() {
     super.initState();
 
-    // Инициализация анимаций
     _animationController = AnimationController(
       duration: Duration(milliseconds: 800),
       vsync: this,
@@ -70,478 +68,168 @@ class _PaymentScreenState extends State<PaymentScreen>
   @override
   Widget build(BuildContext context) {
     final double amount = widget.orderData['totalAmount'] ?? 0.0;
-    final authProvider = Provider.of<AuthProvider>(context);
-    final user = authProvider.currentUser;
 
     return Scaffold(
-      // Градиентный фон
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.background,
-              AppColors.ice,
-              AppColors.aurora3.withOpacity(0.05),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Премиум AppBar с градиентом
-              Container(
-                decoration: BoxDecoration(
-                  gradient: AppGradients.primary,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryLight.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: Offset(0, 5),
-                    ),
-                  ],
-                ),
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.arrow_back_ios_rounded,
-                          color: Colors.white),
-                      onPressed: () {
-                        HapticFeedback.lightImpact();
-                        Navigator.pop(context);
-                      },
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Оплата заказа',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    SizedBox(width: 48), // Баланс для центровки
-                  ],
-                ),
-              ),
-
-              // Контент с анимацией
-              Expanded(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: SingleChildScrollView(
-                              physics: BouncingScrollPhysics(),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  SizedBox(height: 16),
-                                  _buildOrderSummary(amount),
-                                  SizedBox(height: 20),
-                                  _buildPaymentMethod(),
-                                  SizedBox(height: 20),
-                                  _buildSecurityInfo(),
-                                ],
-                              ),
-                            ),
-                          ),
-                          _buildPaymentButton(amount, user),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOrderSummary(double amount) {
-    return TweenAnimationBuilder<double>(
-      duration: Duration(milliseconds: 1000),
-      tween: Tween(begin: 0, end: amount),
-      builder: (context, value, child) {
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.success.withOpacity(0.1),
-                AppColors.aurora2.withOpacity(0.05),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: AppColors.success.withOpacity(0.3),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.success.withOpacity(0.1),
-                blurRadius: 20,
-                offset: Offset(0, 10),
-              ),
-              BoxShadow(
-                color: AppColors.aurora2.withOpacity(0.05),
-                blurRadius: 30,
-                offset: Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Card(
-            color: Colors.transparent,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          gradient: AppGradients.success,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.receipt_long_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Text(
-                        'К оплате',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Итого к оплате:',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 16,
-                        ),
-                      ),
-                      // Анимированная сумма с градиентом
-                      ShaderMask(
-                        shaderCallback: (bounds) =>
-                            AppGradients.success.createShader(bounds),
-                        child: Text(
-                          '${value.toStringAsFixed(0)} ₽',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.success.withOpacity(0.2),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline_rounded,
-                          size: 16,
-                          color: AppColors.success,
-                        ),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Полная оплата заказа. Товары будут готовы к получению после доставки.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildPaymentMethod() {
-    return AnimatedContainer(
-      duration: Duration(milliseconds: 300),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 10,
-            offset: Offset(0, 5),
-          ),
-          BoxShadow(
-            color: AppColors.aurora1.withOpacity(0.05),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Card(
-        color: Colors.transparent,
+      appBar: AppBar(
+        title: Text('Оплата заказа'),
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: AppGradients.primary,
+          ),
         ),
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: AppGradients.button,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.credit_card_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    'Способ оплаты',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
+      ),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.primaryLight.withOpacity(0.05),
+                  Colors.white,
                 ],
               ),
-              SizedBox(height: 16),
-              Container(
-                padding: EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.success.withOpacity(0.1),
-                      AppColors.aurora2.withOpacity(0.05),
-                    ],
-                  ),
-                  border: Border.all(
-                    color: AppColors.success,
-                    width: 2,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
+            ),
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      padding: EdgeInsets.all(4),
+                      width: 140,
+                      height: 140,
                       decoration: BoxDecoration(
-                        color: AppColors.success,
+                        gradient: AppGradients.primary,
                         shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Банковская карта или СБП',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'МИР, Visa, Mastercard',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primaryLight.withOpacity(0.3),
+                            blurRadius: 20,
+                            spreadRadius: 5,
                           ),
                         ],
                       ),
+                      child: Icon(
+                        Icons.payment_rounded,
+                        size: 70,
+                        color: Colors.white,
+                      ),
                     ),
-                    Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 16,
-                      color: AppColors.success,
+                    SizedBox(height: 40),
+                    Text(
+                      'Сумма к оплате',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
+                    SizedBox(height: 12),
+                    Text(
+                      '${amount.toStringAsFixed(0)} ₽',
+                      style: TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        foreground: Paint()
+                          ..shader = AppGradients.primary.createShader(
+                            Rect.fromLTWH(0, 0, 200, 70),
+                          ),
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      'Оплата через Точка Банк',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildPaymentBadge('СБП'),
+                        SizedBox(width: 12),
+                        _buildPaymentBadge('Банковская карта'),
+                      ],
+                    ),
+                    SizedBox(height: 48),
+                    _buildPaymentButton(amount),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSecurityInfo() {
+  Widget _buildPaymentBadge(String text) {
     return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.info.withOpacity(0.1),
-            AppColors.aurora1.withOpacity(0.05),
-          ],
-        ),
+        color: AppColors.primaryLight.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.info.withOpacity(0.3),
+          color: AppColors.primaryLight.withOpacity(0.3),
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.info.withOpacity(0.1),
-            blurRadius: 15,
-            offset: Offset(0, 5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.check_circle,
+            size: 16,
+            color: AppColors.primaryLight,
+          ),
+          SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.primaryLight,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
-      child: Card(
-        color: Colors.transparent,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  gradient: AppGradients.button,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryLight.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.security_rounded,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Безопасная оплата',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Безопасный платёж через Точка Банк',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
-  Widget _buildPaymentButton(double amount, User? user) {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 16),
-      child: SizedBox(
-        width: double.infinity,
-        height: 60,
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: 200),
+  Widget _buildPaymentButton(double amount) {
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        final user = authProvider.currentUser;
+
+        return Container(
+          width: double.infinity,
+          height: 60,
           decoration: BoxDecoration(
-            gradient: _isProcessing ? null : AppGradients.success,
-            color: _isProcessing ? Colors.grey[400] : null,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
+            gradient: _isProcessing ? null : AppGradients.primary,
+            color: _isProcessing ? Colors.grey[300] : null,
             boxShadow: _isProcessing
                 ? []
                 : [
                     BoxShadow(
-                      color: AppColors.success.withOpacity(0.4),
+                      color: AppColors.primaryLight.withOpacity(0.4),
                       blurRadius: 20,
-                      offset: Offset(0, 10),
-                    ),
-                    BoxShadow(
-                      color: AppColors.aurora2.withOpacity(0.3),
-                      blurRadius: 30,
-                      offset: Offset(0, 5),
+                      offset: Offset(0, 8),
                     ),
                   ],
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               onTap: _isProcessing
                   ? null
                   : () {
@@ -587,12 +275,12 @@ class _PaymentScreenState extends State<PaymentScreen>
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  // ВСЕ ОСТАЛЬНЫЕ МЕТОДЫ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ
+  // ✅ ИСПРАВЛЕННАЯ ЛОГИКА: НЕ СОЗДАЕМ ЗАКАЗ ПОВТОРНО!
   Future<void> _startPayment(User? user) async {
     if (_isProcessing) return;
 
@@ -626,53 +314,42 @@ class _PaymentScreenState extends State<PaymentScreen>
           activeBatchId = data['batch']?['id'];
         }
       } catch (e) {
-        print('Ошибка получения активной партии: $e');
+        print('⚠️ Ошибка получения активной партии: $e');
       }
 
-      // Создаем заказ на бэкенде
-      final orderResponse = await http.post(
-        Uri.parse('http://84.201.149.245:3000/api/orders'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({
-          'items': items,
-          'addressId': addressId,
-          'notes': notes,
-        }),
-      );
+      // ✅ ГЛАВНОЕ ИСПРАВЛЕНИЕ:
+      // Передаем orderId с префиксом ORDER_ + данные для создания заказа
+      // Backend сам создаст заказ ОДИН РАЗ в payments.js
+      final orderId = 'ORDER_${DateTime.now().millisecondsSinceEpoch}';
 
-      if (orderResponse.statusCode != 201) {
-        throw Exception('Не удалось создать заказ');
-      }
+      print('📦 Создаем платеж с orderId: $orderId');
+      print('📦 Items для создания заказа: ${items?.length ?? 0}');
 
-      final orderData = json.decode(orderResponse.body);
-      final orderId = orderData['order']?['id'];
-
-      if (orderId == null) {
-        throw Exception('Не получен ID заказа');
-      }
-
-      // Создаем платеж
+      // Создаем платеж, передавая ВСЕ данные для создания заказа
       final paymentResult = await _paymentService.createPayment(
         amount: amount,
-        orderId: orderId.toString(),
+        orderId: orderId, // ✅ ORDER_ префикс - backend создаст заказ
         customerPhone: user?.phone ?? '',
         customerName: user?.fullName ?? 'Клиент',
         batchId: activeBatchId,
+        addressId: addressId,
+        orderItems: items, // ✅ Используем orderItems вместо items
+        notes: notes,
         token: token,
       );
 
       if (paymentResult.success && paymentResult.paymentId != null) {
         _currentPaymentId = paymentResult.paymentId;
 
+        print('✅ Платеж создан: ${paymentResult.paymentId}');
+        print('✅ Реальный ID заказа: ${paymentResult.realOrderId}');
+
         if (paymentResult.confirmationUrl != null) {
           _openPaymentWebView(
             paymentResult.confirmationUrl!,
             paymentResult.paymentId!,
-            orderId.toString(),
-            true,
+            paymentResult.realOrderId ?? orderId, // ✅ Используем realOrderId
+            paymentResult.orderCreated,
           );
         } else {
           _showError('Не получена ссылка для оплаты');
@@ -681,6 +358,7 @@ class _PaymentScreenState extends State<PaymentScreen>
         _showError(paymentResult.message ?? 'Ошибка создания платежа');
       }
     } catch (e) {
+      print('❌ Ошибка в _startPayment: $e');
       _showError('Ошибка: $e');
     } finally {
       if (mounted) {
@@ -701,6 +379,8 @@ class _PaymentScreenState extends State<PaymentScreen>
           paymentId: paymentId,
           orderId: orderId,
           orderCreated: orderCreated,
+          orderData:
+              widget.orderData, // ✅ Передаем orderData для восстановления
         ),
       ),
     );
@@ -758,31 +438,41 @@ class _PaymentScreenState extends State<PaymentScreen>
                 message,
                 textAlign: TextAlign.center,
                 style: TextStyle(
+                  fontSize: 14,
                   color: AppColors.textSecondary,
-                  height: 1.4,
+                  height: 1.5,
                 ),
               ),
               SizedBox(height: 24),
-              SizedBox(
+              Container(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    Navigator.pop(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.error,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                height: 48,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.error,
+                      AppColors.error.withOpacity(0.8),
+                    ],
                   ),
-                  child: Text(
-                    'Понятно',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.of(context).pop();
+                    },
+                    child: Center(
+                      child: Text(
+                        'Понятно',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
                 ),
