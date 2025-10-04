@@ -426,17 +426,21 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
       if (items != null && items.isNotEmpty) {
         print('🔄 Восстанавливаем ${items.length} товаров в корзину');
 
-        // ✅ Корзина уже очищена в checkout_screen, просто добавляем товары
         for (var item in items) {
           final productId = item['productId'] as int;
           final quantity = item['quantity'] as int;
-          final price = item['price'] as double;
 
-          // Используем сохраненные name и unit из orderData
+          // ✅ ИСПРАВЛЕНО: Безопасное преобразование price
+          final priceValue = item['price'];
+          final price = priceValue is double
+              ? priceValue
+              : (priceValue is int
+                  ? priceValue.toDouble()
+                  : double.parse(priceValue.toString()));
+
           final name = item['name'] as String? ?? 'Товар #$productId';
           final unit = item['unit'] as String? ?? 'шт';
 
-          // Добавляем товар обратно в корзину
           cartProvider.addItem(
             productId: productId,
             name: name,
@@ -450,6 +454,7 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
       }
     } catch (e) {
       print('❌ Ошибка восстановления корзины: $e');
+      print('❌ Детали ошибки: $e');
     }
   }
 
