@@ -154,9 +154,16 @@ class _ProfileScreenState extends State<ProfileScreen>
         _apiService.setAuthToken(authProvider.token);
       }
 
+      print('🔄 Запрашиваем активную партию...'); // ✅ ДОБАВЬ
+
       final response = await _apiService.getActiveBatch();
 
+      print('📦 Ответ API: $response'); // ✅ ДОБАВЬ
+
       if (response['success'] == true && response['batch'] != null) {
+        print('✅ Партия получена:'); // ✅ ДОБАВЬ
+        print('   ID: ${response['batch']['id']}'); // ✅ ДОБАВЬ
+        print('   Title: ${response['batch']['title']}'); // ✅ ДОБАВЬ
         setState(() {
           _batchData = response['batch'];
           _isLoadingBatch = false;
@@ -847,12 +854,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Закупка #${_batchData!['id']}',
+                        _batchData!['title'] ?? 'Закупка #${_batchData!['id']}',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
                         ),
+                        maxLines: 1, // ✅ ДОБАВЬ чтобы не переносилось
+                        overflow: TextOverflow
+                            .ellipsis, // ✅ ДОБАВЬ троеточие если длинное
                       ),
                       Text(
                         '${_formatCurrency((_batchData!['currentAmount'] ?? 0).toInt())} из ${_formatCurrency((_batchData!['targetAmount'] ?? 0).toInt())}',
