@@ -6,7 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 class PaymentService {
   // Backend API endpoint (Точка Банк)
-  static const String _baseUrl = 'http://84.201.149.245:3000';
+  // static const String _baseUrl = 'http://84.201.149.245:3000';
+  static const String _baseUrl = 'https://api.sevkorzina.ru';
 
   /// Создание платежа через backend (Точка Банк)
   Future<PaymentResult> createPayment({

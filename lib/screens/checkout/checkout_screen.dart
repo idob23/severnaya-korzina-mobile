@@ -27,6 +27,7 @@ class _CheckoutScreenState extends State<CheckoutScreen>
   bool _isProcessing = false;
   double _marginPercent = 50.0;
   bool _isLoadingMargin = true;
+  bool _hasLoadedMargin = false; // ← ДОБАВИТЬ
 
   final TextEditingController _notesController = TextEditingController();
 
@@ -46,13 +47,23 @@ class _CheckoutScreenState extends State<CheckoutScreen>
       curve: Curves.easeIn,
     );
     _animationController.forward();
+  }
 
-    _loadMarginPercent(); // ✅ НОВОЕ
+  // ✨ ДОБАВИТЬ ЭТОТ МЕТОД:
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasLoadedMargin) {
+      _loadMarginPercent();
+      _hasLoadedMargin = true;
+    }
   }
 
   // ДОБАВЬТЕ этот метод:
   Future<void> _loadMarginPercent() async {
     try {
+      print('🔄 Загружаем маржу из активной партии...');
+
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final token = authProvider.token;
 
@@ -66,12 +77,16 @@ class _CheckoutScreenState extends State<CheckoutScreen>
 
       if (batchResponse.statusCode == 200 && mounted) {
         final batchData = json.decode(batchResponse.body);
+        final newMargin = double.tryParse(
+                batchData['batch']?['marginPercent']?.toString() ?? '50') ??
+            50.0;
+
         setState(() {
-          _marginPercent = double.tryParse(
-                  batchData['batch']?['marginPercent']?.toString() ?? '50') ??
-              50.0;
+          _marginPercent = newMargin;
           _isLoadingMargin = false;
         });
+
+        print('✅ Маржа загружена: $_marginPercent%'); // ← ДОБАВИТЬ ЛОГ
       }
     } catch (e) {
       print('⚠️ Ошибка получения маржи: $e');

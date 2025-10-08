@@ -250,6 +250,8 @@ class OrderDetailsScreen extends StatelessWidget {
                 'Заказ оплачен, готовится к отправке',
                 style: TextStyle(
                     color: Colors.green[700], fontWeight: FontWeight.bold),
+                maxLines: 2, // ← Разрешить перенос на 2 строки
+                overflow: TextOverflow.ellipsis, // ← Обрезка если не влезает
               ),
             ],
           ),

@@ -246,6 +246,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         child: CircularProgressIndicator(color: AppColors.primaryLight),
       ),
     );
+    await _loadActiveBatch();
 
     final updateService = UpdateService();
     final updateInfo = await updateService.checkForUpdate(); // БЕЗ ПАРАМЕТРОВ!

@@ -12,7 +12,8 @@ class ApiService {
   // URL вашего сервера в Yandex Cloud
   static String get baseUrl {
     // ВСЕГДА используем продакшен сервер
-    return 'http://84.201.149.245:3000/api';
+    // return 'http://84.201.149.245:3000/api';
+    return 'https://api.sevkorzina.ru/api';
   }
 
   // Singleton паттерн

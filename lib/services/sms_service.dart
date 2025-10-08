@@ -6,7 +6,8 @@ import 'package:flutter/foundation.dart';
 
 class SMSService {
   // Используем наш backend как прокси для SMS
-  static const String _baseUrl = 'http://84.201.149.245:3000/api';
+  // static const String _baseUrl = 'http://84.201.149.245:3000/api';
+  static const String _baseUrl = 'https://api.sevkorzina.ru/api';
 
   final Dio _dio = Dio(BaseOptions(
     connectTimeout: Duration(seconds: 30),

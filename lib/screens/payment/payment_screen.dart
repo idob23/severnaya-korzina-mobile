@@ -302,7 +302,8 @@ class _PaymentScreenState extends State<PaymentScreen>
       int? activeBatchId;
       try {
         final response = await http.get(
-          Uri.parse('http://84.201.149.245:3000/api/batches/active'),
+          // Uri.parse('http://84.201.149.245:3000/api/batches/active'),
+          Uri.parse('https://api.sevkorzina.ru/api/batches/active'),
           headers: {
             'Authorization': 'Bearer $token',
             'Content-Type': 'application/json',
