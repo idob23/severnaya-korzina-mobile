@@ -3,6 +3,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 
 class PaymentService {
   // Backend API endpoint (Точка Банк)
@@ -42,6 +44,7 @@ class PaymentService {
           'items': orderItems ?? [],
           'notes': notes,
           'batchId': batchId,
+          'platform': _getPlatform(),
         }),
       );
 
@@ -128,6 +131,14 @@ class PaymentService {
     } catch (e) {
       return false;
     }
+  }
+
+  // В КЛАССЕ PaymentService, ДОБАВЬ МЕТОД:
+  String _getPlatform() {
+    if (kIsWeb) return 'web';
+    if (Platform.isAndroid) return 'android';
+    if (Platform.isIOS) return 'ios';
+    return 'unknown';
   }
 }
 
