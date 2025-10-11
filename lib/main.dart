@@ -745,12 +745,10 @@ class _AppInitializerState extends State<AppInitializer> {
       // НОВОЕ: Сначала проверяем незавершенные обновления
       await updateService.checkPendingUpdate(context);
 
-      final updateInfo = await updateService.checkForUpdate(silent: true);
+      final updateInfo = await updateService.checkForUpdate();
 
       if (updateInfo != null && mounted) {
-        if (await updateService.shouldShowUpdateDialog()) {
-          updateService.showUpdateDialog(context, updateInfo);
-        }
+        updateService.showUpdateDialog(context, updateInfo);
       }
     } catch (e) {
       print('Ошибка проверки обновлений: $e');

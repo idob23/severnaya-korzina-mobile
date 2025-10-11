@@ -818,9 +818,7 @@ class UpdateService {
 
   // Упрощенный метод - всегда показываем диалог если есть обновление
   Future<bool> shouldShowUpdateDialog() async {
-    print(
-        '🔍 shouldShowUpdateDialog: обновление ${_availableUpdate != null ? "доступно" : "недоступно"}');
-    return _availableUpdate != null;
+    return true;
   }
 }
 
