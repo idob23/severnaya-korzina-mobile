@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Добавлен для HapticFeedback
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -18,7 +19,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   String _appVersion = '';
 
   static const String WHATSAPP_GROUP_LINK =
@@ -39,6 +40,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
+    print('🟢 initState: Регистрируем observer');
+    WidgetsBinding.instance.addObserver(this);
+    print('🟢 initState: Observer зарегистрирован');
 
     _loadAppVersion();
 
@@ -90,6 +94,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   void dispose() {
+    print('🔴 dispose: Удаляем observer');
+    WidgetsBinding.instance.removeObserver(this);
     _progressAnimationController.dispose();
     _pulseAnimationController.dispose();
     _fadeController.dispose(); // Добавлено
@@ -253,22 +259,95 @@ class _ProfileScreenState extends State<ProfileScreen>
         child: CircularProgressIndicator(color: AppColors.primaryLight),
       ),
     );
-    await _loadActiveBatch();
 
-    final updateService = UpdateService();
-    final updateInfo = await updateService.checkForUpdate(); // БЕЗ ПАРАМЕТРОВ!
+    try {
+      print('🔍 === НАЧАЛО ПРОВЕРКИ ОБНОВЛЕНИЙ ===');
 
-    if (mounted) Navigator.of(context).pop();
+      final updateService = UpdateService();
 
-    if (updateInfo != null && mounted) {
-      updateService.showUpdateDialog(context, updateInfo);
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('У вас последняя версия приложения'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // Выводим информацию о текущей версии
+      print('📱 Текущая версия: ${updateService.currentVersion}');
+      print('📱 Build number: ${updateService.currentBuildNumber}');
+      print('🌐 Base URL: ${updateService.baseUrl}');
+      print('🌐 Полный URL запроса: ${updateService.baseUrl}/api/app/version');
+
+      await _loadActiveBatch();
+
+      // Проверяем сохраненное обновление
+      final prefs = await SharedPreferences.getInstance();
+      final pendingVersion = prefs.getString('pending_update_version');
+      if (pendingVersion != null) {
+        print('📦 Найдено сохраненное обновление: $pendingVersion');
+      }
+
+      print('📡 Отправляем запрос на сервер...');
+      final updateInfo = await updateService.checkForUpdate();
+
+      if (mounted) Navigator.of(context).pop();
+
+      if (updateInfo != null) {
+        print('✅ ОБНОВЛЕНИЕ ДОСТУПНО!');
+        print('📦 Новая версия: ${updateInfo.latestVersion}');
+        print('📦 URL скачивания: ${updateInfo.downloadUrl}');
+        print('📦 Размер: ${updateInfo.sizeMb} MB');
+
+        if (mounted) {
+          updateService.showUpdateDialog(context, updateInfo);
+        }
+      } else {
+        print('❌ Обновлений не найдено');
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('У вас последняя версия приложения'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+
+      print('🔍 === КОНЕЦ ПРОВЕРКИ ОБНОВЛЕНИЙ ===');
+    } catch (e, stackTrace) {
+      print('❌ ОШИБКА при проверке обновлений: $e');
+      print('Stack trace: $stackTrace');
+
+      if (mounted) {
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка проверки: $e'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    print('🔄 ЛЮБОЕ изменение состояния: $state');
+    if (state == AppLifecycleState.resumed) {
+      print('🔄 Приложение вернулось на передний план');
+      _checkSavedUpdate();
+    }
+  }
+
+  Future<void> _checkSavedUpdate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final pendingVersion = prefs.getString('pending_update_version');
+
+    if (pendingVersion != null && mounted) {
+      print('📦 Восстанавливаем диалог обновления для версии $pendingVersion');
+
+      final updateService = UpdateService();
+      final updateInfo = await updateService.checkForUpdate();
+
+      if (updateInfo != null && mounted) {
+        updateService.showUpdateDialog(context, updateInfo);
+      }
     }
   }
 

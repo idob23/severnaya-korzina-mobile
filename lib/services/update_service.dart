@@ -211,6 +211,12 @@ class UpdateService {
   // Упрощенный диалог - только кнопка "Обновить"
   Future<void> showUpdateDialog(
       BuildContext context, UpdateInfo updateInfo) async {
+    // ⬇️ ВСТАВИТЬ СЮДА
+    print('💾 Сохраняем информацию об обновлении...');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('pending_update_version', updateInfo.latestVersion);
+    await prefs.setString('pending_update_url', updateInfo.downloadUrl);
+    // ⬆️ КОНЕЦ ВСТАВКИ
     await showDialog(
       context: context,
       barrierDismissible: false, // Нельзя закрыть по клику вне диалога
@@ -408,37 +414,48 @@ class UpdateService {
     UpdateInfo updateInfo,
   ) async {
     if (_isDownloading) {
-      print('⚠️ Загрузка уже в процессе, игнорируем повторное нажатие');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Обновление уже загружается...'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
+      print('⚠️ Сбрасываем флаг загрузки');
+      _isDownloading = false;
     }
 
-    _isDownloading = true; // Устанавливаем флаг
+    _isDownloading = true;
+    print('🔽 Начинаем загрузку обновления...');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('pending_update_version', updateInfo.latestVersion);
+    await prefs.setString('pending_update_url', updateInfo.downloadUrl);
+    print('💾 Сохранили информацию об обновлении');
     // Проверяем разрешение на установку
     if (Platform.isAndroid) {
+      print('🔐 Проверяем разрешения...');
       final status = await Permission.requestInstallPackages.status;
+      print('🔐 Статус разрешения: $status');
+
       if (!status.isGranted) {
+        print('🔐 Запрашиваем разрешение...');
         final result = await Permission.requestInstallPackages.request();
+        print('🔐 Результат запроса: $result');
+
         if (!result.isGranted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'Разрешите установку из неизвестных источников в настройках'),
-              duration: Duration(seconds: 5),
-              action: SnackBarAction(
-                label: 'Открыть настройки',
-                onPressed: () => openAppSettings(),
+          _isDownloading = false;
+          print('❌ Разрешение не получено');
+
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Разрешите установку из неизвестных источников'),
+                action: SnackBarAction(
+                  label: 'Настройки',
+                  onPressed: () => openAppSettings(),
+                ),
               ),
-            ),
-          );
+            );
+          }
           return;
+        } else {
+          print('✅ Разрешение уже есть!');
         }
       }
+      print('📥 Переходим к загрузке APK...');
     }
 
     // ВАЖНО: Очищаем старые APK перед загрузкой новой версии
