@@ -11,9 +11,10 @@ import 'package:url_launcher/url_launcher.dart';
 class ApiService {
   // URL вашего сервера в Yandex Cloud
   static String get baseUrl {
-    // ВСЕГДА используем продакшен сервер
-    // return 'http://84.201.149.245:3000/api';
-    return 'https://api.sevkorzina.ru/api';
+    // Тут может быть проблема
+    return kIsWeb
+        ? 'https://api.sevkorzina.ru/api' // ← Проверь этот URL
+        : 'http://84.201.149.245:3000/api';
   }
 
   // Singleton паттерн
