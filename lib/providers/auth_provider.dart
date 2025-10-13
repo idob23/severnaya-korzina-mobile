@@ -111,6 +111,12 @@ class AuthProvider with ChangeNotifier {
                 _isAuthenticated = true;
                 await _saveUserToPrefs(_currentUser!);
 
+                // Между ними вставить:
+                if (_currentUser?.phone != null) {
+                  await prefs.setString('user_phone', _currentUser!.phone);
+                  print('📱 [WEB] Сохранен номер: ${_currentUser!.phone}');
+                }
+
                 print('✅ Web user authenticated from saved session');
               } else {
                 throw Exception('Invalid token');

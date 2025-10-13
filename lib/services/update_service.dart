@@ -211,12 +211,12 @@ class UpdateService {
   // Упрощенный диалог - только кнопка "Обновить"
   Future<void> showUpdateDialog(
       BuildContext context, UpdateInfo updateInfo) async {
-    // ⬇️ ВСТАВИТЬ СЮДА
-    print('💾 Сохраняем информацию об обновлении...');
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('pending_update_version', updateInfo.latestVersion);
-    await prefs.setString('pending_update_url', updateInfo.downloadUrl);
-    // ⬆️ КОНЕЦ ВСТАВКИ
+    // // ⬇️ ВСТАВИТЬ СЮДА
+    // print('💾 Сохраняем информацию об обновлении...');
+    // final prefs = await SharedPreferences.getInstance();
+    // await prefs.setString('pending_update_version', updateInfo.latestVersion);
+    // await prefs.setString('pending_update_url', updateInfo.downloadUrl);
+    // // ⬆️ КОНЕЦ ВСТАВКИ
     await showDialog(
       context: context,
       barrierDismissible: false, // Нельзя закрыть по клику вне диалога
@@ -625,83 +625,109 @@ class UpdateService {
     await prefs.remove('pending_update_time');
   }
 
-  // НОВЫЙ МЕТОД: Проверка незавершенных обновлений
   Future<void> checkPendingUpdate(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    final pendingPath = prefs.getString('pending_update_path');
     final pendingVersion = prefs.getString('pending_update_version');
-    final pendingTime = prefs.getString('pending_update_time');
+    final pendingUrl = prefs.getString('pending_update_url');
 
-    if (pendingPath != null && pendingVersion != null) {
-      final file = File(pendingPath);
+    if (pendingVersion != null && pendingUrl != null) {
+      print('📦 Найдено незавершенное обновление: версия $pendingVersion');
 
-      // Проверяем, что файл существует и не слишком старый (24 часа)
-      if (await file.exists()) {
-        bool shouldShowResume = true;
+      try {
+        final updateInfo = await checkForUpdate();
 
-        if (pendingTime != null) {
-          final savedTime = DateTime.parse(pendingTime);
-          final hoursSinceDownload =
-              DateTime.now().difference(savedTime).inHours;
-          if (hoursSinceDownload > 24) {
-            // Если прошло больше 24 часов, удаляем файл
-            await file.delete();
-            await _clearPendingUpdateInfo();
-            shouldShowResume = false;
-          }
+        if (updateInfo != null &&
+            updateInfo.latestVersion == pendingVersion &&
+            context.mounted) {
+          print('✅ Показываем диалог обновления заново');
+          showUpdateDialog(context, updateInfo);
+        } else {
+          print('⚠️ Сохраненное обновление больше не актуально, очищаем');
+          await _clearPendingUpdateInfo();
         }
-
-        if (shouldShowResume && context.mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Text('Незавершенное обновление'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.download_done, color: Colors.blue, size: 48),
-                  SizedBox(height: 16),
-                  Text(
-                      'Обновление версии $pendingVersion было загружено ранее.'),
-                  SizedBox(height: 8),
-                  Text('Хотите установить его сейчас?'),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () async {
-                    Navigator.of(context).pop();
-                    await file.delete();
-                    await _clearPendingUpdateInfo();
-                  },
-                  child: Text('Удалить'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    Navigator.of(context).pop();
-                    final result = await OpenFile.open(
-                      pendingPath,
-                      type: 'application/vnd.android.package-archive',
-                    );
-
-                    if (result.type != ResultType.done && context.mounted) {
-                      _showManualInstallDialog(
-                          context, pendingPath, pendingPath.split('/').last);
-                    }
-                  },
-                  child: Text('Установить'),
-                ),
-              ],
-            ),
-          );
-        }
-      } else {
-        // Файл не существует, очищаем информацию
-        await _clearPendingUpdateInfo();
+      } catch (e) {
+        print('❌ Ошибка проверки pending update: $e');
       }
     }
   }
+
+  // // НОВЫЙ МЕТОД: Проверка незавершенных обновлений
+  // Future<void> checkPendingUpdate(BuildContext context) async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final pendingPath = prefs.getString('pending_update_path');
+  //   final pendingVersion = prefs.getString('pending_update_version');
+  //   final pendingTime = prefs.getString('pending_update_time');
+
+  //   if (pendingPath != null && pendingVersion != null) {
+  //     final file = File(pendingPath);
+
+  //     // Проверяем, что файл существует и не слишком старый (24 часа)
+  //     if (await file.exists()) {
+  //       bool shouldShowResume = true;
+
+  //       if (pendingTime != null) {
+  //         final savedTime = DateTime.parse(pendingTime);
+  //         final hoursSinceDownload =
+  //             DateTime.now().difference(savedTime).inHours;
+  //         if (hoursSinceDownload > 24) {
+  //           // Если прошло больше 24 часов, удаляем файл
+  //           await file.delete();
+  //           await _clearPendingUpdateInfo();
+  //           shouldShowResume = false;
+  //         }
+  //       }
+
+  //       if (shouldShowResume && context.mounted) {
+  //         showDialog(
+  //           context: context,
+  //           builder: (context) => AlertDialog(
+  //             title: Text('Незавершенное обновление'),
+  //             content: Column(
+  //               mainAxisSize: MainAxisSize.min,
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 Icon(Icons.download_done, color: Colors.blue, size: 48),
+  //                 SizedBox(height: 16),
+  //                 Text(
+  //                     'Обновление версии $pendingVersion было загружено ранее.'),
+  //                 SizedBox(height: 8),
+  //                 Text('Хотите установить его сейчас?'),
+  //               ],
+  //             ),
+  //             actions: [
+  //               TextButton(
+  //                 onPressed: () async {
+  //                   Navigator.of(context).pop();
+  //                   await file.delete();
+  //                   await _clearPendingUpdateInfo();
+  //                 },
+  //                 child: Text('Удалить'),
+  //               ),
+  //               ElevatedButton(
+  //                 onPressed: () async {
+  //                   Navigator.of(context).pop();
+  //                   final result = await OpenFile.open(
+  //                     pendingPath,
+  //                     type: 'application/vnd.android.package-archive',
+  //                   );
+
+  //                   if (result.type != ResultType.done && context.mounted) {
+  //                     _showManualInstallDialog(
+  //                         context, pendingPath, pendingPath.split('/').last);
+  //                   }
+  //                 },
+  //                 child: Text('Установить'),
+  //               ),
+  //             ],
+  //           ),
+  //         );
+  //       }
+  //     } else {
+  //       // Файл не существует, очищаем информацию
+  //       await _clearPendingUpdateInfo();
+  //     }
+  //   }
+  // }
 
   void _showManualInstallDialog(
       BuildContext context, String filePath, String fileName) {
