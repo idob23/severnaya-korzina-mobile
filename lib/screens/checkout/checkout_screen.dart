@@ -68,7 +68,7 @@ class _CheckoutScreenState extends State<CheckoutScreen>
       final token = authProvider.token;
 
       final batchResponse = await http.get(
-        Uri.parse('http://84.201.149.245:3000/api/batches/active'),
+        Uri.parse('https://api.sevkorzina.ru/api/batches/active'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -77,6 +77,16 @@ class _CheckoutScreenState extends State<CheckoutScreen>
 
       if (batchResponse.statusCode == 200 && mounted) {
         final batchData = json.decode(batchResponse.body);
+
+        // 🔍 ДЕБАГ: Смотрим что пришло с сервера
+        print('📦 ДЕБАГ: Полный ответ сервера:');
+        print(batchResponse.body);
+        print('📊 ДЕБАГ: batch объект: ${batchData['batch']}');
+        print(
+            '💰 ДЕБАГ: marginPercent значение: ${batchData['batch']?['marginPercent']}');
+        print(
+            '🔢 ДЕБАГ: тип данных: ${batchData['batch']?['marginPercent'].runtimeType}');
+
         final newMargin = double.tryParse(
                 batchData['batch']?['marginPercent']?.toString() ?? '50') ??
             50.0;

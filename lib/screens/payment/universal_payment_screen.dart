@@ -41,6 +41,7 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
   Timer? _autoRollbackTimer; // ✅ НОВОЕ: Таймер автоотмены
   bool _isChecking = false;
   bool _paymentCompleted = false; // ✅ НОВОЕ: Флаг завершения оплаты
+  bool _paymentCancelled = false; // ✅ НОВЫЙ флаг
   int _checkAttempts = 0;
   static const int _maxAttempts = 40;
   static const int _autoRollbackMinutes = 2; // ✅ Короче для Web
@@ -348,6 +349,13 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
 
   // ✅ НОВАЯ ЛОГИКА: Откат неоплаченного заказа
   Future<void> _handlePaymentCancelled() async {
+    // ✅ ЗАЩИТА ОТ ПОВТОРНОГО ВЫЗОВА
+    if (_paymentCancelled) {
+      print('⚠️ Отмена уже выполняется, пропускаем');
+      return;
+    }
+
+    _paymentCancelled = true; // ✅ Устанавливаем флаг
     print('❌ Платеж отменен или не завершен');
 
     // Останавливаем все таймеры
@@ -400,7 +408,7 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
       print('🗑️ Удаляем неоплаченный заказ #$orderId');
 
       final response = await http.delete(
-        Uri.parse('http://84.201.149.245:3000/api/orders/$orderId'),
+        Uri.parse('https://api.sevkorzina.ru/api/orders/$orderId'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
