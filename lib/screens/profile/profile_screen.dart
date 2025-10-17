@@ -157,6 +157,12 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      //✅ ДОБАВЬ ЛОГИ
+      print(
+          '🔑 Token: ${authProvider.token != null ? "ЕСТЬ (${authProvider.token!.substring(0, 20)}...)" : "НЕТ"}');
+      print('👤 User ID: ${authProvider.currentUser?.id}');
+
       if (authProvider.token != null) {
         _apiService.setAuthToken(authProvider.token);
       }
@@ -168,9 +174,16 @@ class _ProfileScreenState extends State<ProfileScreen>
       print('📦 Ответ API: $response'); // ✅ ДОБАВЬ
 
       if (response['success'] == true && response['batch'] != null) {
-        print('✅ Партия получена:'); // ✅ ДОБАВЬ
-        print('   ID: ${response['batch']['id']}'); // ✅ ДОБАВЬ
-        print('   Title: ${response['batch']['title']}'); // ✅ ДОБАВЬ
+        // ✅ ВАЖНО: ПРОВЕРЬ ЧТО ПРИХОДИТ
+        print('✅ Партия получена:');
+        print('   ID: ${response['batch']['id']}');
+        print('   Title: ${response['batch']['title']}');
+        print('   currentAmount: ${response['batch']['currentAmount']}');
+        print(
+            '   participantsCount: ${response['batch']['participantsCount']}');
+        print(
+            '   🎯 userContribution: ${response['batch']['userContribution']}'); // ← КЛЮЧЕВАЯ СТРОКА!
+
         setState(() {
           _batchData = response['batch'];
           _isLoadingBatch = false;
