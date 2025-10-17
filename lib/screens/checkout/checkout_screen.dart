@@ -133,6 +133,11 @@ class _CheckoutScreenState extends State<CheckoutScreen>
         throw Exception('Пользователь не авторизован');
       }
 
+      // ✅ КРИТИЧЕСКАЯ ПРОВЕРКА: Есть ли адрес у пользователя?
+      if (user == null || user.defaultAddress == null) {
+        throw Exception('Пожалуйста, добавьте адрес доставки в профиле');
+      }
+
       // ✅ ВАЖНО: Сохраняем все данные ДО перехода
       final double baseAmount = cartProvider.totalAmount;
       final double marginAmount = baseAmount * (_marginPercent / 100);
@@ -154,6 +159,12 @@ class _CheckoutScreenState extends State<CheckoutScreen>
       cartProvider.clearCart();
       print('🗑️ Корзина очищена перед переходом к оплате');
 
+      // ✅ ИСПРАВЛЕНИЕ: Используем реальный ID адреса пользователя
+      final realAddressId = user.defaultAddress!.id!;
+
+      print('📍 Используем адрес ID: $realAddressId');
+      print('📍 Адрес: ${user.defaultAddress!.address}');
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -162,7 +173,7 @@ class _CheckoutScreenState extends State<CheckoutScreen>
               'totalAmount': totalAmount,
               'items': items,
               'notes': _notes,
-              'addressId': 1,
+              'addressId': realAddressId,
               'deliveryTime': _selectedDeliveryTime,
             },
           ),

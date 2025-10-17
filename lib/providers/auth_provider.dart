@@ -558,6 +558,73 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Добавить новый адрес пользователя
+  Future<bool> addAddress({
+    required String title,
+    required String address,
+    bool isDefault = false,
+  }) async {
+    if (_currentUser == null) return false;
+
+    _isLoading = true;
+    _lastError = null;
+    notifyListeners();
+
+    try {
+      // Вызываем API для создания адреса
+      final result = await _apiService.addAddress(
+        title: title,
+        address: address,
+        isDefault: isDefault,
+      );
+
+      if (result['success'] == true) {
+        // Обновляем профиль пользователя, чтобы получить новый список адресов
+        await loadUserData();
+
+        if (kDebugMode) {
+          print('✅ Адрес успешно добавлен');
+        }
+        return true;
+      } else {
+        _lastError = result['error'] ?? 'Ошибка добавления адреса';
+        return false;
+      }
+    } catch (e) {
+      _lastError = 'Ошибка при добавлении адреса: $e';
+      if (kDebugMode) {
+        print('❌ Ошибка addAddress: $e');
+      }
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Загружает актуальные данные пользователя с сервера
+  Future<void> loadUserData() async {
+    if (!_isAuthenticated) return;
+
+    try {
+      final profileResult = await _apiService.getProfile();
+
+      if (profileResult['success'] == true && profileResult['user'] != null) {
+        _currentUser = User.fromJson(profileResult['user']);
+        await _saveUserToPrefs(_currentUser!);
+        notifyListeners();
+
+        if (kDebugMode) {
+          print('✅ Данные пользователя обновлены');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Ошибка загрузки данных пользователя: $e');
+      }
+    }
+  }
+
   /// Обновляет данные пользователя
   Future<bool> updateUserProfile({
     String? firstName,

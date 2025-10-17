@@ -12,6 +12,7 @@ import 'dart:math' as math;
 import 'package:severnaya_korzina/services/update_service.dart';
 import '../../design_system/colors/app_colors.dart'; // Добавлено
 import '../../design_system/colors/gradients.dart'; // Добавлено
+import 'add_address_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -1368,6 +1369,45 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  // Widget _buildSettingsCard(BuildContext context, AuthProvider authProvider) {
+  //   return Container(
+  //     decoration: BoxDecoration(
+  //       color: Colors.white,
+  //       borderRadius: BorderRadius.circular(20),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: AppColors.shadowLight,
+  //           blurRadius: 10,
+  //           offset: Offset(0, 5),
+  //         ),
+  //       ],
+  //     ),
+  //     child: ListTile(
+  //       leading: Container(
+  //         padding: EdgeInsets.all(8),
+  //         decoration: BoxDecoration(
+  //           color: AppColors.aurora1.withOpacity(0.1),
+  //           borderRadius: BorderRadius.circular(8),
+  //         ),
+  //         child: Icon(Icons.refresh, color: AppColors.aurora1),
+  //       ),
+  //       title: Text('Обновить данные'),
+  //       subtitle: Text('Синхронизация с сервером'),
+  //       trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary),
+  //       onTap: () async {
+  //         HapticFeedback.lightImpact();
+  //         await _loadActiveBatch();
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(
+  //             content: Text('Данные обновлены'),
+  //             backgroundColor: Colors.green,
+  //           ),
+  //         );
+  //       },
+  //     ),
+  //   );
+  // }
+
   Widget _buildSettingsCard(BuildContext context, AuthProvider authProvider) {
     return Container(
       decoration: BoxDecoration(
@@ -1381,28 +1421,57 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
         ],
       ),
-      child: ListTile(
-        leading: Container(
-          padding: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.aurora1.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(Icons.refresh, color: AppColors.aurora1),
-        ),
-        title: Text('Обновить данные'),
-        subtitle: Text('Синхронизация с сервером'),
-        trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary),
-        onTap: () async {
-          HapticFeedback.lightImpact();
-          await _loadActiveBatch();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Данные обновлены'),
-              backgroundColor: Colors.green,
+      child: Column(
+        children: [
+          // Кнопка "Мои адреса"
+          ListTile(
+            leading: Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.location_on, color: AppColors.primaryLight),
             ),
-          );
-        },
+            title: Text('Мои адреса'),
+            subtitle: Text('Управление адресами доставки'),
+            trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddAddressScreen(),
+                ),
+              );
+            },
+          ),
+          Divider(height: 1, thickness: 1),
+          // Кнопка "Обновить данные"
+          ListTile(
+            leading: Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.aurora1.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.refresh, color: AppColors.aurora1),
+            ),
+            title: Text('Обновить данные'),
+            subtitle: Text('Синхронизация с сервером'),
+            trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            onTap: () async {
+              HapticFeedback.lightImpact();
+              await _loadActiveBatch();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Данные обновлены'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
