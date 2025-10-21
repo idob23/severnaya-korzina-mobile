@@ -247,7 +247,8 @@ class CartProvider with ChangeNotifier {
               'productId': item.productId,
               'quantity': item.quantity,
               'price': item.price,
-              'name': item.name, // для удобства отображения
+              'name': item.name,
+              'unit': item.unit, // для удобства отображения
             })
         .toList();
   }

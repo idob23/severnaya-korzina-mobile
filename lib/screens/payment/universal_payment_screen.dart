@@ -240,56 +240,63 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
       if (status.isPaid) {
         _paymentCompleted = true;
         _statusCheckTimer?.cancel();
+        _autoRollbackTimer?.cancel(); // ✅ ДОБАВЛЕНО: отменяем таймер автоотмены
         _handlePaymentSuccess();
       } else if (status.isCanceled) {
         _statusCheckTimer?.cancel();
+        _autoRollbackTimer?.cancel(); // ✅ ДОБАВЛЕНО
         await _handlePaymentCancelled();
       } else if (status.isPending) {
-        // ✅ ВАЖНО: Если платеж все еще pending, спрашиваем пользователя
-        _showPaymentStatusDialog();
+        // // ✅ ВАЖНО: Если платеж все еще pending, спрашиваем пользователя
+        // _showPaymentStatusDialog();
+        print(
+            '⏳ Платеж в статусе PENDING, продолжаем автоматическую проверку...');
+        print(
+            '⏱️ Заказ будет автоматически отменён через 2 минуты если оплата не пройдёт');
+        // Таймер автоотмены (_autoRollbackTimer) сам отменит заказ если статус не изменится
       }
     } catch (e) {
       print('❌ Ошибка проверки статуса при возврате: $e');
     }
   }
 
-  // ✅ НОВОЕ: Диалог для уточнения статуса оплаты
-  void _showPaymentStatusDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.help_outline, color: Colors.blue),
-            SizedBox(width: 8),
-            Text('Статус оплаты'),
-          ],
-        ),
-        content: Text(
-          'Вы завершили оплату?\n\nЕсли оплата прошла успешно, мы скоро получим подтверждение. Если вы закрыли окно оплаты, заказ будет отменен.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Пользователь закрыл окно - отменяем
-              _handlePaymentCancelled();
-            },
-            child: Text('Я не оплатил, отменить'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Продолжаем проверку статуса
-              print('⏳ Продолжаем ожидание подтверждения оплаты...');
-            },
-            child: Text('Я оплатил, ждать'),
-          ),
-        ],
-      ),
-    );
-  }
+  // // ✅ НОВОЕ: Диалог для уточнения статуса оплаты
+  // void _showPaymentStatusDialog() {
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (context) => AlertDialog(
+  //       title: Row(
+  //         children: [
+  //           Icon(Icons.help_outline, color: Colors.blue),
+  //           SizedBox(width: 8),
+  //           Text('Статус оплаты'),
+  //         ],
+  //       ),
+  //       content: Text(
+  //         'Вы завершили оплату?\n\nЕсли оплата прошла успешно, мы скоро получим подтверждение. Если вы закрыли окно оплаты, заказ будет отменен.',
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () {
+  //             Navigator.pop(context);
+  //             // Пользователь закрыл окно - отменяем
+  //             _handlePaymentCancelled();
+  //           },
+  //           child: Text('Я не оплатил, отменить'),
+  //         ),
+  //         ElevatedButton(
+  //           onPressed: () {
+  //             Navigator.pop(context);
+  //             // Продолжаем проверку статуса
+  //             print('⏳ Продолжаем ожидание подтверждения оплаты...');
+  //           },
+  //           child: Text('Я оплатил, ждать'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   void _handlePaymentSuccess() async {
     print('✅ Платеж успешно завершен!');

@@ -424,7 +424,7 @@ class _LoginScreenState extends State<LoginScreen>
 
         if (!mounted) return;
 
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => SMSVerificationScreen(

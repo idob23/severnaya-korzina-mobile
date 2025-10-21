@@ -377,8 +377,10 @@ class _CheckoutScreenState extends State<CheckoutScreen>
                   children: [
                     Expanded(
                       child: Text(
-                        '${item.quantity} x Товар #${item.productId}',
+                        '${item.quantity} x Товар #${item.name}',
                         style: TextStyle(fontSize: 14),
+                        maxLines: 2, // ✅ Добавлено для длинных названий
+                        overflow: TextOverflow.ellipsis, // ✅ Добавлено
                       ),
                     ),
                     Text(

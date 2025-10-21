@@ -15,9 +15,10 @@ import 'screens/home/home_screen.dart';
 import 'package:severnaya_korzina/screens/auth/auth_choice_screen.dart';
 import 'screens/payment/payment_success_screen.dart';
 import 'package:severnaya_korzina/services/update_service.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 // Импортируем новую тему вместо старых цветов
 import 'design_system/theme/app_theme.dart';
+import 'screens/auth/sms_verification_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -188,6 +189,32 @@ class _AppInitializerState extends State<AppInitializer>
 
       // Проверяем статус авторизации
       await authProvider.checkAuthStatus();
+
+      // Проверяем незавершённую верификацию SMS
+      final pendingSmsPhone = await authProvider.getPendingSmsPhone();
+
+      if (pendingSmsPhone != null) {
+        if (kDebugMode) {
+          print('📱 Найдена незавершённая верификация для: $pendingSmsPhone');
+        }
+
+        setState(() {
+          _isInitialized = true;
+        });
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SMSVerificationScreen(
+                phone: pendingSmsPhone,
+                rememberMe: true,
+              ),
+            ),
+          );
+        }
+        return; // ✅ ВАЖНО: выходим из метода
+      }
 
       // Если пользователь авторизован, инициализируем OrdersProvider
       if (authProvider.isAuthenticated) {

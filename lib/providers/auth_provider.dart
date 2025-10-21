@@ -39,6 +39,55 @@ class AuthProvider with ChangeNotifier {
     await checkAuthStatus();
   }
 
+  /// Получить номер телефона из pending SMS
+  Future<String?> getPendingSmsPhone() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final hasPending = prefs.getBool(_pendingSmsVerificationKey) ?? false;
+      if (hasPending) {
+        return prefs.getString('pending_sms_phone');
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Ошибка получения pending SMS phone: $e');
+      }
+      return null;
+    }
+  }
+
+  /// Сохранить состояние ожидания SMS
+  Future<void> savePendingSmsVerification(String phone) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_pendingSmsVerificationKey, true);
+      await prefs.setString('pending_sms_phone', phone);
+      if (kDebugMode) {
+        print('💾 Сохранено состояние ожидания SMS для: $phone');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Ошибка сохранения pending SMS: $e');
+      }
+    }
+  }
+
+  /// Очистить состояние ожидания SMS
+  Future<void> clearPendingSmsVerification() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_pendingSmsVerificationKey);
+      await prefs.remove('pending_sms_phone');
+      if (kDebugMode) {
+        print('✅ Очищено состояние ожидания SMS');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Ошибка очистки pending SMS: $e');
+      }
+    }
+  }
+
   /// Проверяет статус авторизации при запуске приложения
   Future<void> checkAuthStatus() async {
     _isLoading = true;
@@ -251,7 +300,16 @@ class AuthProvider with ChangeNotifier {
       final success = await _smsService.sendVerificationCode(formattedPhone);
 
       if (!success) {
-        _lastError = 'Не удалось отправить SMS. Попробуйте позже';
+        _lastError =
+            'Не удалось отправить SMS. ${isConnected ? '' : 'Проверьте подключение к интернету.'}';
+        return false;
+      }
+
+      // ✅ ДОБАВИТЬ ЭТУ СТРОКУ - сохраняем флаг ожидания SMS
+      await savePendingSmsVerification(formattedPhone);
+
+      if (kDebugMode) {
+        print('✅ SMS код отправлен успешно');
       }
 
       return success;
@@ -335,6 +393,7 @@ class AuthProvider with ChangeNotifier {
                     // final prefs = await SharedPreferences.getInstance();
                     await prefs.setString(_authTokenKey, token);
 
+                    // ✅ ДОБАВИТЬ ЭТУ СТРОКУ
                     await prefs.remove(_pendingSmsVerificationKey);
                     saved = true;
                     print('✅ Token saved to web storage (attempt ${i + 1})');
