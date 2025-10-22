@@ -652,7 +652,7 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
                 SizedBox(height: 16),
                 Text(
                   kIsWeb
-                      ? 'Нажмите кнопку ниже для открытия формы оплаты.\nПосле оплаты вернитесь в приложение.'
+                      ? 'Нажмите кнопку ниже для открытия формы оплаты.' // ← ИЗМЕНИ ЭТУ СТРОКУ
                       : 'Завершите оплату в браузере.\nМы автоматически отследим результат.',
                   style: TextStyle(
                     fontSize: 16,
