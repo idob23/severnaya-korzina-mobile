@@ -140,26 +140,27 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
 
   // ✅ НОВОЕ: Автоматическая отмена через N минут без активности
   void _startAutoRollbackTimer() {
-    // ✅ Для Web делаем более короткий таймер (2 минуты)
+    // ✅ Для Web 5 минут (даём время webhook/cron), для Mobile 2 минуты
     final rollbackDuration =
-        kIsWeb ? Duration(minutes: 2) : Duration(minutes: _autoRollbackMinutes);
+        kIsWeb ? Duration(minutes: 5) : Duration(minutes: _autoRollbackMinutes);
 
     _autoRollbackTimer = Timer(
       rollbackDuration,
-      () {
+      () async {
+        // ✅ ДОБАВЛЕН async
         if (!_paymentCompleted && mounted) {
-          print('⏰ Время ожидания оплаты истекло, выполняем автоотмену');
-          _handleAutoRollback();
+          print(
+              '⏰ Время ожидания оплаты истекло, выполняем финальную проверку...');
+          await _finalCheckBeforeRollback();
         }
       },
     );
   }
 
-  // ✅ НОВОЕ: Автоматический откат заказа
-  Future<void> _handleAutoRollback() async {
-    print('🔄 Автоматический откат заказа...');
+  // ✅ ФИНАЛЬНАЯ ПРОВЕРКА перед откатом
+  Future<void> _finalCheckBeforeRollback() async {
+    print('🔍 ФИНАЛЬНАЯ ПРОВЕРКА перед откатом заказа...');
 
-    // Проверяем статус еще раз перед откатом
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final token = authProvider.token;
@@ -169,18 +170,39 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
         token: token,
       );
 
-      // Если оплата прошла - не откатываем
       if (status.isPaid) {
+        print('✅ ПЛАТЁЖ ОПЛАЧЕН! Отменяем откат!');
         _paymentCompleted = true;
+        _statusCheckTimer?.cancel();
+        _autoRollbackTimer?.cancel();
         _handlePaymentSuccess();
         return;
       }
+
+      if (status.isPending) {
+        print('⏳ Статус всё ещё PENDING, продлеваем ожидание на 2 минуты...');
+        // Продлеваем ожидание
+        _autoRollbackTimer = Timer(Duration(minutes: 2), () async {
+          if (!_paymentCompleted && mounted) {
+            await _finalCheckBeforeRollback(); // Рекурсивная проверка
+          }
+        });
+        return;
+      }
+
+      // Статус FAILED или CANCELED
+      print('❌ Платёж не оплачен (статус: ${status.status}), откатываем заказ');
     } catch (e) {
-      print('Ошибка финальной проверки статуса: $e');
+      print('❌ Ошибка финальной проверки: $e');
     }
 
     // Откатываем заказ
     await _handlePaymentCancelled();
+  }
+
+  // ✅ СТАРЫЙ метод для совместимости (теперь просто вызывает новый)
+  Future<void> _handleAutoRollback() async {
+    await _finalCheckBeforeRollback();
   }
 
   Future<void> _checkPaymentStatus() async {
@@ -204,7 +226,12 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
       if (status.isPaid) {
         _paymentCompleted = true; // ✅ Помечаем как завершенный
         _statusCheckTimer?.cancel();
-        _handlePaymentSuccess();
+        // ✅ Показываем диалог успеха если пользователь вернулся на эту вкладку
+        if (kIsWeb) {
+          _showPaymentSuccessDialog();
+        } else {
+          _handlePaymentSuccess();
+        }
       } else if (status.isCanceled) {
         _statusCheckTimer?.cancel();
         await _handlePaymentCancelled();
@@ -218,6 +245,56 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
         _isChecking = false;
       });
     }
+  }
+
+  // ✅ НОВОЕ: Диалог успеха для Web (когда статус обновился на вкладке A)
+  void _showPaymentSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 64),
+            SizedBox(height: 16),
+            Text(
+              'Оплата успешна!',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.green[700],
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Ваш заказ #${widget.orderId ?? "..."} оплачен\nи принят в обработку.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Остаться здесь'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Закрыть диалог
+              _handlePaymentSuccess(); // Перейти к заказам
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: Text('Перейти к заказам'),
+          ),
+        ],
+      ),
+    );
   }
 
   // ✅ НОВОЕ: Проверка статуса при возврате из фона с показом диалога
