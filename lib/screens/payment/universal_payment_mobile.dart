@@ -66,14 +66,15 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       print('🔄 Приложение вернулось из фона, проверяем статус платежа');
-      // ✅ НОВОЕ: Проверяем статус с небольшой задержкой
-      Future.delayed(Duration(seconds: 1), () {
-        if (mounted && !_paymentCompleted) {
-          _checkPaymentStatusOnResume();
+
+      if (!_paymentCompleted && mounted) {
+        // Немедленная проверка
+        _checkPaymentStatusOnResume();
+
+        // Перезапуск периодической проверки
+        if (_statusCheckTimer == null || !_statusCheckTimer!.isActive) {
+          _startStatusChecking();
         }
-      });
-      if (_statusCheckTimer == null || !_statusCheckTimer!.isActive) {
-        _startStatusChecking();
       }
     } else if (state == AppLifecycleState.paused) {
       print('⏸️ Приложение ушло в фон');
@@ -92,8 +93,9 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
     try {
       await launchUrl(
         Uri.parse(widget.paymentUrl),
-        mode: LaunchMode.inAppBrowserView,
+        mode: LaunchMode.externalApplication,
       );
+      print('✅ Платёжная форма открыта во внешнем браузере');
       _startStatusChecking();
     } catch (e) {
       print('❌ Ошибка открытия платежа: $e');
@@ -117,18 +119,9 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
     if (await canLaunchUrl(Uri.parse(widget.paymentUrl))) {
       await launchUrl(
         Uri.parse(widget.paymentUrl),
-        mode: LaunchMode.inAppBrowserView,
-      ).then((_) {
-        // ✅ Когда браузер закрывается (любым способом), проверяем статус
-        if (mounted && !_paymentCompleted) {
-          print('🔄 InAppBrowser закрыт, проверяем статус платежа');
-          Future.delayed(Duration(seconds: 1), () {
-            if (mounted) {
-              _checkPaymentStatusOnResume();
-            }
-          });
-        }
-      });
+        mode: LaunchMode.externalApplication,
+      );
+      print('✅ Платёжная форма открыта во внешнем браузере');
     }
   }
 
@@ -151,8 +144,8 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
   // ✅ НОВОЕ: Автоматическая отмена через N минут без активности
   void _startAutoRollbackTimer() {
     // ✅ Для Web 5 минут (даём время webhook/cron), для Mobile 2 минуты
-    final rollbackDuration =
-        kIsWeb ? Duration(minutes: 5) : Duration(minutes: _autoRollbackMinutes);
+
+    final rollbackDuration = Duration(minutes: 5);
 
     _autoRollbackTimer = Timer(
       rollbackDuration,
