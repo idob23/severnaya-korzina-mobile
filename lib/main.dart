@@ -14,7 +14,7 @@ import 'screens/profile/profile_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'package:severnaya_korzina/screens/auth/auth_choice_screen.dart';
 import 'screens/payment/payment_success_screen.dart';
-import 'screens/payment/payment_checking_web_screen.dart';
+import 'screens/payment/payment_checking_screen.dart';
 import 'package:severnaya_korzina/services/update_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 // Импортируем новую тему вместо старых цветов
