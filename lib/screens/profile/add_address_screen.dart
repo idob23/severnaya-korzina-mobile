@@ -181,9 +181,6 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                           if (value == null || value.trim().isEmpty) {
                             return 'Введите адрес доставки';
                           }
-                          if (value.trim().length < 10) {
-                            return 'Адрес слишком короткий';
-                          }
                           return null;
                         },
                       ),

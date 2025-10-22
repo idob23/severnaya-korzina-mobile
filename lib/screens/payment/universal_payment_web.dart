@@ -304,14 +304,14 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Остаться здесь'),
-          ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context); // Закрыть диалог
-              _handlePaymentSuccess(); // Перейти к заказам
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/orders',
+                (route) => false,
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
