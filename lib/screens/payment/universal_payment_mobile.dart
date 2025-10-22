@@ -92,7 +92,7 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
     try {
       await launchUrl(
         Uri.parse(widget.paymentUrl),
-        mode: LaunchMode.externalApplication,
+        mode: LaunchMode.inAppBrowserView,
       );
       _startStatusChecking();
     } catch (e) {
@@ -117,8 +117,18 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
     if (await canLaunchUrl(Uri.parse(widget.paymentUrl))) {
       await launchUrl(
         Uri.parse(widget.paymentUrl),
-        mode: LaunchMode.externalApplication,
-      );
+        mode: LaunchMode.inAppBrowserView,
+      ).then((_) {
+        // ✅ Когда браузер закрывается (любым способом), проверяем статус
+        if (mounted && !_paymentCompleted) {
+          print('🔄 InAppBrowser закрыт, проверяем статус платежа');
+          Future.delayed(Duration(seconds: 1), () {
+            if (mounted) {
+              _checkPaymentStatusOnResume();
+            }
+          });
+        }
+      });
     }
   }
 
