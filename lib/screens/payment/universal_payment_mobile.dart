@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/orders_provider.dart';
+import '../home/home_screen.dart';
 
 class UniversalPaymentScreen extends StatefulWidget {
   final String paymentUrl;
@@ -417,16 +418,20 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
               ),
             ],
           ),
+          // ЗАМЕНИТЬ НА:
           actions: [
             ElevatedButton(
               onPressed: () {
-                Navigator.pushNamedAndRemoveUntil(
+                Navigator.pushAndRemoveUntil(
                   context,
-                  '/',
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        HomeScreen(initialIndex: 2), // ✅ index 2 = Orders tab
+                  ),
                   (route) => false,
                 );
               },
-              child: Text('В каталог'),
+              child: Text('К заказам'),
             ),
           ],
         ),
@@ -465,19 +470,35 @@ class _UniversalPaymentScreenState extends State<UniversalPaymentScreen>
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          contentPadding: EdgeInsets.fromLTRB(24, 20, 24, 0), // ← НОВОЕ
+          actionsPadding: EdgeInsets.only(right: 16, bottom: 8), // ← НОВОЕ
           title: Row(
             children: [
               Icon(Icons.info_outline, color: Colors.orange),
               SizedBox(width: 8),
-              Text('Оплата не завершена'),
+              Flexible(
+                // ← НОВОЕ: предотвращает переполнение
+                child: Text('Оплата не завершена'),
+              ),
             ],
           ),
-          content: Text(
-            'Заказ не был оплачен. Товары возвращены в корзину.',
+          content: ConstrainedBox(
+            // ← НОВОЕ: ограничиваем ширину
+            constraints: BoxConstraints(maxWidth: 280),
+            child: Text(
+              'Заказ не был оплачен. Товары возвращены в корзину.',
+              style: TextStyle(fontSize: 14),
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
               child: Text('ОК'),
             ),
           ],

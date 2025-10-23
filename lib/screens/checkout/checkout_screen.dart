@@ -13,6 +13,7 @@ import '../../design_system/colors/app_colors.dart';
 import '../../design_system/colors/gradients.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/services.dart'; // для HapticFeedback
 
 class CheckoutScreen extends StatefulWidget {
   @override
@@ -25,7 +26,7 @@ class _CheckoutScreenState extends State<CheckoutScreen>
   String _selectedDeliveryTime = 'В любое время';
   String _notes = '';
   bool _isProcessing = false;
-  double _marginPercent = 50.0;
+  double _marginPercent = 22.0;
   bool _isLoadingMargin = true;
   bool _hasLoadedMargin = false; // ← ДОБАВИТЬ
 
@@ -88,8 +89,8 @@ class _CheckoutScreenState extends State<CheckoutScreen>
             '🔢 ДЕБАГ: тип данных: ${batchData['batch']?['marginPercent'].runtimeType}');
 
         final newMargin = double.tryParse(
-                batchData['batch']?['marginPercent']?.toString() ?? '50') ??
-            50.0;
+                batchData['batch']?['marginPercent']?.toString() ?? '22') ??
+            22.0;
 
         setState(() {
           _marginPercent = newMargin;
@@ -135,7 +136,8 @@ class _CheckoutScreenState extends State<CheckoutScreen>
 
       // ✅ КРИТИЧЕСКАЯ ПРОВЕРКА: Есть ли адрес у пользователя?
       if (user == null || user.defaultAddress == null) {
-        throw Exception('Пожалуйста, добавьте адрес доставки в профиле');
+        _showAddressRequiredDialog();
+        return;
       }
 
       // ✅ ВАЖНО: Сохраняем все данные ДО перехода
@@ -660,6 +662,131 @@ class _CheckoutScreenState extends State<CheckoutScreen>
                       ],
                     ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddressRequiredDialog() {
+    HapticFeedback.mediumImpact();
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          padding: EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                AppColors.aurora1.withOpacity(0.1),
+              ],
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Иконка
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.location_on_outlined,
+                  color: AppColors.warning,
+                  size: 48,
+                ),
+              ),
+              SizedBox(height: 20),
+
+              // Заголовок
+              Text(
+                'Укажите адрес доставки',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 12),
+
+              // Описание
+              Text(
+                'Для оформления заказа необходимо добавить адрес доставки во вкладке "Профиль"',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: AppColors.textSecondary,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 24),
+
+              // // Кнопки
+              // Row(
+              //   children: [
+              //     // Кнопка "Отмена"
+              //     Expanded(
+              //       child: TextButton(
+              //         onPressed: () => Navigator.pop(context),
+              //         style: TextButton.styleFrom(
+              //           padding: EdgeInsets.symmetric(vertical: 14),
+              //           shape: RoundedRectangleBorder(
+              //             borderRadius: BorderRadius.circular(12),
+              //           ),
+              //         ),
+              //         child: Text(
+              //           'Отмена',
+              //           style: TextStyle(
+              //             fontSize: 16,
+              //             color: AppColors.textSecondary,
+              //           ),
+              //         ),
+              //       ),
+              //     ),
+              //     SizedBox(width: 12),
+
+              //     // Кнопка "Перейти в профиль"
+              //     Expanded(
+              //       child: ElevatedButton(
+              //         onPressed: () {
+              //           Navigator.pop(context); // Закрываем диалог
+              //           Navigator.pop(context); // Возвращаемся из checkout
+              //           // Переключаемся на вкладку профиля (индекс 3)
+              //           DefaultTabController.of(context)?.animateTo(3);
+              //         },
+              //         style: ElevatedButton.styleFrom(
+              //           backgroundColor: AppColors.primaryLight,
+              //           padding: EdgeInsets.symmetric(vertical: 14),
+              //           shape: RoundedRectangleBorder(
+              //             borderRadius: BorderRadius.circular(12),
+              //           ),
+              //           elevation: 0,
+              //         ),
+              //         child: Text(
+              //           'В профиль',
+              //           style: TextStyle(
+              //             fontSize: 16,
+              //             fontWeight: FontWeight.w600,
+              //             color: Colors.white,
+              //           ),
+              //         ),
+              //       ),
+              //     ),
+              //   ],
+              // ),
+            ],
           ),
         ),
       ),
