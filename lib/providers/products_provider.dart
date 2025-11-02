@@ -224,12 +224,18 @@ class ProductsProvider with ChangeNotifier {
   bool _isLoading = false;
   bool _isLoadingCategories = false;
   String? _error;
+  bool _isLoadingMore = false; // Загрузка следующей страницы
+  int _currentPage = 1;
+  int _totalPages = 1;
+  bool _hasMore = true;
   int? _selectedCategoryId;
   String _searchQuery = '';
+  int _totalProducts = 0;
 
   final ApiService _apiService = ApiService();
 
   // Геттеры
+  int get totalProducts => _totalProducts;
   List<Product> get products => _products;
   List<Category> get categories => _categories;
   bool get isLoading => _isLoading;
@@ -237,6 +243,8 @@ class ProductsProvider with ChangeNotifier {
   String? get error => _error;
   int? get selectedCategoryId => _selectedCategoryId;
   String get searchQuery => _searchQuery;
+  bool get isLoadingMore => _isLoadingMore;
+  bool get hasMore => _hasMore;
 
   // Удобные геттеры для UI
   bool get hasSearchQuery => _searchQuery.isNotEmpty;
@@ -327,6 +335,24 @@ class ProductsProvider with ChangeNotifier {
               .map((json) => Product.fromJson(json as Map<String, dynamic>))
               .toList();
 
+          // ПОСЛЕ НИХ ДОБАВИТЬ обработку pagination:
+          // Обрабатываем данные пагинации
+          final paginationData = result['pagination'];
+          if (paginationData != null) {
+            _currentPage = paginationData['page'] ?? 1;
+            _totalPages = paginationData['pages'] ?? 1;
+            _hasMore = _currentPage < _totalPages;
+          } else {
+            _hasMore = false;
+          }
+
+          // ДОБАВИТЬ: Сохраняем общее количество из pagination
+          if (result['pagination'] != null) {
+            _totalProducts = result['pagination']['total'] ?? _products.length;
+          } else {
+            _totalProducts = _products.length;
+          }
+
           if (kDebugMode) {
             print('ProductsProvider: Загружено ${_products.length} товаров');
             for (var product in _products.take(3)) {
@@ -360,6 +386,56 @@ class ProductsProvider with ChangeNotifier {
         _isLoading = false;
         notifyListeners();
       }
+    }
+  }
+
+  /// Загружает следующую страницу товаров
+  Future<void> loadMoreProducts() async {
+    if (!_hasMore || _isLoadingMore || _isLoading) {
+      return;
+    }
+
+    _isLoadingMore = true;
+    notifyListeners();
+
+    try {
+      final nextPage = _currentPage + 1;
+
+      final result = await _apiService.getProducts(
+        categoryId: _selectedCategoryId,
+        search: _searchQuery.isNotEmpty ? _searchQuery : null,
+        page: nextPage,
+        limit: 50,
+      );
+
+      if (result['success'] == true) {
+        final productsData = result['products'];
+        final paginationData = result['pagination'];
+
+        if (productsData is List && productsData.isNotEmpty) {
+          final newProducts = productsData
+              .map((json) => Product.fromJson(json as Map<String, dynamic>))
+              .toList();
+
+          // Добавляем к существующим
+          _products.addAll(newProducts);
+
+          if (paginationData != null) {
+            _currentPage = paginationData['page'] ?? nextPage;
+            _totalPages = paginationData['pages'] ?? _totalPages;
+            _hasMore = _currentPage < _totalPages;
+          }
+        } else {
+          _hasMore = false;
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Ошибка загрузки следующей страницы: $e');
+      }
+    } finally {
+      _isLoadingMore = false;
+      notifyListeners();
     }
   }
 
@@ -457,6 +533,10 @@ class ProductsProvider with ChangeNotifier {
   Future<void> searchProducts(String query) async {
     _searchQuery = query.trim();
 
+    // 🆕 Сбрасываем пагинацию при новом поиске
+    _currentPage = 1;
+    _hasMore = true;
+
     if (_searchQuery.isEmpty) {
       await loadProducts();
     } else {
@@ -467,6 +547,9 @@ class ProductsProvider with ChangeNotifier {
   /// Фильтрация товаров по категории
   Future<void> filterByCategory(int? categoryId) async {
     _selectedCategoryId = categoryId;
+    // 🆕 Сбрасываем пагинацию при смене категории
+    _currentPage = 1;
+    _hasMore = true;
     await loadProducts(
         categoryId: categoryId,
         search: _searchQuery.isNotEmpty ? _searchQuery : null);
@@ -476,6 +559,9 @@ class ProductsProvider with ChangeNotifier {
   Future<void> clearFilters() async {
     _selectedCategoryId = null;
     _searchQuery = '';
+    // 🆕 Сбрасываем пагинацию при сбросе фильтров
+    _currentPage = 1;
+    _hasMore = true;
     await loadProducts();
   }
 

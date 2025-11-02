@@ -141,9 +141,11 @@ class _CheckoutScreenState extends State<CheckoutScreen>
       }
 
       // ✅ ВАЖНО: Сохраняем все данные ДО перехода
-      final double baseAmount = cartProvider.totalAmount;
-      final double marginAmount = baseAmount * (_marginPercent / 100);
-      final double totalAmount = baseAmount + marginAmount; // ✅ С маржой!
+      // final double baseAmount = cartProvider.totalAmount;
+      // final double marginAmount = baseAmount * (_marginPercent / 100);
+      // final double totalAmount = baseAmount + marginAmount; // ✅ С маржой!
+      // final List<Map<String, dynamic>> items = cartProvider.itemsList
+      final double totalAmount = cartProvider.totalAmount;
       final List<Map<String, dynamic>> items = cartProvider.itemsList
           .map((item) => {
                 'productId': item.productId,
@@ -448,10 +450,10 @@ class _CheckoutScreenState extends State<CheckoutScreen>
   }
 
   Widget _buildTotalCard(CartProvider cartProvider) {
-    // Расчет сумм
-    final baseAmount = cartProvider.totalAmount;
-    final marginAmount = baseAmount * (_marginPercent / 100);
-    final totalWithMargin = baseAmount + marginAmount;
+    // Цены в корзине уже включают наценку!
+    final totalAmount = cartProvider.totalAmount;
+    final baseAmount = totalAmount / (1 + _marginPercent / 100);
+    final serviceAmount = totalAmount - baseAmount;
 
     return Container(
       padding: EdgeInsets.all(20),
@@ -538,7 +540,7 @@ class _CheckoutScreenState extends State<CheckoutScreen>
                       ],
                     ),
                     Text(
-                      '${marginAmount.toStringAsFixed(0)} ₽',
+                      '${serviceAmount.toStringAsFixed(0)} ₽',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -569,7 +571,7 @@ class _CheckoutScreenState extends State<CheckoutScreen>
                       ),
                     ),
                     Text(
-                      '${totalWithMargin.toStringAsFixed(0)} ₽',
+                      '${totalAmount.toStringAsFixed(0)} ₽',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,

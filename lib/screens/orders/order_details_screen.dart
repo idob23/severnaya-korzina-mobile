@@ -201,10 +201,15 @@ class OrderDetailsScreen extends StatelessWidget {
           children: [
             Icon(Icons.cancel, color: Colors.red[700]),
             SizedBox(width: 8),
-            Text(
-              'Заказ отменен',
-              style: TextStyle(
-                  color: Colors.red[700], fontWeight: FontWeight.bold),
+            Expanded(
+              // ← ДОБАВЛЕНО
+              child: Text(
+                'Заказ отменен',
+                style: TextStyle(
+                    color: Colors.red[700], fontWeight: FontWeight.bold),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -225,10 +230,15 @@ class OrderDetailsScreen extends StatelessWidget {
             children: [
               Icon(Icons.hourglass_empty, color: Colors.orange[700]),
               SizedBox(width: 8),
-              Text(
-                'Ожидает оплаты',
-                style: TextStyle(
-                    color: Colors.orange[700], fontWeight: FontWeight.bold),
+              Expanded(
+                // ← ДОБАВЛЕНО
+                child: Text(
+                  'Ожидает оплаты',
+                  style: TextStyle(
+                      color: Colors.orange[700], fontWeight: FontWeight.bold),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -246,12 +256,15 @@ class OrderDetailsScreen extends StatelessWidget {
             children: [
               Icon(Icons.payment, color: Colors.green[700]),
               SizedBox(width: 8),
-              Text(
-                'Заказ оплачен, готовится к отправке',
-                style: TextStyle(
-                    color: Colors.green[700], fontWeight: FontWeight.bold),
-                maxLines: 2, // ← Разрешить перенос на 2 строки
-                overflow: TextOverflow.ellipsis, // ← Обрезка если не влезает
+              Expanded(
+                // ← ДОБАВЛЕНО
+                child: Text(
+                  'Заказ оплачен, готовится к отправке',
+                  style: TextStyle(
+                      color: Colors.green[700], fontWeight: FontWeight.bold),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -269,10 +282,15 @@ class OrderDetailsScreen extends StatelessWidget {
             children: [
               Icon(Icons.local_shipping, color: Colors.blue[700]),
               SizedBox(width: 8),
-              Text(
-                'Заказ в пути',
-                style: TextStyle(
-                    color: Colors.blue[700], fontWeight: FontWeight.bold),
+              Expanded(
+                // ← ДОБАВЛЕНО
+                child: Text(
+                  'Заказ в пути',
+                  style: TextStyle(
+                      color: Colors.blue[700], fontWeight: FontWeight.bold),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -290,10 +308,15 @@ class OrderDetailsScreen extends StatelessWidget {
             children: [
               Icon(Icons.check_circle, color: Colors.green[700]),
               SizedBox(width: 8),
-              Text(
-                'Заказ доставлен',
-                style: TextStyle(
-                    color: Colors.green[700], fontWeight: FontWeight.bold),
+              Expanded(
+                // ← ДОБАВЛЕНО
+                child: Text(
+                  'Заказ доставлен',
+                  style: TextStyle(
+                      color: Colors.green[700], fontWeight: FontWeight.bold),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),

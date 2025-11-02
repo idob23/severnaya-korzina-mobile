@@ -19,10 +19,14 @@ class CatalogScreen extends StatefulWidget {
 
 class _CatalogScreenState extends State<CatalogScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+
+    // 🆕 ДОБАВИТЬ слушатель скролла
+    _scrollController.addListener(_onScroll);
 
     // Загружаем данные с сервера при инициализации
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -32,9 +36,24 @@ class _CatalogScreenState extends State<CatalogScreen> {
     });
   }
 
+  // 🆕 ДОБАВИТЬ ВЕСЬ ЭТОТ МЕТОД
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      // За 200 пикселей до конца начинаем загрузку
+      final productsProvider =
+          Provider.of<ProductsProvider>(context, listen: false);
+
+      if (!productsProvider.isLoadingMore && productsProvider.hasMore) {
+        productsProvider.loadMoreProducts();
+      }
+    }
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose(); // 🆕 ДОБАВИТЬ
     super.dispose();
   }
 
@@ -92,17 +111,20 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     children: [
                       Icon(Icons.category, color: Colors.white, size: 24),
                       SizedBox(width: 12),
-                      Text(
-                        'Выберите категорию',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing:
-                              0.5, // ДОБАВЛЕНО: межбуквенный интервал
+                      Expanded(
+                        // ← ИЗМЕНИТЬ Text на Expanded + Text
+                        child: Text(
+                          'Выберите категорию',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                          overflow: TextOverflow.ellipsis, // ← ДОБАВИТЬ
+                          maxLines: 1, // ← ДОБАВИТЬ
                         ),
                       ),
-                      Spacer(),
                       IconButton(
                         icon: Icon(Icons.close, color: Colors.white),
                         onPressed: () => Navigator.pop(context),
@@ -123,7 +145,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           title: 'Все товары',
                           isSelected:
                               productsProvider.selectedCategoryId == null,
-                          count: productsProvider.products.length,
+                          count: productsProvider.totalProducts,
                           onTap: () {
                             productsProvider.filterByCategory(null);
                             Navigator.pop(context);
@@ -834,9 +856,24 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
                   // Отображение списка товаров
                   return ListView.builder(
+                    controller: _scrollController, // 🆕 ДОБАВИТЬ
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: products.length,
+                    itemCount: products.length +
+                        (productsProvider.hasMore ? 1 : 0), // 🆕 ИЗМЕНИТЬ
                     itemBuilder: (context, index) {
+                      // 🆕 ДОБАВИТЬ проверку для индикатора загрузки
+                      if (index == products.length) {
+                        return Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppColors.primaryLight),
+                            ),
+                          ),
+                        );
+                      }
+
                       final product = products[index];
                       return _buildProductCard(context, product);
                     },
@@ -850,7 +887,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
     );
   }
 
-  /// Улучшенная карточка товара с исправленными анимациями
   /// Улучшенная карточка товара с исправленными анимациями
   Widget _buildProductCard(BuildContext context, Product product) {
     // Определяем статус остатков
@@ -910,40 +946,49 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     children: [
                       // Категория
                       if (product.category != null)
-                        Container(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                AppColors.aurora1.withOpacity(0.1),
-                                AppColors.aurora2.withOpacity(0.1),
+                        Flexible(
+                          // ← ДОБАВИТЬ Flexible
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.aurora1.withOpacity(0.1),
+                                  AppColors.aurora2.withOpacity(0.1),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppColors.aurora1.withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.category_outlined,
+                                  size: 12,
+                                  color: AppColors.aurora1,
+                                ),
+                                SizedBox(width: 4),
+                                Flexible(
+                                  // ← ДОБАВИТЬ Flexible для Text
+                                  child: Text(
+                                    product.category!.name,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.aurora1,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    overflow:
+                                        TextOverflow.ellipsis, // ← ДОБАВИТЬ
+                                    maxLines: 1, // ← ДОБАВИТЬ
+                                  ),
+                                ),
                               ],
                             ),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppColors.aurora1.withOpacity(0.2),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.category_outlined,
-                                size: 12,
-                                color: AppColors.aurora1,
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                product.category!.name,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.aurora1,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
                           ),
                         ),
 
@@ -1026,14 +1071,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // Цена
-                      Expanded(
+                      Flexible(
+                        // ✅ ИЗМЕНЕНО: было Expanded
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min, // ✅ ДОБАВЛЕНО
                           children: [
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.baseline,
                               textBaseline: TextBaseline.alphabetic,
                               children: [
+                                // Цена БЕЗ Flexible - всегда видна полностью
                                 Text(
                                   '${product.price.toStringAsFixed(0)}',
                                   style: TextStyle(
@@ -1059,11 +1107,16 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                 ),
                                 if (product.unit != 'шт') ...[
                                   SizedBox(width: 4),
-                                  Text(
-                                    '/ ${product.unit}',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: AppColors.textSecondary,
+                                  Flexible(
+                                    // ✅ ОСТАВЛЕНО: только единица может сжаться
+                                    child: Text(
+                                      '/ ${product.unit}',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                      overflow:
+                                          TextOverflow.ellipsis, // ✅ ДОБАВЛЕНО
                                     ),
                                   ),
                                 ],
@@ -1080,6 +1133,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                       ? AppColors.warning
                                       : AppColors.textSecondary,
                                 ),
+                                overflow: TextOverflow.ellipsis, // ✅ ДОБАВЛЕНО
                               ),
                             ],
                           ],
@@ -2200,12 +2254,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                 color: Colors.white,
                               ),
                               SizedBox(width: 6),
-                              Text(
-                                product.category!.name,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
+                              Flexible(
+                                // ← ДОБАВИТЬ Flexible
+                                child: Text(
+                                  product.category!.name,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                  overflow: TextOverflow.ellipsis, // ← ДОБАВИТЬ
+                                  maxLines: 1, // ← ДОБАВИТЬ
                                 ),
                               ),
                             ],
