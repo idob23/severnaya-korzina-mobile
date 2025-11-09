@@ -26,7 +26,7 @@ class _CheckoutScreenState extends State<CheckoutScreen>
   String _selectedDeliveryTime = 'В любое время';
   String _notes = '';
   bool _isProcessing = false;
-  double _marginPercent = 22.0;
+  double _marginPercent = 25.0;
   bool _isLoadingMargin = true;
   bool _hasLoadedMargin = false; // ← ДОБАВИТЬ
 
@@ -89,8 +89,8 @@ class _CheckoutScreenState extends State<CheckoutScreen>
             '🔢 ДЕБАГ: тип данных: ${batchData['batch']?['marginPercent'].runtimeType}');
 
         final newMargin = double.tryParse(
-                batchData['batch']?['marginPercent']?.toString() ?? '22') ??
-            22.0;
+                batchData['batch']?['marginPercent']?.toString() ?? '25') ??
+            25.0;
 
         setState(() {
           _marginPercent = newMargin;
