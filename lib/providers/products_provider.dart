@@ -15,20 +15,25 @@ class Product {
   final bool isActive;
   final DateTime createdAt;
   final Category? category;
+  final double? basePrice;
+  final String? baseUnit;
+  final int? inPackage;
 
-  Product({
-    required this.id,
-    required this.name,
-    this.description,
-    this.imageUrl,
-    required this.price,
-    required this.unit,
-    this.minQuantity = 1,
-    this.maxQuantity,
-    this.isActive = true,
-    required this.createdAt,
-    this.category,
-  });
+  Product(
+      {required this.id,
+      required this.name,
+      this.description,
+      this.imageUrl,
+      required this.price,
+      required this.unit,
+      this.minQuantity = 1,
+      this.maxQuantity,
+      this.isActive = true,
+      required this.createdAt,
+      this.category,
+      this.basePrice,
+      this.baseUnit,
+      this.inPackage});
 
   factory Product.fromJson(Map<String, dynamic> json) {
     try {
@@ -55,6 +60,12 @@ class Product {
             : DateTime.now(),
         category: json['category'] != null
             ? Category.fromJson(json['category'] as Map<String, dynamic>)
+            : null,
+        basePrice:
+            json['basePrice'] != null ? _parseDouble(json['basePrice']) : null,
+        baseUnit: json['baseUnit']?.toString(),
+        inPackage: json['inPackage'] != null
+            ? int.tryParse(json['inPackage'].toString())
             : null,
       );
     } catch (e) {
