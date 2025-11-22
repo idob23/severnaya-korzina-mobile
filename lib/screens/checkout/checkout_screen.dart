@@ -26,7 +26,7 @@ class _CheckoutScreenState extends State<CheckoutScreen>
   String _selectedDeliveryTime = 'В любое время';
   String _notes = '';
   bool _isProcessing = false;
-  double _marginPercent = 25.0;
+  double _marginPercent = 15.0;
   bool _isLoadingMargin = true;
   bool _hasLoadedMargin = false; // ← ДОБАВИТЬ
 
@@ -89,8 +89,8 @@ class _CheckoutScreenState extends State<CheckoutScreen>
             '🔢 ДЕБАГ: тип данных: ${batchData['batch']?['marginPercent'].runtimeType}');
 
         final newMargin = double.tryParse(
-                batchData['batch']?['marginPercent']?.toString() ?? '25') ??
-            25.0;
+                batchData['batch']?['marginPercent']?.toString() ?? '15') ??
+            15.0;
 
         setState(() {
           _marginPercent = newMargin;
@@ -584,29 +584,29 @@ class _CheckoutScreenState extends State<CheckoutScreen>
                 SizedBox(height: 8),
 
                 // Пояснение
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline,
-                          color: Colors.blue.shade700, size: 16),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Наценка покрывает доставку и организацию закупки',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue.shade700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                // Container(
+                //   padding: EdgeInsets.all(12),
+                //   decoration: BoxDecoration(
+                //     color: Colors.blue.shade50,
+                //     borderRadius: BorderRadius.circular(8),
+                //   ),
+                //   child: Row(
+                //     children: [
+                //       Icon(Icons.info_outline,
+                //           color: Colors.blue.shade700, size: 16),
+                //       SizedBox(width: 8),
+                //       Expanded(
+                //         child: Text(
+                //           'Наценка покрывает организацию закупки',
+                //           style: TextStyle(
+                //             fontSize: 12,
+                //             color: Colors.blue.shade700,
+                //           ),
+                //         ),
+                //       ),
+                //     ],
+                //   ),
+                // ),
               ],
             ),
     );

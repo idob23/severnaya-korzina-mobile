@@ -2620,7 +2620,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                           product
                                               .inPackage! // price уже с наценкой, делим на количество
                                       : product.basePrice! *
-                                          1.25; // если нет inPackage, применяем 25% наценку
+                                          1.15; // если нет inPackage, применяем 25% наценку
 
                                   return Text(
                                     '${basePriceWithMargin.toStringAsFixed(2)} ₽ / ${product.baseUnit}',
