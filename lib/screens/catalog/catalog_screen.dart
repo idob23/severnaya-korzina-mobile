@@ -1083,9 +1083,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                               crossAxisAlignment: CrossAxisAlignment.baseline,
                               textBaseline: TextBaseline.alphabetic,
                               children: [
-                                // Цена БЕЗ Flexible - всегда видна полностью
+                                // ✅ ЦЕНА ЗАВИСИТ ОТ ТИПА ПРОДАЖИ
                                 Text(
-                                  '${product.price.toStringAsFixed(0)}',
+                                  product.saleType == 'только уп'
+                                      ? '${product.price.toStringAsFixed(0)}' // Цена за упаковку
+                                      : (product.basePrice != null &&
+                                              product.inPackage != null)
+                                          ? '${(product.price / product.inPackage!).toStringAsFixed(0)}' // Цена за штуку
+                                          : '${product.price.toStringAsFixed(0)}', // Цена как есть
                                   style: TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
@@ -1107,21 +1112,22 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                             .withOpacity(0.8),
                                   ),
                                 ),
-                                if (product.unit != 'шт') ...[
-                                  SizedBox(width: 4),
-                                  Flexible(
-                                    // ✅ ОСТАВЛЕНО: только единица может сжаться
-                                    child: Text(
-                                      '/ ${product.unit}',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                      overflow:
-                                          TextOverflow.ellipsis, // ✅ ДОБАВЛЕНО
+                                // ✅ ЕДИНИЦА ИЗМЕРЕНИЯ
+                                SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    product.saleType == 'только уп'
+                                        ? '/ уп' // Просто "/ уп" для упаковок
+                                        : (product.baseUnit != null)
+                                            ? '/ ${product.baseUnit}' // "/ шт" для штучных
+                                            : '/ ${product.unit}', // Единица как есть
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.textSecondary,
                                     ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ],
+                                ),
                               ],
                             ),
                             // Остаток если есть ограничение
@@ -1151,7 +1157,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  '📦 Упаковка: ${product.inPackage} ${product.unit}',
+                                  '📦 ${product.unit}',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.orange.shade900,
@@ -1225,6 +1231,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
     required CartProvider cartProvider,
     required bool hasStock,
   }) {
+    // ✅ Определяем шаг изменения количества
+    final step = (product.saleType == 'только уп' && product.inPackage != null)
+        ? product.inPackage!
+        : 1;
+
+    // ✅ Минимальное количество
+    final minQty =
+        (product.saleType == 'только уп' && product.inPackage != null)
+            ? product.inPackage!
+            : 1;
+
     return Container(
       key: key,
       decoration: BoxDecoration(
@@ -1243,16 +1260,22 @@ class _CatalogScreenState extends State<CatalogScreen> {
         children: [
           // Кнопка уменьшения
           InkWell(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              cartProvider.decrementItem(product.id);
-            },
+            onTap: quantity > minQty
+                ? () {
+                    HapticFeedback.lightImpact();
+                    // Уменьшаем на step, но не меньше minQty
+                    final newQty = (quantity - step).clamp(minQty, 9999);
+                    cartProvider.updateQuantity(product.id, newQty);
+                  }
+                : null,
             borderRadius: BorderRadius.horizontal(left: Radius.circular(20)),
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Icon(
                 Icons.remove,
-                color: Colors.white,
+                color: quantity > minQty
+                    ? Colors.white
+                    : Colors.white.withOpacity(0.3),
                 size: 18,
               ),
             ),
@@ -1283,10 +1306,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
           InkWell(
             onTap: hasStock &&
                     (product.maxQuantity == null ||
-                        quantity < product.maxQuantity!)
+                        quantity + step <= product.maxQuantity!)
                 ? () {
                     HapticFeedback.lightImpact();
-                    cartProvider.incrementItem(product.id);
+                    cartProvider.updateQuantity(product.id, quantity + step);
                   }
                 : null,
             borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),
@@ -1296,7 +1319,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 Icons.add,
                 color: hasStock &&
                         (product.maxQuantity == null ||
-                            quantity < product.maxQuantity!)
+                            quantity + step <= product.maxQuantity!)
                     ? Colors.white
                     : Colors.white.withOpacity(0.3),
                 size: 18,
@@ -1316,6 +1339,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
     required bool hasStock,
     required bool isOutOfStock,
   }) {
+    // ✅ Определяем правильное начальное количество
+    final initialQuantity =
+        (product.saleType == 'только уп' && product.inPackage != null)
+            ? product.inPackage!
+            : 1;
     return GestureDetector(
       key: key,
       onTap: hasStock
