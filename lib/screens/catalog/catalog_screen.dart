@@ -1138,6 +1138,28 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                 overflow: TextOverflow.ellipsis, // ✅ ДОБАВЛЕНО
                               ),
                             ],
+
+                            // ✅ БЕЙДЖ "ТОЛЬКО УПАКОВКАМИ"
+                            if (product.saleType == 'только уп' &&
+                                product.inPackage != null) ...[
+                              SizedBox(height: 4),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade100,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '📦 Упаковка: ${product.inPackage} ${product.unit}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.orange.shade900,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

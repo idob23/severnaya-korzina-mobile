@@ -18,6 +18,7 @@ class Product {
   final double? basePrice;
   final String? baseUnit;
   final int? inPackage;
+  final String? saleType;
 
   Product(
       {required this.id,
@@ -33,7 +34,8 @@ class Product {
       this.category,
       this.basePrice,
       this.baseUnit,
-      this.inPackage});
+      this.inPackage,
+      this.saleType});
 
   factory Product.fromJson(Map<String, dynamic> json) {
     try {
@@ -67,6 +69,7 @@ class Product {
         inPackage: json['inPackage'] != null
             ? int.tryParse(json['inPackage'].toString())
             : null,
+        saleType: json['saleType']?.toString(),
       );
     } catch (e) {
       if (kDebugMode) {
