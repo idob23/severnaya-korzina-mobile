@@ -1231,16 +1231,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
     required CartProvider cartProvider,
     required bool hasStock,
   }) {
-    // ✅ Определяем шаг изменения количества
-    final step = (product.saleType == 'только уп' && product.inPackage != null)
-        ? product.inPackage!
-        : 1;
-
-    // ✅ Минимальное количество
-    final minQty =
-        (product.saleType == 'только уп' && product.inPackage != null)
-            ? product.inPackage!
-            : 1;
+    // ✅ Шаг и минимум всегда = 1
+    final step = 1;
+    final minQty = 1;
 
     return Container(
       key: key,
@@ -1260,23 +1253,26 @@ class _CatalogScreenState extends State<CatalogScreen> {
         children: [
           // Кнопка уменьшения
           InkWell(
-            onTap: quantity > minQty
-                ? () {
-                    HapticFeedback.lightImpact();
-                    // Уменьшаем на step, но не меньше minQty
-                    final newQty = (quantity - step).clamp(minQty, 9999);
-                    cartProvider.updateQuantity(product.id, newQty);
-                  }
-                : null,
+            onTap: () {
+              HapticFeedback.lightImpact();
+              if (quantity > 1) {
+                cartProvider.updateQuantity(product.id, quantity - 1);
+              } else {
+                // Удаляем товар из корзины
+                cartProvider.updateQuantity(product.id, 0);
+              }
+            },
             borderRadius: BorderRadius.horizontal(left: Radius.circular(20)),
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Icon(
-                Icons.remove,
-                color: quantity > minQty
-                    ? Colors.white
-                    : Colors.white.withOpacity(0.3),
-                size: 18,
+              child: AnimatedSwitcher(
+                duration: Duration(milliseconds: 200),
+                child: Icon(
+                  quantity > 1 ? Icons.remove : Icons.delete,
+                  key: ValueKey(quantity > 1),
+                  color: quantity > 1 ? Colors.white : Colors.red.shade300,
+                  size: 18,
+                ),
               ),
             ),
           ),
@@ -1339,13 +1335,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
     required bool hasStock,
     required bool isOutOfStock,
   }) {
-    // ✅ Определяем правильное начальное количество
-    final initialQuantity =
-        (product.saleType == 'только уп' && product.inPackage != null)
-            ? product.inPackage!
-            : 1;
+    // ✅ ВСЕГДА добавляем 1 единицу (1 шт или 1 уп)
+    final initialQuantity = 1;
 
-    // // ✅ ДОБАВЬ ОТЛАДКУ
     // print('=== ADD TO CART ===');
     // print('Product: ${product.name}');
     // print('saleType: ${product.saleType}');

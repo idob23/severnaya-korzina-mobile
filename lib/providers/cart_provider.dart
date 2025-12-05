@@ -137,6 +137,11 @@ class CartProvider with ChangeNotifier {
     String? saleType, // ← ДОБАВИТЬ
     int? inPackage, // ← ДОБАВИТЬ
   }) {
+    print('📝 addItem called:');
+    print('   name: $name');
+    print('   quantity: $quantity');
+    print('   saleType: $saleType');
+    print('   inPackage: $inPackage');
     if (_items.containsKey(productId)) {
       // Если товар уже есть в корзине, увеличиваем количество
       _items[productId]!.quantity += quantity;

@@ -385,22 +385,8 @@ class _CartScreenState extends State<CartScreen> {
                               print('   item.quantity: ${item.quantity}');
                               HapticFeedback.lightImpact();
                               if (item.quantity > 1) {
-                                final step = (item.saleType == 'только уп' &&
-                                        item.inPackage != null)
-                                    ? item.inPackage!
-                                    : 1;
-                                final minQty = (item.saleType == 'только уп' &&
-                                        item.inPackage != null)
-                                    ? item.inPackage!
-                                    : 1;
-
-                                if (item.quantity > minQty) {
-                                  cartProvider.updateQuantity(
-                                      item.productId, item.quantity - step);
-                                } else {
-                                  cartProvider.updateQuantity(
-                                      item.productId, 0);
-                                }
+                                cartProvider.updateQuantity(
+                                    item.productId, item.quantity - 1);
                               } else {
                                 cartProvider.updateQuantity(item.productId, 0);
                               }
@@ -452,12 +438,8 @@ class _CartScreenState extends State<CartScreen> {
                               print('   item.inPackage: ${item.inPackage}');
                               print('   item.quantity: ${item.quantity}');
                               HapticFeedback.lightImpact();
-                              final step = (item.saleType == 'только уп' &&
-                                      item.inPackage != null)
-                                  ? item.inPackage!
-                                  : 1;
                               cartProvider.updateQuantity(
-                                  item.productId, item.quantity + step);
+                                  item.productId, item.quantity + 1);
                             },
                             icon: Icon(
                               Icons.add,
