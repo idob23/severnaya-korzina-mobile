@@ -378,10 +378,29 @@ class _CartScreenState extends State<CartScreen> {
                         children: [
                           IconButton(
                             onPressed: () {
+                              print('🔴 MINUS BUTTON');
+                              print('   item.name: ${item.name}');
+                              print('   item.saleType: ${item.saleType}');
+                              print('   item.inPackage: ${item.inPackage}');
+                              print('   item.quantity: ${item.quantity}');
                               HapticFeedback.lightImpact();
                               if (item.quantity > 1) {
-                                cartProvider.updateQuantity(
-                                    item.productId, item.quantity - 1);
+                                final step = (item.saleType == 'только уп' &&
+                                        item.inPackage != null)
+                                    ? item.inPackage!
+                                    : 1;
+                                final minQty = (item.saleType == 'только уп' &&
+                                        item.inPackage != null)
+                                    ? item.inPackage!
+                                    : 1;
+
+                                if (item.quantity > minQty) {
+                                  cartProvider.updateQuantity(
+                                      item.productId, item.quantity - step);
+                                } else {
+                                  cartProvider.updateQuantity(
+                                      item.productId, 0);
+                                }
                               } else {
                                 cartProvider.updateQuantity(item.productId, 0);
                               }
@@ -427,9 +446,18 @@ class _CartScreenState extends State<CartScreen> {
                           ),
                           IconButton(
                             onPressed: () {
+                              print('🔴 PLUS BUTTON');
+                              print('   item.name: ${item.name}');
+                              print('   item.saleType: ${item.saleType}');
+                              print('   item.inPackage: ${item.inPackage}');
+                              print('   item.quantity: ${item.quantity}');
                               HapticFeedback.lightImpact();
+                              final step = (item.saleType == 'только уп' &&
+                                      item.inPackage != null)
+                                  ? item.inPackage!
+                                  : 1;
                               cartProvider.updateQuantity(
-                                  item.productId, item.quantity + 1);
+                                  item.productId, item.quantity + step);
                             },
                             icon: Icon(
                               Icons.add,

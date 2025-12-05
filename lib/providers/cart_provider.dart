@@ -12,6 +12,8 @@ class CartItem {
   final double price;
   final String unit;
   int quantity;
+  final String? saleType;
+  final int? inPackage;
 
   CartItem({
     required this.productId,
@@ -19,6 +21,8 @@ class CartItem {
     required this.price,
     required this.unit,
     required this.quantity,
+    this.saleType,
+    this.inPackage,
   });
 
   /// Создает копию с изменениями
@@ -28,6 +32,8 @@ class CartItem {
     double? price,
     String? unit,
     int? quantity,
+    String? saleType,
+    int? inPackage,
   }) {
     return CartItem(
       productId: productId ?? this.productId,
@@ -35,6 +41,8 @@ class CartItem {
       price: price ?? this.price,
       unit: unit ?? this.unit,
       quantity: quantity ?? this.quantity,
+      saleType: saleType ?? this.saleType,
+      inPackage: inPackage ?? this.inPackage,
     );
   }
 
@@ -55,6 +63,8 @@ class CartItem {
       'price': price,
       'unit': unit,
       'quantity': quantity,
+      'saleType': saleType,
+      'inPackage': inPackage,
     };
   }
 
@@ -66,6 +76,8 @@ class CartItem {
       price: json['price'].toDouble(),
       unit: json['unit'],
       quantity: json['quantity'],
+      saleType: json['saleType'],
+      inPackage: json['inPackage'],
     );
   }
 
@@ -122,6 +134,8 @@ class CartProvider with ChangeNotifier {
     required double price,
     required String unit,
     int quantity = 1,
+    String? saleType, // ← ДОБАВИТЬ
+    int? inPackage, // ← ДОБАВИТЬ
   }) {
     if (_items.containsKey(productId)) {
       // Если товар уже есть в корзине, увеличиваем количество
@@ -134,6 +148,8 @@ class CartProvider with ChangeNotifier {
         price: price,
         unit: unit,
         quantity: quantity,
+        saleType: saleType, // ← ДОБАВИТЬ
+        inPackage: inPackage, // ← ДОБАВИТЬ
       );
     }
 
@@ -147,12 +163,19 @@ class CartProvider with ChangeNotifier {
 
   /// НОВЫЙ МЕТОД: Добавляет товар по объекту Product (нужен для CatalogScreen)
   void addProduct(Product product, int quantity) {
+    print('📦 addProduct called:');
+    print('   product.name: ${product.name}');
+    print('   product.saleType: ${product.saleType}');
+    print('   product.inPackage: ${product.inPackage}');
+    print('   quantity: $quantity');
     addItem(
       productId: product.id,
       name: product.name,
       price: product.price,
       unit: product.unit,
       quantity: quantity,
+      saleType: product.saleType, // ← ДОБАВИТЬ
+      inPackage: product.inPackage, // ← ДОБАВИТЬ
     );
   }
 
@@ -302,6 +325,10 @@ class CartProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_cartStorageKey);
+
+      print('=== LOADING CART ===');
+      print('Cart JSON: $jsonString');
+      print('===================');
 
       if (jsonString != null && jsonString.isNotEmpty) {
         final Map<String, dynamic> cartData = jsonDecode(jsonString);

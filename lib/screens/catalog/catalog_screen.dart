@@ -1344,12 +1344,39 @@ class _CatalogScreenState extends State<CatalogScreen> {
         (product.saleType == 'только уп' && product.inPackage != null)
             ? product.inPackage!
             : 1;
+
+    // // ✅ ДОБАВЬ ОТЛАДКУ
+    // print('=== ADD TO CART ===');
+    // print('Product: ${product.name}');
+    // print('saleType: ${product.saleType}');
+    // print('inPackage: ${product.inPackage}');
+    // print('initialQuantity: $initialQuantity');
+    // print('===================');
+
     return GestureDetector(
       key: key,
       onTap: hasStock
           ? () {
+              print(
+                  '🔴 CLICKED! Adding ${product.name} with quantity: $initialQuantity');
               HapticFeedback.mediumImpact();
-              cartProvider.addProduct(product, product.minQuantity);
+
+              // ✅ Правильная цена в зависимости от типа продажи
+              final priceToUse = (product.saleType == 'поштучно' &&
+                      product.inPackage != null &&
+                      product.inPackage! > 0)
+                  ? (product.price / product.inPackage!) // Цена за штуку
+                  : product.price; // Цена за упаковку
+
+              cartProvider.addItem(
+                productId: product.id,
+                name: product.name,
+                price: priceToUse,
+                unit: product.unit,
+                quantity: initialQuantity,
+                saleType: product.saleType,
+                inPackage: product.inPackage,
+              );
             }
           : null,
       child: Container(
