@@ -34,7 +34,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final productsProvider =
           Provider.of<ProductsProvider>(context, listen: false);
-      productsProvider.init();
+      // 🔥 Перезагружаем товары
+      productsProvider.loadProducts();
     });
   }
 
@@ -170,6 +171,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                   category.id;
                           return _buildCategoryTile(
                             context: context,
+                            imageUrl: category.imageUrl,
                             icon: Icons.category,
                             title: category.name,
                             isSelected: isSelected,
@@ -243,7 +245,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
   // Виджет плитки категории с улучшенным дизайном
   Widget _buildCategoryTile({
     required BuildContext context,
-    required IconData icon,
+    IconData? icon,
+    String? imageUrl,
     required String title,
     required bool isSelected,
     int? count,
@@ -296,11 +299,31 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         ]
                       : null,
                 ),
-                child: Icon(
-                  icon,
-                  color: isSelected ? Colors.white : AppColors.textSecondary,
-                  size: 20,
-                ),
+                child: imageUrl != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          'https://api.sevkorzina.ru$imageUrl',
+                          width: 20,
+                          height: 20,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              icon ?? Icons.category,
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppColors.textSecondary,
+                              size: 20,
+                            );
+                          },
+                        ),
+                      )
+                    : Icon(
+                        icon ?? Icons.category,
+                        color:
+                            isSelected ? Colors.white : AppColors.textSecondary,
+                        size: 20,
+                      ),
               ),
               SizedBox(width: 12),
               Expanded(
@@ -370,7 +393,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
               builder: (context, productsProvider, child) {
                 // Получаем текущую выбранную категорию
                 String currentCategoryName = 'Все товары';
-                Icon currentIcon = Icon(Icons.apps, size: 18);
+                Widget currentIcon = Icon(Icons.apps, size: 18);
 
                 if (productsProvider.selectedCategoryId != null) {
                   final selectedCategory =
@@ -379,7 +402,25 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     orElse: () => productsProvider.categories.first,
                   );
                   currentCategoryName = selectedCategory.name;
-                  currentIcon = Icon(Icons.category, size: 18);
+
+                  // Если у категории есть картинка - показываем её
+                  if (selectedCategory.imageUrl != null &&
+                      selectedCategory.imageUrl!.isNotEmpty) {
+                    currentIcon = ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Image.network(
+                        'https://api.sevkorzina.ru${selectedCategory.imageUrl}',
+                        width: 18,
+                        height: 18,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(Icons.category, size: 18);
+                        },
+                      ),
+                    );
+                  } else {
+                    currentIcon = Icon(Icons.category, size: 18);
+                  }
                 }
 
                 return InkWell(
@@ -966,30 +1007,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                 width: 1,
                               ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.category_outlined,
-                                  size: 12,
-                                  color: AppColors.aurora1,
-                                ),
-                                SizedBox(width: 4),
-                                Flexible(
-                                  // ← ДОБАВИТЬ Flexible для Text
-                                  child: Text(
-                                    product.category!.name,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.aurora1,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    overflow:
-                                        TextOverflow.ellipsis, // ← ДОБАВИТЬ
-                                    maxLines: 1, // ← ДОБАВИТЬ
-                                  ),
-                                ),
-                              ],
+                            child: Text(
+                              product.category!.name,
+                              style: TextStyle(
+                                color: AppColors.aurora1,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ),
@@ -1338,33 +1363,37 @@ class _CatalogScreenState extends State<CatalogScreen> {
     // ✅ ВСЕГДА добавляем 1 единицу (1 шт или 1 уп)
     final initialQuantity = 1;
 
-    // print('=== ADD TO CART ===');
-    // print('Product: ${product.name}');
-    // print('saleType: ${product.saleType}');
-    // print('inPackage: ${product.inPackage}');
-    // print('initialQuantity: $initialQuantity');
-    // print('===================');
-
     return GestureDetector(
       key: key,
       onTap: hasStock
           ? () {
-              print(
-                  '🔴 CLICKED! Adding ${product.name} with quantity: $initialQuantity');
               HapticFeedback.mediumImpact();
 
+              // 🔥 КРИТИЧЕСКАЯ ПРОВЕРКА: принудительно проверяем saleType
+              final actualSaleType = product.saleType ?? 'поштучно';
+              final actualInPackage = product.inPackage ?? 1;
+
+              print('🛒 ADDING TO CART:');
+              print('   Product: ${product.name}');
+              print('   saleType: $actualSaleType');
+              print('   inPackage: $actualInPackage');
+              print('   product.price: ${product.price}');
+
               // ✅ Правильная цена в зависимости от типа продажи
-              final priceToUse = (product.saleType == 'поштучно' &&
-                      product.inPackage != null &&
-                      product.inPackage! > 0)
-                  ? (product.price / product.inPackage!) // Цена за штуку
-                  : product.price; // Цена за упаковку
+              final priceToUse =
+                  (actualSaleType == 'поштучно' && actualInPackage > 1)
+                      ? (product.price / actualInPackage) // Цена за штуку
+                      : product.price; // Цена за упаковку
 
               // ✅ Правильная единица измерения
-              final unitToUse = (product.saleType == 'поштучно')
+              final unitToUse = (actualSaleType == 'поштучно')
                   ? (product.baseUnit ??
                       'шт') // Для штучных - базовая единица (шт)
                   : product.unit; // Для упаковок - оставляем как есть (уп)
+
+              print('   Calculated price: $priceToUse');
+              print('   Unit: $unitToUse');
+              print('   Quantity to add: $initialQuantity');
 
               cartProvider.addItem(
                 productId: product.id,
@@ -1372,8 +1401,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 price: priceToUse,
                 unit: unitToUse,
                 quantity: initialQuantity,
-                saleType: product.saleType,
-                inPackage: product.inPackage,
+                saleType: actualSaleType,
+                inPackage: actualInPackage,
               );
             }
           : null,
@@ -1551,29 +1580,15 @@ class _CatalogScreenState extends State<CatalogScreen> {
                               ),
                             ],
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.category_rounded,
-                                size: 16,
-                                color: Colors.white,
-                              ),
-                              SizedBox(width: 6),
-                              Flexible(
-                                // ← ДОБАВИТЬ Flexible
-                                child: Text(
-                                  product.category!.name,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                  ),
-                                  overflow: TextOverflow.ellipsis, // ← ДОБАВИТЬ
-                                  maxLines: 1, // ← ДОБАВИТЬ
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            product.category!.name,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
                       ),
