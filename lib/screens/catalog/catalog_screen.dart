@@ -36,6 +36,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
           Provider.of<ProductsProvider>(context, listen: false);
       // 🔥 Перезагружаем товары
       productsProvider.loadProducts();
+      productsProvider.loadCategories();
     });
   }
 
@@ -113,8 +114,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.category, color: Colors.white, size: 24),
-                      SizedBox(width: 12),
+                      // Icon(Icons.category, color: Colors.white, size: 24),
+                      // SizedBox(width: 12),
                       Expanded(
                         // ← ИЗМЕНИТЬ Text на Expanded + Text
                         child: Text(
@@ -149,7 +150,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           title: 'Все товары',
                           isSelected:
                               productsProvider.selectedCategoryId == null,
-                          count: productsProvider.totalProducts,
+                          count: productsProvider.categories.fold<int>(
+                              0,
+                              (sum, category) =>
+                                  sum +
+                                  (category.productsCount ??
+                                      0)), // ✅ Суммируем товары из всех категорий
                           onTap: () {
                             productsProvider.filterByCategory(null);
                             Navigator.pop(context);
@@ -282,50 +288,50 @@ class _CatalogScreenState extends State<CatalogScreen> {
           ),
           child: Row(
             children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  // УЛУЧШЕНО: градиент для иконки
-                  gradient: isSelected ? AppGradients.button : null,
-                  color: isSelected ? null : AppColors.background,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: AppColors.primaryLight.withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: Offset(0, 4),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: imageUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          'https://api.sevkorzina.ru$imageUrl',
-                          width: 20,
-                          height: 20,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              icon ?? Icons.category,
-                              color: isSelected
-                                  ? Colors.white
-                                  : AppColors.textSecondary,
-                              size: 20,
-                            );
-                          },
-                        ),
-                      )
-                    : Icon(
-                        icon ?? Icons.category,
-                        color:
-                            isSelected ? Colors.white : AppColors.textSecondary,
-                        size: 20,
-                      ),
-              ),
-              SizedBox(width: 12),
+              // Container(
+              //   padding: EdgeInsets.all(8),
+              //   decoration: BoxDecoration(
+              //     // УЛУЧШЕНО: градиент для иконки
+              //     gradient: isSelected ? AppGradients.button : null,
+              //     color: isSelected ? null : AppColors.background,
+              //     borderRadius: BorderRadius.circular(12),
+              //     boxShadow: isSelected
+              //         ? [
+              //             BoxShadow(
+              //               color: AppColors.primaryLight.withOpacity(0.3),
+              //               blurRadius: 8,
+              //               offset: Offset(0, 4),
+              //             ),
+              //           ]
+              //         : null,
+              //   ),
+              //   child: imageUrl != null
+              //       ? ClipRRect(
+              //           borderRadius: BorderRadius.circular(8),
+              //           child: Image.network(
+              //             'https://api.sevkorzina.ru$imageUrl',
+              //             width: 20,
+              //             height: 20,
+              //             fit: BoxFit.cover,
+              //             errorBuilder: (context, error, stackTrace) {
+              //               return Icon(
+              //                 icon ?? Icons.category,
+              //                 color: isSelected
+              //                     ? Colors.white
+              //                     : AppColors.textSecondary,
+              //                 size: 20,
+              //               );
+              //             },
+              //           ),
+              //         )
+              //       : Icon(
+              //           icon ?? Icons.category,
+              //           color:
+              //               isSelected ? Colors.white : AppColors.textSecondary,
+              //           size: 20,
+              //         ),
+              // ),
+              // SizedBox(width: 12),
               Expanded(
                 child: Text(
                   title,
@@ -393,7 +399,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
               builder: (context, productsProvider, child) {
                 // Получаем текущую выбранную категорию
                 String currentCategoryName = 'Все товары';
-                Widget currentIcon = Icon(Icons.apps, size: 18);
+                // Widget currentIcon = Icon(Icons.apps, size: 18);
 
                 if (productsProvider.selectedCategoryId != null) {
                   final selectedCategory =
@@ -403,24 +409,24 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   );
                   currentCategoryName = selectedCategory.name;
 
-                  // Если у категории есть картинка - показываем её
-                  if (selectedCategory.imageUrl != null &&
-                      selectedCategory.imageUrl!.isNotEmpty) {
-                    currentIcon = ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: Image.network(
-                        'https://api.sevkorzina.ru${selectedCategory.imageUrl}',
-                        width: 18,
-                        height: 18,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(Icons.category, size: 18);
-                        },
-                      ),
-                    );
-                  } else {
-                    currentIcon = Icon(Icons.category, size: 18);
-                  }
+                  // // Если у категории есть картинка - показываем её
+                  // if (selectedCategory.imageUrl != null &&
+                  //     selectedCategory.imageUrl!.isNotEmpty) {
+                  //   currentIcon = ClipRRect(
+                  //     borderRadius: BorderRadius.circular(4),
+                  //     child: Image.network(
+                  //       'https://api.sevkorzina.ru${selectedCategory.imageUrl}',
+                  //       width: 18,
+                  //       height: 18,
+                  //       fit: BoxFit.cover,
+                  //       errorBuilder: (context, error, stackTrace) {
+                  //         return Icon(Icons.category, size: 18);
+                  //       },
+                  //     ),
+                  //   );
+                  // } else {
+                  //   currentIcon = Icon(Icons.category, size: 18);
+                  // }
                 }
 
                 return InkWell(
@@ -439,8 +445,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        currentIcon,
-                        SizedBox(width: 8),
+                        // currentIcon,
+                        // SizedBox(width: 8),
                         Flexible(
                           child: Text(
                             currentCategoryName,
@@ -2079,7 +2085,39 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                         onTap: hasStock
                                             ? () {
                                                 HapticFeedback.mediumImpact();
-                                                cart.addProduct(product, 1);
+                                                // 🔥 КРИТИЧЕСКАЯ ПРОВЕРКА: принудительно проверяем saleType
+                                                final actualSaleType =
+                                                    product.saleType ??
+                                                        'поштучно';
+                                                final actualInPackage =
+                                                    product.inPackage ?? 1;
+
+                                                // ✅ Правильная цена в зависимости от типа продажи
+                                                final priceToUse = (actualSaleType ==
+                                                            'поштучно' &&
+                                                        actualInPackage > 1)
+                                                    ? (product.price /
+                                                        actualInPackage) // Цена за штуку
+                                                    : product
+                                                        .price; // Цена за упаковку
+
+                                                // ✅ Правильная единица измерения
+                                                final unitToUse =
+                                                    (actualSaleType ==
+                                                            'поштучно')
+                                                        ? (product.baseUnit ??
+                                                            'шт')
+                                                        : product.unit;
+
+                                                cart.addItem(
+                                                  productId: product.id,
+                                                  name: product.name,
+                                                  price: priceToUse,
+                                                  unit: unitToUse,
+                                                  quantity: 1,
+                                                  saleType: actualSaleType,
+                                                  inPackage: actualInPackage,
+                                                );
                                                 // Показываем снекбар с анимацией
                                                 ScaffoldMessenger.of(context)
                                                     .showSnackBar(
