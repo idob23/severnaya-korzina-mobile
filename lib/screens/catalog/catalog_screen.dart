@@ -23,6 +23,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
   Timer? _debounceTimer; // ← ДОБАВИТЬ ЭТУ СТРОКУ
   final ScrollController _scrollController = ScrollController();
 
+  double _savedScrollPosition = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -37,11 +39,20 @@ class _CatalogScreenState extends State<CatalogScreen> {
       // 🔥 Перезагружаем товары
       productsProvider.loadProducts();
       productsProvider.loadCategories();
+
+      // ✅ ДОБАВИТЬ ЭТИ СТРОКИ:
+      // Восстанавливаем сохранённую позицию скролла
+      if (_savedScrollPosition > 0 && _scrollController.hasClients) {
+        _scrollController.jumpTo(_savedScrollPosition);
+      }
     });
   }
 
   // 🆕 ДОБАВИТЬ ВЕСЬ ЭТОТ МЕТОД
   void _onScroll() {
+    // ✅ СОХРАНЯЕМ позицию при скролле
+    _savedScrollPosition = _scrollController.position.pixels;
+
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       // За 200 пикселей до конца начинаем загрузку
@@ -464,7 +475,103 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 );
               },
             ),
+            // actions: [
+            //   // Иконка корзины с индикатором
+            //   Consumer<CartProvider>(
+            //     builder: (context, cart, child) {
+            //       return Stack(
+            //         children: [
+            //           IconButton(
+            //             icon: Icon(Icons.shopping_cart),
+            //             onPressed: () {
+            //               Navigator.pushNamed(context, '/cart');
+            //             },
+            //           ),
+            //           if (cart.totalItems > 0)
+            //             Positioned(
+            //               right: 8,
+            //               top: 8,
+            //               child: Container(
+            //                 padding: EdgeInsets.all(4),
+            //                 decoration: BoxDecoration(
+            //                   gradient: LinearGradient(
+            //                     // УЛУЧШЕНО: градиент
+            //                     colors: [Colors.red, Colors.red.shade700],
+            //                   ),
+            //                   shape: BoxShape.circle,
+            //                 ),
+            //                 constraints: BoxConstraints(
+            //                   minWidth: 16,
+            //                   minHeight: 16,
+            //                 ),
+            //                 child: Text(
+            //                   '${cart.totalItems}',
+            //                   style: TextStyle(
+            //                     color: Colors.white,
+            //                     fontSize: 10,
+            //                     fontWeight: FontWeight.bold,
+            //                   ),
+            //                   textAlign: TextAlign.center,
+            //                 ),
+            //               ),
+            //             ),
+            //         ],
+            //       );
+            //     },
+            //   ),
+            // ],
             actions: [
+              // Кнопка обновления
+              IconButton(
+                icon: Icon(Icons.refresh),
+                tooltip: 'Обновить каталог',
+                onPressed: () async {
+                  final productsProvider =
+                      Provider.of<ProductsProvider>(context, listen: false);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation(Colors.white),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Text('Обновление каталога...'),
+                        ],
+                      ),
+                      duration: Duration(seconds: 1),
+                      backgroundColor: AppColors.primaryDark,
+                    ),
+                  );
+
+                  await productsProvider.loadProducts();
+                  await productsProvider.loadCategories();
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            Icon(Icons.check_circle,
+                                color: Colors.white, size: 20),
+                            SizedBox(width: 8),
+                            Text('Каталог обновлён!'),
+                          ],
+                        ),
+                        duration: Duration(seconds: 2),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  }
+                },
+              ),
+
               // Иконка корзины с индикатором
               Consumer<CartProvider>(
                 builder: (context, cart, child) {
@@ -484,7 +591,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             padding: EdgeInsets.all(4),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                // УЛУЧШЕНО: градиент
                                 colors: [Colors.red, Colors.red.shade700],
                               ),
                               shape: BoxShape.circle,
