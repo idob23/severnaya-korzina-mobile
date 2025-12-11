@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../design_system/colors/app_colors.dart';
 import '../../design_system/colors/gradients.dart';
 import '../../providers/auth_provider.dart';
+import '../../models/user.dart';
 
 class AddAddressScreen extends StatefulWidget {
   const AddAddressScreen({Key? key}) : super(key: key);
@@ -14,72 +15,192 @@ class AddAddressScreen extends StatefulWidget {
 }
 
 class _AddAddressScreenState extends State<AddAddressScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
   final _addressController = TextEditingController();
-  bool _isDefault = false;
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _titleController.dispose();
     _addressController.dispose();
     super.dispose();
   }
 
-  Future<void> _saveAddress() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _addAddress() async {
+    final address = _addressController.text.trim();
+
+    if (address.length < 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Адрес должен содержать минимум 5 символов'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-      // addAddress возвращает bool, а не Map
       final success = await authProvider.addAddress(
-        title: _titleController.text.trim(),
-        address: _addressController.text.trim(),
-        isDefault: _isDefault,
+        title: address, // Используем адрес как название
+        address: address,
+        isDefault: false,
       );
 
       if (success) {
-        HapticFeedback.heavyImpact();
+        HapticFeedback.mediumImpact();
+        _addressController.clear();
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('✅ Адрес добавлен'),
               backgroundColor: AppColors.success,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
             ),
           );
-
-          Navigator.pop(context, true);
         }
       } else {
-        throw Exception(authProvider.lastError ?? 'Ошибка добавления адреса');
+        throw Exception(authProvider.lastError ?? 'Ошибка добавления');
       }
     } catch (e) {
-      HapticFeedback.heavyImpact();
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('❌ ${e.toString().replaceAll('Exception: ', '')}'),
             backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
           ),
         );
       }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _editAddress(UserAddress address) async {
+    final controller = TextEditingController(text: address.address);
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Редактировать адрес'),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: 'Адрес',
+            hintText: 'Введите адрес',
+          ),
+          minLines: 1,
+          maxLines: null,
+          keyboardType: TextInputType.multiline,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: Text('Сохранить'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.length >= 5) {
+      setState(() => _isLoading = true);
+
+      try {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final success = await authProvider.updateAddress(
+          id: address.id!,
+          title: result,
+          address: result,
+          isDefault: address.isDefault,
+        );
+
+        if (success) {
+          HapticFeedback.mediumImpact();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('✅ Адрес обновлен'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Ошибка обновления'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    }
+  }
+
+  Future<void> _deleteAddress(UserAddress address) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Удалить адрес?'),
+        content: Text('Адрес "${address.address}" будет удален'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() => _isLoading = true);
+
+      try {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final success = await authProvider.deleteAddress(address.id!);
+
+        if (success) {
+          HapticFeedback.mediumImpact();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('✅ Адрес удален'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Ошибка удаления'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
@@ -94,7 +215,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
           ),
         ),
         title: Text(
-          'Добавить адрес',
+          'Мои адреса',
           style: TextStyle(color: Colors.white),
         ),
         centerTitle: true,
@@ -113,253 +234,164 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
             ],
           ),
         ),
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(16),
-                child: Form(
-                  key: _formKey,
+        child: Consumer<AuthProvider>(
+          builder: (context, authProvider, _) {
+            final addresses = authProvider.currentUser?.addresses ?? [];
+
+            if (_isLoading) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            // Если адресов нет - показываем форму добавления
+            if (addresses.isEmpty) {
+              return Center(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(24),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Информационная карточка
-                      Container(
-                        padding: EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.ice.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppColors.primaryLight.withOpacity(0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.info_outline,
-                              color: AppColors.primaryLight,
-                              size: 24,
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Укажите адрес для доставки товаров',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      Icon(
+                        Icons.location_off,
+                        size: 80,
+                        color: AppColors.textSecondary,
                       ),
                       SizedBox(height: 24),
-
-                      // Название адреса
-                      _buildTextField(
-                        controller: _titleController,
-                        label: 'Название адреса',
-                        hint: 'Например: Дом, Работа',
-                        icon: Icons.label_outline,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Введите название адреса';
-                          }
-                          return null;
-                        },
+                      Text(
+                        'Адрес пока не указан',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
-                      SizedBox(height: 16),
-
-                      // Адрес
-                      _buildTextField(
-                        controller: _addressController,
-                        label: 'Адрес доставки',
-                        hint: 'г. Магадан, ул. Примерная, д. 1, кв. 1',
-                        icon: Icons.location_on_outlined,
-                        maxLines: 3,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Введите адрес доставки';
-                          }
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: 16),
-
-                      // Чекбокс "Сделать основным"
+                      SizedBox(height: 32),
                       Container(
+                        padding: EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.shadowLight,
-                              blurRadius: 8,
+                              blurRadius: 10,
                               offset: Offset(0, 4),
                             ),
                           ],
                         ),
-                        child: CheckboxListTile(
-                          title: Text(
-                            'Сделать основным адресом',
+                        child: TextField(
+                          controller: _addressController,
+                          decoration: InputDecoration(
+                            hintText: 'Введите адрес',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            prefixIcon: Icon(Icons.location_on),
+                          ),
+                          minLines: 1,
+                          maxLines: null,
+                          keyboardType: TextInputType.multiline,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: AppGradients.button,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primaryLight.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton.icon(
+                          onPressed: _isLoading ? null : _addAddress,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                          ),
+                          icon: Icon(Icons.add, color: Colors.white),
+                          label: Text(
+                            'Добавить адрес',
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
                             ),
-                          ),
-                          subtitle: Text(
-                            'Будет использоваться по умолчанию',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          value: _isDefault,
-                          onChanged: (value) {
-                            HapticFeedback.lightImpact();
-                            setState(() => _isDefault = value ?? false);
-                          },
-                          activeColor: AppColors.primaryLight,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ),
-            _buildSaveButton(),
-          ],
-        ),
-      ),
-    );
-  }
+              );
+            }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    String? Function(String?)? validator,
-    int maxLines = 1,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: EdgeInsets.only(left: 12, top: 8, bottom: 4),
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
-            TextFormField(
-              controller: controller,
-              maxLines: maxLines,
-              style: TextStyle(
-                fontSize: 16,
-                color: AppColors.textPrimary,
-              ),
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: TextStyle(
-                  color: AppColors.textSecondary.withOpacity(0.5),
-                ),
-                prefixIcon: Icon(icon, color: AppColors.primaryLight),
-                border: InputBorder.none,
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: AppColors.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(
-                    color: AppColors.primaryLight,
-                    width: 2,
-                  ),
-                ),
-                contentPadding: EdgeInsets.all(12),
-              ),
-              validator: validator,
-              onTapOutside: (_) => FocusScope.of(context).unfocus(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+            // Если адреса есть - показываем список
+            return ListView.builder(
+              itemCount: addresses.length,
+              itemBuilder: (context, index) {
+                final address = addresses[index];
 
-  Widget _buildSaveButton() {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 10,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 300),
-        child: ElevatedButton(
-          onPressed: _isLoading ? null : _saveAddress,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryLight,
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            elevation: 0,
-            shadowColor: Colors.transparent,
-          ),
-          child: _isLoading
-              ? SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                return Container(
+                  margin: EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.shadowLight,
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.check_circle_outline, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Сохранить адрес',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    leading: Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.location_on,
+                        color: AppColors.primaryLight,
                       ),
                     ),
-                  ],
-                ),
+                    title: Text(
+                      address.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.edit, color: AppColors.aurora2),
+                          onPressed: () => _editAddress(address),
+                        ),
+                        // IconButton(
+                        //   icon: Icon(Icons.delete, color: AppColors.error),
+                        //   onPressed: () => _deleteAddress(address),
+                        // ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         ),
       ),
     );

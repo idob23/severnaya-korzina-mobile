@@ -581,8 +581,9 @@ class _CatalogScreenState extends State<CatalogScreen>
                     ),
                   );
 
-                  await productsProvider.loadProducts();
-                  await productsProvider.loadCategories();
+                  // await productsProvider.loadProducts();
+                  // await productsProvider.loadCategories();
+                  await productsProvider.refresh();
 
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(

@@ -661,6 +661,84 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Обновить адрес пользователя
+  Future<bool> updateAddress({
+    required int id,
+    required String title,
+    required String address,
+    bool isDefault = false,
+  }) async {
+    if (_currentUser == null) return false;
+
+    _isLoading = true;
+    _lastError = null;
+    notifyListeners();
+
+    try {
+      final result = await _apiService.updateAddress(
+        id: id,
+        title: title,
+        address: address,
+        isDefault: isDefault,
+      );
+
+      if (result['success'] == true) {
+        await loadUserData();
+
+        if (kDebugMode) {
+          print('✅ Адрес успешно обновлен');
+        }
+        return true;
+      } else {
+        _lastError = result['error'] ?? 'Ошибка обновления адреса';
+        return false;
+      }
+    } catch (e) {
+      _lastError = 'Ошибка при обновлении адреса: $e';
+      if (kDebugMode) {
+        print('❌ Ошибка updateAddress: $e');
+      }
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Удалить адрес пользователя
+  Future<bool> deleteAddress(int id) async {
+    if (_currentUser == null) return false;
+
+    _isLoading = true;
+    _lastError = null;
+    notifyListeners();
+
+    try {
+      final result = await _apiService.deleteAddress(id);
+
+      if (result['success'] == true) {
+        await loadUserData();
+
+        if (kDebugMode) {
+          print('✅ Адрес успешно удален');
+        }
+        return true;
+      } else {
+        _lastError = result['error'] ?? 'Ошибка удаления адреса';
+        return false;
+      }
+    } catch (e) {
+      _lastError = 'Ошибка при удалении адреса: $e';
+      if (kDebugMode) {
+        print('❌ Ошибка deleteAddress: $e');
+      }
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   /// Загружает актуальные данные пользователя с сервера
   Future<void> loadUserData() async {
     if (!_isAuthenticated) return;

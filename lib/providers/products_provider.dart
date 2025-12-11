@@ -292,89 +292,89 @@ class ProductsProvider with ChangeNotifier {
     return _products;
   }
 
-  /// Сортирует товары по релевантности к поисковому запросу
-  List<Product> _sortByRelevance(List<Product> products, String query) {
-    if (query.isEmpty) return products;
+  // /// Сортирует товары по релевантности к поисковому запросу
+  // List<Product> _sortByRelevance(List<Product> products, String query) {
+  //   if (query.isEmpty) return products;
 
-    final lowerQuery = query.toLowerCase().trim();
-    final queryWords = lowerQuery.split(RegExp(r'\s+'));
+  //   final lowerQuery = query.toLowerCase().trim();
+  //   final queryWords = lowerQuery.split(RegExp(r'\s+'));
 
-    // Функция для расчета релевантности
-    int calculateRelevance(Product product) {
-      final name = product.name.toLowerCase();
-      final description = product.description?.toLowerCase() ?? '';
+  //   // Функция для расчета релевантности
+  //   int calculateRelevance(Product product) {
+  //     final name = product.name.toLowerCase();
+  //     final description = product.description?.toLowerCase() ?? '';
 
-      // Приоритет 1: Точное совпадение названия
-      if (name == lowerQuery) return 1000;
+  //     // Приоритет 1: Точное совпадение названия
+  //     if (name == lowerQuery) return 1000;
 
-      // Приоритет 2: Название начинается с запроса
-      if (name.startsWith(lowerQuery)) return 900;
+  //     // Приоритет 2: Название начинается с запроса
+  //     if (name.startsWith(lowerQuery)) return 900;
 
-      // Приоритет 3: Одно из слов в названии точно совпадает с запросом
-      final nameWords = name.split(RegExp(r'\s+'));
-      if (nameWords.contains(lowerQuery)) return 800;
+  //     // Приоритет 3: Одно из слов в названии точно совпадает с запросом
+  //     final nameWords = name.split(RegExp(r'\s+'));
+  //     if (nameWords.contains(lowerQuery)) return 800;
 
-      // Приоритет 4: Название содержит все слова из запроса
-      final containsAllWords = queryWords.every((word) => name.contains(word));
-      if (containsAllWords) return 700;
+  //     // Приоритет 4: Название содержит все слова из запроса
+  //     final containsAllWords = queryWords.every((word) => name.contains(word));
+  //     if (containsAllWords) return 700;
 
-      // Приоритет 5: Название начинается с одного из слов запроса
-      for (final word in queryWords) {
-        if (name.startsWith(word)) return 600;
-      }
+  //     // Приоритет 5: Название начинается с одного из слов запроса
+  //     for (final word in queryWords) {
+  //       if (name.startsWith(word)) return 600;
+  //     }
 
-      // Приоритет 6: Название содержит хотя бы одно слово целиком
-      for (final word in queryWords) {
-        if (nameWords.contains(word)) return 500;
-      }
+  //     // Приоритет 6: Название содержит хотя бы одно слово целиком
+  //     for (final word in queryWords) {
+  //       if (nameWords.contains(word)) return 500;
+  //     }
 
-      // Приоритет 7: Название содержит запрос как подстроку
-      if (name.contains(lowerQuery)) return 400;
+  //     // Приоритет 7: Название содержит запрос как подстроку
+  //     if (name.contains(lowerQuery)) return 400;
 
-      // Приоритет 8: Название содержит хотя бы одно слово как подстроку
-      int wordsFound = 0;
-      for (final word in queryWords) {
-        if (name.contains(word)) wordsFound++;
-      }
-      if (wordsFound > 0) return 300 + (wordsFound * 10);
+  //     // Приоритет 8: Название содержит хотя бы одно слово как подстроку
+  //     int wordsFound = 0;
+  //     for (final word in queryWords) {
+  //       if (name.contains(word)) wordsFound++;
+  //     }
+  //     if (wordsFound > 0) return 300 + (wordsFound * 10);
 
-      // Приоритет 9: Описание содержит точный запрос
-      if (description.contains(lowerQuery)) return 200;
+  //     // Приоритет 9: Описание содержит точный запрос
+  //     if (description.contains(lowerQuery)) return 200;
 
-      // Приоритет 10: Описание содержит хотя бы одно слово
-      for (final word in queryWords) {
-        if (description.contains(word)) return 100;
-      }
+  //     // Приоритет 10: Описание содержит хотя бы одно слово
+  //     for (final word in queryWords) {
+  //       if (description.contains(word)) return 100;
+  //     }
 
-      // Не релевантно
-      return 0;
-    }
+  //     // Не релевантно
+  //     return 0;
+  //   }
 
-    // Создаем список с релевантностью
-    final productsWithRelevance = products.map((product) {
-      return {
-        'product': product,
-        'relevance': calculateRelevance(product),
-      };
-    }).toList();
+  //   // Создаем список с релевантностью
+  //   final productsWithRelevance = products.map((product) {
+  //     return {
+  //       'product': product,
+  //       'relevance': calculateRelevance(product),
+  //     };
+  //   }).toList();
 
-    // Сортируем по релевантности (от большего к меньшему)
-    productsWithRelevance.sort((a, b) {
-      final relevanceComparison =
-          (b['relevance'] as int).compareTo(a['relevance'] as int);
-      if (relevanceComparison != 0) return relevanceComparison;
+  //   // Сортируем по релевантности (от большего к меньшему)
+  //   productsWithRelevance.sort((a, b) {
+  //     final relevanceComparison =
+  //         (b['relevance'] as int).compareTo(a['relevance'] as int);
+  //     if (relevanceComparison != 0) return relevanceComparison;
 
-      // Если релевантность одинаковая - сортируем по алфавиту
-      return (a['product'] as Product)
-          .name
-          .compareTo((b['product'] as Product).name);
-    });
+  //     // Если релевантность одинаковая - сортируем по алфавиту
+  //     return (a['product'] as Product)
+  //         .name
+  //         .compareTo((b['product'] as Product).name);
+  //   });
 
-    // Возвращаем только продукты
-    return productsWithRelevance
-        .map((item) => item['product'] as Product)
-        .toList();
-  }
+  //   // Возвращаем только продукты
+  //   return productsWithRelevance
+  //       .map((item) => item['product'] as Product)
+  //       .toList();
+  // }
 
   /// Очищает ошибку
   void clearError() {
@@ -642,11 +642,11 @@ class ProductsProvider with ChangeNotifier {
         categoryId: _selectedCategoryId,
       );
 
-      // ✅ НОВОЕ: Сортируем результаты по релевантности
-      if (_products.isNotEmpty) {
-        _products = _sortByRelevance(_products, _searchQuery);
-        notifyListeners();
-      }
+      // // ✅ НОВОЕ: Сортируем результаты по релевантности
+      // if (_products.isNotEmpty) {
+      //   _products = _sortByRelevance(_products, _searchQuery);
+      //   notifyListeners();
+      // }
     }
   }
 

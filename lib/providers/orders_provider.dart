@@ -100,11 +100,7 @@ class OrdersProvider with ChangeNotifier {
         limit: limit,
       );
 
-// ✅ ДОБАВЬ ЭТИ 3 СТРОКИ СРАЗУ ПОСЛЕ:
       print('🔍 RAW API RESPONSE: ${result}');
-      print('🔍 First order: ${(result['orders'] as List?)?.first}');
-      print(
-          '🔍 First order orderItems: ${(result['orders'] as List?)?.first?['orderItems']}');
 
       if (kDebugMode) {
         print('📡 OrdersProvider: Ответ от API: ${result['success']}');

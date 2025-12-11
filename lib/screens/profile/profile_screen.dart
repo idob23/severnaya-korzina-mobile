@@ -26,6 +26,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   static const String WHATSAPP_GROUP_LINK =
       'https://chat.whatsapp.com/BkMuB7ALKzZ5Zj81yGhdvG';
 
+  static const String TELEGRAM_GROUP_LINK = 'https://t.me/+BTRqw9tNwlNmNWNi';
+
   late AnimationController _progressAnimationController;
   late AnimationController _pulseAnimationController;
   late AnimationController _fadeController; // Добавлено
@@ -125,6 +127,38 @@ class _ProfileScreenState extends State<ProfileScreen>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Не удалось открыть WhatsApp'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openTelegramGroup() async {
+    HapticFeedback.lightImpact();
+    try {
+      final Uri telegramUrl = Uri.parse(TELEGRAM_GROUP_LINK);
+
+      if (await canLaunchUrl(telegramUrl)) {
+        await launchUrl(
+          telegramUrl,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Не удалось открыть Telegram'),
               backgroundColor: Colors.red,
             ),
           );
@@ -457,13 +491,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                         _buildInstructionSection(
                           '🎯 Как это работает',
                           [
-                            'Северная Корзина - это платформа коллективных закупок для жителей Усть-Неры.',
-                            'Мы объединяем заказы жителей, чтобы получить оптовые цены от поставщиков.',
+                            // 'Северная Корзина - это платформа коллективных закупок для жителей Усть-Неры.',
                           ],
                         ),
 
+                        // _buildInstructionSection(
+                        //   'Из-за сложности сервиса протестировать все возможные варианты не просто, поэтому просим оказывать содействие в модернизации и развитии проекта путём вступления в нашу группу WhatsApp и Telegram "Северная Корзина", где можно сообщать о проблемах и вносить предложения. Также там будет вся актуальная информация. Ссылка на группу доступна в профиле.',
+                        //   [],
+                        // ),
+
                         _buildInstructionSection(
-                          'Из-за сложности сервиса протестировать все возможные варианты не просто, поэтому просим оказывать содействие в модернизации и развитии проекта путём вступления в нашу группу WhatsApp "Северная Корзина", где можно сообщать о проблемах и вносить предложения. Также там будет вся актуальная информация. Ссылка на группу доступна в профиле.',
+                          'Заказы осуществляются с понедельника по среду (до 21:00), машина ожидается примерно через 5-7 дней после оформления заявки.',
                           [],
                         ),
 
@@ -494,7 +532,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                         _buildInstructionSection(
                           '🚛 Доставка',
                           [
-                            '• Машина отправляется после набора целевой суммы закупки',
                             '• Прогресс закупки отображается в разделе "Профиль"',
                             '• Вы получите SMS когда заказ будет сформирован и по прибытии машины',
                           ],
@@ -510,16 +547,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                             '  - Отправлен',
                             '  - Доставлен',
                             '  - Отменен',
-                          ],
-                        ),
-
-                        _buildInstructionSection(
-                          '🎯 Целевая сумма закупки',
-                          [
-                            '• Минимальная сумма для отправки машины отображается в профиле',
-                            '• Текущий прогресс показан в виде прогресс-бара',
-                            '• Машина отправляется сразу после достижения цели',
-                            '• Приглашайте друзей для быстрого набора суммы!',
                           ],
                         ),
 
@@ -791,6 +818,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           _buildSettingsCard(context, authProvider),
           SizedBox(height: 12),
           _buildWhatsAppGroupCard(),
+          SizedBox(height: 12),
+          _buildTelegramGroupCard(),
           _buildAboutSection(),
           SizedBox(height: 16),
           _buildLogoutButton(context, authProvider),
@@ -1444,8 +1473,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               child: Icon(Icons.location_on, color: AppColors.primaryLight),
             ),
-            title: Text('Мои адреса'),
-            subtitle: Text('Управление адресами доставки'),
+            title: Text('Мой адрес'),
+            // subtitle: Text('Управление адресами доставки'),
             trailing: Icon(Icons.chevron_right, color: AppColors.textSecondary),
             onTap: () {
               HapticFeedback.lightImpact();
@@ -1621,6 +1650,127 @@ class _ProfileScreenState extends State<ProfileScreen>
                 color: AppColors.textSecondary,
                 height: 1.3,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTelegramGroupCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadowLight,
+            blurRadius: 10,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade400, Colors.blue.shade600],
+              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.telegram, color: Colors.white, size: 24),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Telegram группа',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Новости и обсуждения',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Важно',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildGroupFeature('📢 Актуальные новости о закупках'),
+                _buildGroupFeature('💬 Общение с другими участниками'),
+                _buildGroupFeature('❓ Ответы на вопросы'),
+                _buildGroupFeature('🔔 Уведомления о статусе заказов'),
+                SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blue.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      _openTelegramGroup();
+                    },
+                    icon: Icon(Icons.telegram),
+                    label: Text(
+                      'Войти в Telegram группу',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[600],
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

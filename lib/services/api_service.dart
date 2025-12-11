@@ -300,6 +300,25 @@ class ApiService {
     });
   }
 
+  /// Обновить адрес
+  Future<Map<String, dynamic>> updateAddress({
+    required int id,
+    required String title,
+    required String address,
+    bool isDefault = false,
+  }) async {
+    return await _makeRequest('PUT', '/addresses/$id', body: {
+      'title': title,
+      'address': address,
+      'isDefault': isDefault,
+    });
+  }
+
+  /// Удалить адрес
+  Future<Map<String, dynamic>> deleteAddress(int id) async {
+    return await _makeRequest('DELETE', '/addresses/$id');
+  }
+
   // === МЕТОДЫ ДЛЯ ЗАКАЗОВ ===
 
   /// Получить заказы пользователя
