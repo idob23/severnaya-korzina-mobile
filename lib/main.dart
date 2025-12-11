@@ -15,6 +15,7 @@ import 'screens/home/home_screen.dart';
 import 'package:severnaya_korzina/screens/auth/auth_choice_screen.dart';
 import 'screens/payment/payment_success_screen.dart';
 import 'screens/payment/payment_checking_screen.dart';
+import 'package:severnaya_korzina/services/onboarding_service.dart';
 import 'package:severnaya_korzina/services/update_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 // Импортируем новую тему вместо старых цветов
@@ -23,6 +24,7 @@ import 'screens/auth/sms_verification_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await OnboardingService.instance.init();
 
   // Проверяем режим обслуживания
   final shouldContinue = await _checkMaintenanceStatus();

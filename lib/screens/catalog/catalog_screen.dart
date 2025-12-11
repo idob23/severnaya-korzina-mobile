@@ -88,6 +88,15 @@ class _CatalogScreenState extends State<CatalogScreen>
       final productsProvider =
           Provider.of<ProductsProvider>(context, listen: false);
       productsProvider.searchProducts(_searchController.text);
+
+      // Возвращаемся в начало списка после поиска
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
     });
   }
 
@@ -559,6 +568,14 @@ class _CatalogScreenState extends State<CatalogScreen>
                 onPressed: () async {
                   final productsProvider =
                       Provider.of<ProductsProvider>(context, listen: false);
+                  // Возвращаемся в начало списка
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateTo(
+                      0,
+                      duration: Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  }
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(

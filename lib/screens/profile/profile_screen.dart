@@ -13,6 +13,7 @@ import 'package:severnaya_korzina/services/update_service.dart';
 import '../../design_system/colors/app_colors.dart'; // Добавлено
 import '../../design_system/colors/gradients.dart'; // Добавлено
 import 'add_address_screen.dart';
+import '../../services/onboarding_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -39,6 +40,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Map<String, dynamic>? _batchData;
   bool _isLoadingBatch = true;
   String? _batchError;
+  bool _showAboutBadge = false;
 
   @override
   void initState() {
@@ -48,6 +50,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     print('🟢 initState: Observer зарегистрирован');
 
     _loadAppVersion();
+
+    _loadAboutBadgeState();
 
     // Анимация прогресс-бара
     _progressAnimationController = AnimationController(
@@ -103,6 +107,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     _pulseAnimationController.dispose();
     _fadeController.dispose(); // Добавлено
     super.dispose();
+  }
+
+  void _loadAboutBadgeState() {
+    setState(() {
+      _showAboutBadge = OnboardingService.instance.shouldShowAboutBadge;
+    });
   }
 
   Future<void> _loadAppVersion() async {
@@ -400,6 +410,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _showAboutDialog() {
+    // Убираем бейдж после открытия
+    if (_showAboutBadge) {
+      OnboardingService.instance.markAboutAsSeen();
+      setState(() {
+        _showAboutBadge = false;
+      });
+    }
     HapticFeedback.lightImpact(); // Добавлено
     showDialog(
       context: context,
@@ -502,6 +519,16 @@ class _ProfileScreenState extends State<ProfileScreen>
 
                         _buildInstructionSection(
                           'Заказы осуществляются с понедельника по среду (до 21:00), машина ожидается примерно через 5-7 дней после оформления заявки.',
+                          [],
+                        ),
+
+                        _buildInstructionSection(
+                          'Товары разделены для заказов на штучные(в карточке товара - цена/шт) и по упаковкам (в карточке товара - цена/уп + оранжевое изображение количества единиц в упаковке). ',
+                          [],
+                        ),
+
+                        _buildInstructionSection(
+                          'Заходите в наши группы в WhatsApp и Telegram — там все новости и обновления. Если что, пишите администратору, всегда подскажем!',
                           [],
                         ),
 
@@ -1803,17 +1830,38 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             child: Row(
               children: [
-                Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLight.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.info_outline,
-                    color: AppColors.primaryLight,
-                    size: 20,
-                  ),
+                // Иконка с бейджем
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.info_outline,
+                        color: AppColors.primaryLight,
+                        size: 20,
+                      ),
+                    ),
+                    // Бейдж (красная точка)
+                    if (_showAboutBadge)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 SizedBox(width: 12),
                 Expanded(

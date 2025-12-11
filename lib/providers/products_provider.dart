@@ -269,112 +269,8 @@ class ProductsProvider with ChangeNotifier {
 
   /// Получает отфильтрованные товары
   List<Product> get filteredProducts {
-    // var filtered = _products;
-
-    // // Фильтр по категории
-    // if (_selectedCategoryId != null) {
-    //   filtered = filtered
-    //       .where((product) => product.category?.id == _selectedCategoryId)
-    //       .toList();
-    // }
-
-    // // Поиск по названию
-    // if (_searchQuery.isNotEmpty) {
-    //   final query = _searchQuery.toLowerCase();
-    //   filtered = filtered
-    //       .where((product) =>
-    //           product.name.toLowerCase().contains(query) ||
-    //           (product.description?.toLowerCase().contains(query) ?? false))
-    //       .toList();
-    // }
-
-    // return filtered;
     return _products;
   }
-
-  // /// Сортирует товары по релевантности к поисковому запросу
-  // List<Product> _sortByRelevance(List<Product> products, String query) {
-  //   if (query.isEmpty) return products;
-
-  //   final lowerQuery = query.toLowerCase().trim();
-  //   final queryWords = lowerQuery.split(RegExp(r'\s+'));
-
-  //   // Функция для расчета релевантности
-  //   int calculateRelevance(Product product) {
-  //     final name = product.name.toLowerCase();
-  //     final description = product.description?.toLowerCase() ?? '';
-
-  //     // Приоритет 1: Точное совпадение названия
-  //     if (name == lowerQuery) return 1000;
-
-  //     // Приоритет 2: Название начинается с запроса
-  //     if (name.startsWith(lowerQuery)) return 900;
-
-  //     // Приоритет 3: Одно из слов в названии точно совпадает с запросом
-  //     final nameWords = name.split(RegExp(r'\s+'));
-  //     if (nameWords.contains(lowerQuery)) return 800;
-
-  //     // Приоритет 4: Название содержит все слова из запроса
-  //     final containsAllWords = queryWords.every((word) => name.contains(word));
-  //     if (containsAllWords) return 700;
-
-  //     // Приоритет 5: Название начинается с одного из слов запроса
-  //     for (final word in queryWords) {
-  //       if (name.startsWith(word)) return 600;
-  //     }
-
-  //     // Приоритет 6: Название содержит хотя бы одно слово целиком
-  //     for (final word in queryWords) {
-  //       if (nameWords.contains(word)) return 500;
-  //     }
-
-  //     // Приоритет 7: Название содержит запрос как подстроку
-  //     if (name.contains(lowerQuery)) return 400;
-
-  //     // Приоритет 8: Название содержит хотя бы одно слово как подстроку
-  //     int wordsFound = 0;
-  //     for (final word in queryWords) {
-  //       if (name.contains(word)) wordsFound++;
-  //     }
-  //     if (wordsFound > 0) return 300 + (wordsFound * 10);
-
-  //     // Приоритет 9: Описание содержит точный запрос
-  //     if (description.contains(lowerQuery)) return 200;
-
-  //     // Приоритет 10: Описание содержит хотя бы одно слово
-  //     for (final word in queryWords) {
-  //       if (description.contains(word)) return 100;
-  //     }
-
-  //     // Не релевантно
-  //     return 0;
-  //   }
-
-  //   // Создаем список с релевантностью
-  //   final productsWithRelevance = products.map((product) {
-  //     return {
-  //       'product': product,
-  //       'relevance': calculateRelevance(product),
-  //     };
-  //   }).toList();
-
-  //   // Сортируем по релевантности (от большего к меньшему)
-  //   productsWithRelevance.sort((a, b) {
-  //     final relevanceComparison =
-  //         (b['relevance'] as int).compareTo(a['relevance'] as int);
-  //     if (relevanceComparison != 0) return relevanceComparison;
-
-  //     // Если релевантность одинаковая - сортируем по алфавиту
-  //     return (a['product'] as Product)
-  //         .name
-  //         .compareTo((b['product'] as Product).name);
-  //   });
-
-  //   // Возвращаем только продукты
-  //   return productsWithRelevance
-  //       .map((item) => item['product'] as Product)
-  //       .toList();
-  // }
 
   /// Очищает ошибку
   void clearError() {
@@ -401,7 +297,10 @@ class ProductsProvider with ChangeNotifier {
     int page = 1,
     int limit = 50,
     bool silent = false,
+    int retryCount = 0,
   }) async {
+    const int maxRetries = 3;
+
     if (!silent) {
       _isLoading = true;
       _error = null;
@@ -475,10 +374,27 @@ class ProductsProvider with ChangeNotifier {
         }
       }
     } catch (e, stackTrace) {
-      _error = 'Ошибка подключения к серверу';
-      if (kDebugMode) {
-        print('ProductsProvider: Exception - $e');
-        print('StackTrace: $stackTrace');
+      // Автоматический retry при ошибке соединения
+      if (retryCount < maxRetries) {
+        if (kDebugMode) {
+          print(
+              '🔄 ProductsProvider: Retry ${retryCount + 1}/$maxRetries через 2 сек...');
+        }
+        await Future.delayed(Duration(seconds: 2));
+        return loadProducts(
+          categoryId: categoryId,
+          search: search,
+          page: page,
+          limit: limit,
+          silent: silent,
+          retryCount: retryCount + 1,
+        );
+      } else {
+        _error = 'Ошибка подключения к серверу';
+        if (kDebugMode) {
+          print('ProductsProvider: Exception - $e');
+          print('StackTrace: $stackTrace');
+        }
       }
     } finally {
       if (!silent) {

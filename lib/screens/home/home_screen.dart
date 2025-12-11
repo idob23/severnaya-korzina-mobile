@@ -11,6 +11,7 @@ import '../cart/cart_screen.dart';
 import '../orders/orders_screen.dart';
 import '../profile/profile_screen.dart';
 import 'dart:async';
+import '../../services/onboarding_service.dart';
 // Импортируем design_system
 import '../../design_system/colors/app_colors.dart';
 import '../../design_system/colors/gradients.dart';
@@ -44,6 +45,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _currentIndex = widget.initialIndex;
     WidgetsBinding.instance.addObserver(this);
     _startMaintenanceCheck();
+    // Показываем приветственный диалог при первом входе
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showWelcomeDialogIfNeeded();
+    });
   }
 
   @override
@@ -70,6 +75,100 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _maintenanceCheckTimer = Timer.periodic(
       Duration(seconds: 30),
       (_) => _checkMaintenanceStatus(),
+    );
+  }
+
+  Future<void> _showWelcomeDialogIfNeeded() async {
+    if (!mounted) return;
+
+    final onboarding = OnboardingService.instance;
+    if (!onboarding.shouldShowWelcomeDialog) return;
+
+    await onboarding.markWelcomeDialogShown();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          padding: EdgeInsets.all(24),
+          constraints: BoxConstraints(maxWidth: 340),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blue.shade400, Colors.blue.shade600],
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.waving_hand, color: Colors.white, size: 36),
+              ),
+              SizedBox(height: 20),
+              Text(
+                'Добро пожаловать!',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Рекомендуем ознакомиться с разделом "О приложении" в Профиле, чтобы узнать как работает сервис.',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey[600],
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text('Позже'),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        // Переключаемся на вкладку Профиль
+                        setState(() {
+                          _currentIndex = 3;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text('Перейти'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
