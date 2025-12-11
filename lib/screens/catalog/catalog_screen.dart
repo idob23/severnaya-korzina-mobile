@@ -11,14 +11,13 @@ import '../../design_system/colors/gradients.dart';
 import 'package:flutter/services.dart'; // Для HapticFeedback
 import '../../design_system/spacing/app_spacing.dart'; // Для констант отступов
 
-import 'package:provider/provider.dart';
-
 class CatalogScreen extends StatefulWidget {
   @override
   _CatalogScreenState createState() => _CatalogScreenState();
 }
 
-class _CatalogScreenState extends State<CatalogScreen> {
+class _CatalogScreenState extends State<CatalogScreen>
+    with AutomaticKeepAliveClientMixin {
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounceTimer; // ← ДОБАВИТЬ ЭТУ СТРОКУ
   final ScrollController _scrollController = ScrollController();
@@ -31,20 +30,28 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
     // 🆕 ДОБАВИТЬ слушатель скролла
     _scrollController.addListener(_onScroll);
+    _searchController.addListener(_onSearchChanged);
 
-    // Загружаем данные с сервера при инициализации
+    // Загружаем данные с сервера при инициализации ТОЛЬКО ОДИН РАЗ
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final productsProvider =
           Provider.of<ProductsProvider>(context, listen: false);
-      // 🔥 Перезагружаем товары
-      productsProvider.loadProducts();
-      productsProvider.loadCategories();
 
-      // ✅ ДОБАВИТЬ ЭТИ СТРОКИ:
-      // Восстанавливаем сохранённую позицию скролла
-      if (_savedScrollPosition > 0 && _scrollController.hasClients) {
-        _scrollController.jumpTo(_savedScrollPosition);
+      // Загружаем товары только если список пустой
+      if (productsProvider.products.isEmpty) {
+        productsProvider.loadProducts();
+        productsProvider.loadCategories();
       }
+
+      // Восстанавливаем позицию скролла после построения виджета
+      Future.delayed(Duration(milliseconds: 100), () {
+        if (_savedScrollPosition > 0 &&
+            _scrollController.hasClients &&
+            _scrollController.position.maxScrollExtent >=
+                _savedScrollPosition) {
+          _scrollController.jumpTo(_savedScrollPosition);
+        }
+      });
     });
   }
 
@@ -53,9 +60,16 @@ class _CatalogScreenState extends State<CatalogScreen> {
     // ✅ СОХРАНЯЕМ позицию при скролле
     _savedScrollPosition = _scrollController.position.pixels;
 
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      // За 200 пикселей до конца начинаем загрузку
+    // Проверяем что контроллер подключен и позиция валидна
+    if (!_scrollController.hasClients) return;
+
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+
+    // За 15% до конца начинаем загрузку (вместо фиксированных 200px)
+    final threshold = maxScroll * 0.85;
+
+    if (currentScroll >= threshold) {
       final productsProvider =
           Provider.of<ProductsProvider>(context, listen: false);
 
@@ -65,6 +79,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
     }
   }
 
+  void _onSearchChanged() {
+    // Отменяем предыдущий таймер
+    _debounceTimer?.cancel();
+
+    // Создаем новый таймер на 500мс
+    _debounceTimer = Timer(Duration(milliseconds: 500), () {
+      final productsProvider =
+          Provider.of<ProductsProvider>(context, listen: false);
+      productsProvider.searchProducts(_searchController.text);
+    });
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -72,6 +98,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
     _scrollController.dispose(); // 🆕 ДОБАВИТЬ
     super.dispose();
   }
+
+  @override
+  bool get wantKeepAlive => true; // ← ДОБАВИТЬ ЭТОТ МЕТОД
 
   // Метод для показа красивого меню категорий - ЦЕНТРИРОВАННЫЙ ДИАЛОГ
   void _showCategoryMenu(
@@ -387,7 +416,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(kToolbarHeight),
         child: Container(
@@ -621,7 +652,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            // ДОБАВЛЕНО: фоновый градиент
             colors: [AppColors.background, Colors.white],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -751,7 +781,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                   HapticFeedback.lightImpact();
                                   _searchController.clear();
                                   productsProvider.clearSearch();
-                                  productsProvider.loadProducts();
+                                  // Перезагружаем с учетом выбранной категории
+                                  productsProvider.loadProducts(
+                                    categoryId:
+                                        productsProvider.selectedCategoryId,
+                                  );
                                   setState(() {});
                                 },
                               ),
@@ -779,7 +813,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
               child: Consumer<ProductsProvider>(
                 builder: (context, productsProvider, child) {
                   // Отображение загрузки с SHIMMER эффектом
-                  if (productsProvider.isLoading) {
+                  // Показываем shimmer ТОЛЬКО если загрузка идёт И товаров нет
+                  if (productsProvider.isLoading &&
+                      productsProvider.products.isEmpty) {
                     return ListView.builder(
                       padding:
                           EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -954,55 +990,62 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
+                            // Улучшенная иконка с градиентом
                             Container(
-                              padding: EdgeInsets.all(24),
+                              padding: EdgeInsets.all(28),
                               decoration: BoxDecoration(
-                                color: AppColors.background,
+                                gradient: AppGradients.primary,
                                 shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.aurora2.withOpacity(0.3),
+                                    blurRadius: 20,
+                                    offset: Offset(0, 10),
+                                  ),
+                                ],
                               ),
                               child: Icon(
-                                Icons.inventory_2_outlined,
-                                size: 64,
-                                color: AppColors.textSecondary,
+                                Icons.search_off_rounded,
+                                size: 56,
+                                color: Colors.white,
                               ),
                             ),
-                            SizedBox(height: 16),
+                            SizedBox(height: 24),
                             Text(
                               productsProvider.hasSearchQuery ||
                                       productsProvider.hasSelectedCategory
                                   ? 'Товары не найдены'
                                   : 'Каталог пуст',
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 20,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.textPrimary,
                               ),
                             ),
-                            SizedBox(height: 8),
-                            Text(
-                              productsProvider.hasSearchQuery ||
-                                      productsProvider.hasSelectedCategory
-                                  ? 'Попробуйте изменить условия поиска'
-                                  : 'Товары пока не добавлены',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: AppColors.textSecondary),
-                            ),
+                            SizedBox(height: 12),
+
+                            // Добавляем кнопку сброса фильтров
                             if (productsProvider.hasSearchQuery ||
-                                productsProvider.hasSelectedCategory)
-                              Padding(
-                                padding: EdgeInsets.only(top: 16),
-                                child: ElevatedButton(
-                                  onPressed: () =>
-                                      productsProvider.clearFilters(),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primaryDark,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
+                                productsProvider.hasSelectedCategory) ...[
+                              SizedBox(height: 24),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  _searchController.clear();
+                                  productsProvider.clearFilters();
+                                },
+                                icon: Icon(Icons.clear_all),
+                                label: Text('Сбросить фильтры'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryDark,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: Text('Сбросить фильтры'),
                                 ),
                               ),
+                            ],
                           ],
                         ),
                       ),
@@ -1586,92 +1629,199 @@ class _CatalogScreenState extends State<CatalogScreen> {
         duration: Duration(milliseconds: 500), // Плавная анимация
         vsync: Navigator.of(context),
       ),
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(
-              top: Radius.circular(32)), // Увеличен радиус
-          boxShadow: [
-            // Множественные тени для глубины
-            BoxShadow(
-              color: AppColors.aurora1.withOpacity(0.1),
-              blurRadius: 30,
-              offset: Offset(0, -15),
-            ),
-            BoxShadow(
-              color: AppColors.shadowDark,
-              blurRadius: 20,
-              offset: Offset(0, -10),
-            ),
-          ],
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        child: DraggableScrollableSheet(
-          initialChildSize: 0.7, // Увеличена начальная высота
-          minChildSize: 0.4,
-          maxChildSize: 0.95,
-          expand: false,
-          builder: (context, scrollController) {
-            return SingleChildScrollView(
-              controller: scrollController,
-              physics: BouncingScrollPhysics(), // Добавлен эффект отскока
-              child: Padding(
-                padding:
-                    EdgeInsets.fromLTRB(24, 12, 24, 32), // Увеличены отступы
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Индикатор для свайпа с градиентом
-                    Center(
-                      child: Container(
-                        width: 60,
-                        height: 5,
-                        margin: EdgeInsets.only(bottom: 20),
-                        decoration: BoxDecoration(
-                          gradient: AppGradients.aurora,
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.aurora2.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Анимированное название товара
-                    TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.0, end: 1.0),
-                      duration: Duration(milliseconds: 600),
-                      curve: Curves.easeOutBack,
-                      builder: (context, value, child) {
-                        return Opacity(
-                          opacity: value,
-                          child: Transform.translate(
-                            offset: Offset(0, 20 * (1 - value)),
-                            child: child,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(
+                top: Radius.circular(32)), // Увеличен радиус
+            boxShadow: [
+              // Множественные тени для глубины
+              BoxShadow(
+                color: AppColors.aurora1.withOpacity(0.1),
+                blurRadius: 30,
+                offset: Offset(0, -15),
+              ),
+              BoxShadow(
+                color: AppColors.shadowDark,
+                blurRadius: 20,
+                offset: Offset(0, -10),
+              ),
+            ],
+          ),
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.7, // Увеличена начальная высота
+            minChildSize: 0.4,
+            maxChildSize: 0.95,
+            expand: false,
+            builder: (context, scrollController) {
+              return SingleChildScrollView(
+                controller: scrollController,
+                physics: BouncingScrollPhysics(), // Добавлен эффект отскока
+                child: Padding(
+                  padding:
+                      EdgeInsets.fromLTRB(24, 12, 24, 32), // Увеличены отступы
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Индикатор для свайпа с градиентом
+                      Center(
+                        child: Container(
+                          width: 60,
+                          height: 5,
+                          margin: EdgeInsets.only(bottom: 20),
+                          decoration: BoxDecoration(
+                            gradient: AppGradients.aurora,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.aurora2.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
                           ),
-                        );
-                      },
-                      child: Text(
-                        product.name,
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                          letterSpacing: -0.5,
                         ),
                       ),
-                    ),
-                    SizedBox(height: 12),
 
-                    // Категория с премиум бейджем
-                    if (product.category != null)
+                      // Анимированное название товара
                       TweenAnimationBuilder<double>(
                         tween: Tween(begin: 0.0, end: 1.0),
-                        duration: Duration(milliseconds: 700),
+                        duration: Duration(milliseconds: 600),
                         curve: Curves.easeOutBack,
+                        builder: (context, value, child) {
+                          return Opacity(
+                            opacity: value,
+                            child: Transform.translate(
+                              offset: Offset(0, 20 * (1 - value)),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: Text(
+                          product.name,
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 12),
+
+                      // Категория с премиум бейджем
+                      if (product.category != null)
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: Duration(milliseconds: 700),
+                          curve: Curves.easeOutBack,
+                          builder: (context, value, child) {
+                            return Transform.scale(
+                              scale: value,
+                              child: child,
+                            );
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              gradient: AppGradients.aurora,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.aurora1.withOpacity(0.3),
+                                  blurRadius: 12,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              product.category!.name,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ),
+
+                      SizedBox(height: 20),
+
+                      // Описание с анимацией появления
+                      if (product.description != null &&
+                          product.description!.isNotEmpty) ...[
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: Duration(milliseconds: 800),
+                          curve: Curves.easeOut,
+                          builder: (context, value, child) {
+                            return Opacity(
+                              opacity: value,
+                              child: child,
+                            );
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 4,
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      gradient: AppGradients.aurora,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Описание',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 12),
+                              Container(
+                                padding: EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AppColors.background,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: AppColors.border.withOpacity(0.5),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Text(
+                                  product.description!,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: AppColors.textSecondary,
+                                    height: 1.6,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 20),
+                      ],
+
+                      // Премиум информация о наличии с анимацией
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: Duration(milliseconds: 900),
+                        curve: Curves.elasticOut,
                         builder: (context, value, child) {
                           return Transform.scale(
                             scale: value,
@@ -1679,712 +1829,618 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           );
                         },
                         child: Container(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            gradient: AppGradients.aurora,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: isOutOfStock
+                                  ? [
+                                      Colors.red.shade50,
+                                      Colors.red.shade100.withOpacity(0.7)
+                                    ]
+                                  : isLowStock
+                                      ? [
+                                          Colors.orange.shade50,
+                                          Colors.orange.shade100
+                                              .withOpacity(0.7)
+                                        ]
+                                      : [
+                                          AppColors.aurora1.withOpacity(0.05),
+                                          AppColors.aurora2.withOpacity(0.05)
+                                        ],
+                            ),
                             borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isOutOfStock
+                                  ? Colors.red.shade300
+                                  : isLowStock
+                                      ? Colors.orange.shade300
+                                      : AppColors.aurora1.withOpacity(0.2),
+                              width: 2,
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.aurora1.withOpacity(0.3),
-                                blurRadius: 12,
-                                offset: Offset(0, 4),
+                                color: isOutOfStock
+                                    ? Colors.red.withOpacity(0.1)
+                                    : isLowStock
+                                        ? Colors.orange.withOpacity(0.1)
+                                        : AppColors.aurora1.withOpacity(0.1),
+                                blurRadius: 20,
+                                offset: Offset(0, 10),
                               ),
                             ],
                           ),
-                          child: Text(
-                            product.category!.name,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                      ),
-
-                    SizedBox(height: 20),
-
-                    // Описание с анимацией появления
-                    if (product.description != null &&
-                        product.description!.isNotEmpty) ...[
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.0, end: 1.0),
-                        duration: Duration(milliseconds: 800),
-                        curve: Curves.easeOut,
-                        builder: (context, value, child) {
-                          return Opacity(
-                            opacity: value,
-                            child: child,
-                          );
-                        },
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 4,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    gradient: AppGradients.aurora,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Описание',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 12),
-                            Container(
-                              padding: EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: AppColors.background,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: AppColors.border.withOpacity(0.5),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Text(
-                                product.description!,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: AppColors.textSecondary,
-                                  height: 1.6,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 20),
-                    ],
-
-                    // Премиум информация о наличии с анимацией
-                    TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.0, end: 1.0),
-                      duration: Duration(milliseconds: 900),
-                      curve: Curves.elasticOut,
-                      builder: (context, value, child) {
-                        return Transform.scale(
-                          scale: value,
-                          child: child,
-                        );
-                      },
-                      child: Container(
-                        padding: EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: isOutOfStock
-                                ? [
-                                    Colors.red.shade50,
-                                    Colors.red.shade100.withOpacity(0.7)
-                                  ]
-                                : isLowStock
-                                    ? [
-                                        Colors.orange.shade50,
-                                        Colors.orange.shade100.withOpacity(0.7)
-                                      ]
-                                    : [
-                                        AppColors.aurora1.withOpacity(0.05),
-                                        AppColors.aurora2.withOpacity(0.05)
-                                      ],
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isOutOfStock
-                                ? Colors.red.shade300
-                                : isLowStock
-                                    ? Colors.orange.shade300
-                                    : AppColors.aurora1.withOpacity(0.2),
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: isOutOfStock
-                                  ? Colors.red.withOpacity(0.1)
-                                  : isLowStock
-                                      ? Colors.orange.withOpacity(0.1)
-                                      : AppColors.aurora1.withOpacity(0.1),
-                              blurRadius: 20,
-                              offset: Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            // Анимированная иконка статуса
-                            TweenAnimationBuilder<double>(
-                              tween: Tween(begin: 0.0, end: 2 * 3.14159),
-                              duration: Duration(milliseconds: 1500),
-                              builder: (context, value, child) {
-                                return Transform.rotate(
-                                  angle: value,
-                                  child: Container(
-                                    padding: EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: isOutOfStock
-                                            ? [
-                                                Colors.red.shade400,
-                                                Colors.red.shade600
-                                              ]
-                                            : isLowStock
-                                                ? [
-                                                    Colors.orange.shade400,
-                                                    Colors.orange.shade600
-                                                  ]
-                                                : [
-                                                    Colors.green.shade400,
-                                                    Colors.green.shade600
-                                                  ],
-                                      ),
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: isOutOfStock
-                                              ? Colors.red.withOpacity(0.4)
+                          child: Row(
+                            children: [
+                              // Анимированная иконка статуса
+                              TweenAnimationBuilder<double>(
+                                tween: Tween(begin: 0.0, end: 2 * 3.14159),
+                                duration: Duration(milliseconds: 1500),
+                                builder: (context, value, child) {
+                                  return Transform.rotate(
+                                    angle: value,
+                                    child: Container(
+                                      padding: EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: isOutOfStock
+                                              ? [
+                                                  Colors.red.shade400,
+                                                  Colors.red.shade600
+                                                ]
                                               : isLowStock
-                                                  ? Colors.orange
-                                                      .withOpacity(0.4)
-                                                  : Colors.green
-                                                      .withOpacity(0.4),
-                                          blurRadius: 15,
-                                          offset: Offset(0, 5),
+                                                  ? [
+                                                      Colors.orange.shade400,
+                                                      Colors.orange.shade600
+                                                    ]
+                                                  : [
+                                                      Colors.green.shade400,
+                                                      Colors.green.shade600
+                                                    ],
                                         ),
-                                      ],
-                                    ),
-                                    child: Icon(
-                                      isOutOfStock
-                                          ? Icons.remove_shopping_cart
-                                          : isLowStock
-                                              ? Icons.warning_rounded
-                                              : Icons.check_circle,
-                                      color: Colors.white,
-                                      size: 28,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    isOutOfStock
-                                        ? 'Товар закончился'
-                                        : isLowStock
-                                            ? 'Осталось мало!'
-                                            : 'В наличии',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: isOutOfStock
-                                          ? Colors.red.shade700
-                                          : isLowStock
-                                              ? Colors.orange.shade700
-                                              : Colors.green.shade700,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  if (product.maxQuantity != null)
-                                    Text(
-                                      'Доступно: ${product.maxQuantity} ${product.unit}',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    )
-                                  else
-                                    Text(
-                                      'Без ограничений',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    SizedBox(height: 24),
-
-                    // Цена и кнопка добавления с премиум дизайном
-                    Container(
-                      padding: EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            AppColors.surface,
-                            AppColors.background,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: AppColors.border.withOpacity(0.3),
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.shadowLight,
-                            blurRadius: 10,
-                            offset: Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          TweenAnimationBuilder<double>(
-                            // ✅ ЛОГИКА: для штучных показываем цену за штуку, для упаковок - цену упаковки
-                            tween: Tween(
-                              begin: 0.0,
-                              end: product.saleType == 'только уп'
-                                  ? product
-                                      .price // Для "только уп" показываем цену упаковки
-                                  : (product.inPackage != null &&
-                                          product.inPackage! > 0)
-                                      ? product.price /
-                                          product
-                                              .inPackage! // Для "поштучно" - цена за штуку
-                                      : product.price, // Fallback
-                            ),
-                            duration: Duration(milliseconds: 1000),
-                            curve: Curves.easeOutCubic,
-                            builder: (context, value, child) {
-                              return Column(
-                                children: [
-                                  // ОСНОВНАЯ ЦЕНА (большая)
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      ShaderMask(
-                                        shaderCallback: (bounds) => AppGradients
-                                            .aurora
-                                            .createShader(bounds),
-                                        child: Text(
-                                          '${value.toStringAsFixed(0)}',
-                                          style: TextStyle(
-                                            fontSize: 42,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(width: 8),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '₽',
-                                            style: TextStyle(
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.w500,
-                                              color: AppColors.textPrimary,
-                                            ),
-                                          ),
-                                          Text(
-                                            product.saleType == 'только уп'
-                                                ? '/ уп' // Для упаковок
-                                                : '/ ${product.baseUnit ?? product.unit}', // Для штучных
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: AppColors.textSecondary,
-                                            ),
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: isOutOfStock
+                                                ? Colors.red.withOpacity(0.4)
+                                                : isLowStock
+                                                    ? Colors.orange
+                                                        .withOpacity(0.4)
+                                                    : Colors.green
+                                                        .withOpacity(0.4),
+                                            blurRadius: 15,
+                                            offset: Offset(0, 5),
                                           ),
                                         ],
                                       ),
-                                    ],
-                                  ),
-
-                                  // ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ (маленькая строка снизу)
-                                  // Для ШТУЧНЫХ товаров показываем цену упаковки снизу
-                                  if (product.saleType != 'только уп' &&
-                                      product.inPackage != null &&
-                                      product.inPackage! > 0) ...[
-                                    SizedBox(height: 12),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primaryLight
-                                            .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: AppColors.primaryLight
-                                              .withOpacity(0.3),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        '${product.price.toStringAsFixed(0)} ₽ / уп (${product.inPackage} ${product.baseUnit ?? 'шт'})', // ← ВОТ ТУТ ИСПРАВЛЕНО! Теперь показывает product.unit = "уп (8 шт)"
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.primaryDark,
-                                        ),
+                                      child: Icon(
+                                        isOutOfStock
+                                            ? Icons.remove_shopping_cart
+                                            : isLowStock
+                                                ? Icons.warning_rounded
+                                                : Icons.check_circle,
+                                        color: Colors.white,
+                                        size: 28,
                                       ),
                                     ),
-                                  ],
-
-                                  // Для товаров "только уп" показываем цену за штуку снизу
-                                  if (product.saleType == 'только уп' &&
-                                      product.inPackage != null &&
-                                      product.inPackage! > 0) ...[
-                                    SizedBox(height: 12),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primaryLight
-                                            .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: AppColors.primaryLight
-                                              .withOpacity(0.3),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        '${(product.price / product.inPackage!).toStringAsFixed(2)} ₽ / ${product.baseUnit ?? 'шт'}',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.primaryDark,
-                                        ),
+                                  );
+                                },
+                              ),
+                              SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      isOutOfStock
+                                          ? 'Товар закончился'
+                                          : isLowStock
+                                              ? 'Осталось мало!'
+                                              : 'В наличии',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: isOutOfStock
+                                            ? Colors.red.shade700
+                                            : isLowStock
+                                                ? Colors.orange.shade700
+                                                : Colors.green.shade700,
                                       ),
                                     ),
-                                  ],
-                                ],
-                              );
-                            },
-                          ),
-                          SizedBox(height: 20),
-
-                          // Кнопка добавления в корзину
-                          Consumer<CartProvider>(
-                            builder: (context, cart, child) {
-                              final quantity =
-                                  cart.getProductQuantity(product.id);
-                              final inCart = quantity > 0;
-
-                              return AnimatedContainer(
-                                duration: Duration(milliseconds: 300),
-                                curve: Curves.easeInOutCubic,
-                                child: inCart
-                                    ? Container(
-                                        height: 56,
-                                        decoration: BoxDecoration(
-                                          gradient: AppGradients.aurora,
-                                          borderRadius:
-                                              BorderRadius.circular(28),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppColors.aurora1
-                                                  .withOpacity(0.4),
-                                              blurRadius: 20,
-                                              offset: Offset(0, 10),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            // Кнопка уменьшения
-                                            Expanded(
-                                              child: InkWell(
-                                                onTap: () {
-                                                  HapticFeedback.lightImpact();
-                                                  cart.decrementItem(
-                                                      product.id);
-                                                },
-                                                borderRadius:
-                                                    BorderRadius.horizontal(
-                                                  left: Radius.circular(28),
-                                                ),
-                                                child: Container(
-                                                  alignment: Alignment.center,
-                                                  child: Icon(
-                                                    Icons.remove,
-                                                    color: Colors.white,
-                                                    size: 24,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            // Количество с анимацией
-                                            Container(
-                                              padding: EdgeInsets.symmetric(
-                                                  horizontal: 24),
-                                              child: AnimatedSwitcher(
-                                                duration:
-                                                    Duration(milliseconds: 200),
-                                                transitionBuilder:
-                                                    (child, animation) {
-                                                  return ScaleTransition(
-                                                    scale: animation,
-                                                    child: child,
-                                                  );
-                                                },
-                                                child: Text(
-                                                  '$quantity',
-                                                  key: ValueKey<int>(quantity),
-                                                  style: TextStyle(
-                                                    fontSize: 20,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            // Кнопка увеличения
-                                            Expanded(
-                                              child: InkWell(
-                                                onTap: hasStock
-                                                    ? () {
-                                                        HapticFeedback
-                                                            .lightImpact();
-                                                        cart.incrementItem(
-                                                            product.id);
-                                                      }
-                                                    : null,
-                                                borderRadius:
-                                                    BorderRadius.horizontal(
-                                                  right: Radius.circular(28),
-                                                ),
-                                                child: Container(
-                                                  alignment: Alignment.center,
-                                                  child: Icon(
-                                                    Icons.add,
-                                                    color: hasStock
-                                                        ? Colors.white
-                                                        : Colors.white
-                                                            .withOpacity(0.3),
-                                                    size: 24,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                                    SizedBox(height: 4),
+                                    if (product.maxQuantity != null)
+                                      Text(
+                                        'Доступно: ${product.maxQuantity} ${product.unit}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: AppColors.textSecondary,
                                         ),
                                       )
-                                    : GestureDetector(
-                                        onTap: hasStock
-                                            ? () {
-                                                HapticFeedback.mediumImpact();
-                                                // 🔥 КРИТИЧЕСКАЯ ПРОВЕРКА: принудительно проверяем saleType
-                                                final actualSaleType =
-                                                    product.saleType ??
-                                                        'поштучно';
-                                                final actualInPackage =
-                                                    product.inPackage ?? 1;
+                                    else
+                                      Text(
+                                        'Без ограничений',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
 
-                                                // ✅ Правильная цена в зависимости от типа продажи
-                                                final priceToUse = (actualSaleType ==
-                                                            'поштучно' &&
-                                                        actualInPackage > 1)
-                                                    ? (product.price /
-                                                        actualInPackage) // Цена за штуку
-                                                    : product
-                                                        .price; // Цена за упаковку
+                      SizedBox(height: 24),
 
-                                                // ✅ Правильная единица измерения
-                                                final unitToUse =
-                                                    (actualSaleType ==
-                                                            'поштучно')
-                                                        ? (product.baseUnit ??
-                                                            'шт')
-                                                        : product.unit;
+                      // Цена и кнопка добавления с премиум дизайном
+                      Container(
+                        padding: EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              AppColors.surface,
+                              AppColors.background,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: AppColors.border.withOpacity(0.3),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.shadowLight,
+                              blurRadius: 10,
+                              offset: Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            TweenAnimationBuilder<double>(
+                              // ✅ ЛОГИКА: для штучных показываем цену за штуку, для упаковок - цену упаковки
+                              tween: Tween(
+                                begin: 0.0,
+                                end: product.saleType == 'только уп'
+                                    ? product
+                                        .price // Для "только уп" показываем цену упаковки
+                                    : (product.inPackage != null &&
+                                            product.inPackage! > 0)
+                                        ? product.price /
+                                            product
+                                                .inPackage! // Для "поштучно" - цена за штуку
+                                        : product.price, // Fallback
+                              ),
+                              duration: Duration(milliseconds: 1000),
+                              curve: Curves.easeOutCubic,
+                              builder: (context, value, child) {
+                                return Column(
+                                  children: [
+                                    // ОСНОВНАЯ ЦЕНА (большая)
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        ShaderMask(
+                                          shaderCallback: (bounds) =>
+                                              AppGradients.aurora
+                                                  .createShader(bounds),
+                                          child: Text(
+                                            '${value.toStringAsFixed(0)}',
+                                            style: TextStyle(
+                                              fontSize: 42,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: 8),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '₽',
+                                              style: TextStyle(
+                                                fontSize: 24,
+                                                fontWeight: FontWeight.w500,
+                                                color: AppColors.textPrimary,
+                                              ),
+                                            ),
+                                            Text(
+                                              product.saleType == 'только уп'
+                                                  ? '/ уп' // Для упаковок
+                                                  : '/ ${product.baseUnit ?? product.unit}', // Для штучных
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: AppColors.textSecondary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
 
-                                                cart.addItem(
-                                                  productId: product.id,
-                                                  name: product.name,
-                                                  price: priceToUse,
-                                                  unit: unitToUse,
-                                                  quantity: 1,
-                                                  saleType: actualSaleType,
-                                                  inPackage: actualInPackage,
-                                                );
-                                                // Показываем снекбар с анимацией
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  SnackBar(
-                                                    content: Row(
-                                                      children: [
-                                                        Icon(
-                                                          Icons.check_circle,
-                                                          color: Colors.white,
-                                                          size: 20,
-                                                        ),
-                                                        SizedBox(width: 8),
-                                                        Text(
-                                                            'Добавлено в корзину'),
-                                                      ],
-                                                    ),
-                                                    backgroundColor:
-                                                        AppColors.success,
-                                                    behavior: SnackBarBehavior
-                                                        .floating,
-                                                    shape:
-                                                        RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              12),
-                                                    ),
-                                                    duration:
-                                                        Duration(seconds: 2),
-                                                  ),
-                                                );
-                                              }
-                                            : null,
-                                        child: Container(
+                                    // ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ (маленькая строка снизу)
+                                    // Для ШТУЧНЫХ товаров показываем цену упаковки снизу
+                                    if (product.saleType != 'только уп' &&
+                                        product.inPackage != null &&
+                                        product.inPackage! > 0) ...[
+                                      SizedBox(height: 12),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryLight
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: AppColors.primaryLight
+                                                .withOpacity(0.3),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '${product.price.toStringAsFixed(0)} ₽ / уп (${product.inPackage} ${product.baseUnit ?? 'шт'})', // ← ВОТ ТУТ ИСПРАВЛЕНО! Теперь показывает product.unit = "уп (8 шт)"
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.primaryDark,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+
+                                    // Для товаров "только уп" показываем цену за штуку снизу
+                                    if (product.saleType == 'только уп' &&
+                                        product.inPackage != null &&
+                                        product.inPackage! > 0) ...[
+                                      SizedBox(height: 12),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryLight
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: AppColors.primaryLight
+                                                .withOpacity(0.3),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '${(product.price / product.inPackage!).toStringAsFixed(2)} ₽ / ${product.baseUnit ?? 'шт'}',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.primaryDark,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                );
+                              },
+                            ),
+                            SizedBox(height: 20),
+
+                            // Кнопка добавления в корзину
+                            Consumer<CartProvider>(
+                              builder: (context, cart, child) {
+                                final quantity =
+                                    cart.getProductQuantity(product.id);
+                                final inCart = quantity > 0;
+
+                                return AnimatedContainer(
+                                  duration: Duration(milliseconds: 300),
+                                  curve: Curves.easeInOutCubic,
+                                  child: inCart
+                                      ? Container(
                                           height: 56,
                                           decoration: BoxDecoration(
-                                            gradient: isOutOfStock
-                                                ? LinearGradient(
-                                                    colors: [
-                                                      Colors.grey.shade400,
-                                                      Colors.grey.shade600,
-                                                    ],
-                                                  )
-                                                : AppGradients.button,
+                                            gradient: AppGradients.aurora,
                                             borderRadius:
                                                 BorderRadius.circular(28),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: isOutOfStock
-                                                    ? Colors.grey
-                                                        .withOpacity(0.3)
-                                                    : AppColors.primaryLight
-                                                        .withOpacity(0.4),
+                                                color: AppColors.aurora1
+                                                    .withOpacity(0.4),
                                                 blurRadius: 20,
                                                 offset: Offset(0, 10),
                                               ),
                                             ],
                                           ),
-                                          child: Center(
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  isOutOfStock
-                                                      ? Icons
-                                                          .remove_shopping_cart
-                                                      : Icons
-                                                          .shopping_cart_outlined,
-                                                  color: Colors.white,
-                                                  size: 22,
-                                                ),
-                                                SizedBox(width: 12),
-                                                Text(
-                                                  isOutOfStock
-                                                      ? 'Нет в наличии'
-                                                      : 'Добавить в корзину',
-                                                  style: TextStyle(
-                                                    fontSize: 18,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.white,
-                                                    letterSpacing: 0.5,
+                                          child: Row(
+                                            children: [
+                                              // Кнопка уменьшения
+                                              Expanded(
+                                                child: InkWell(
+                                                  onTap: () {
+                                                    HapticFeedback
+                                                        .lightImpact();
+                                                    cart.decrementItem(
+                                                        product.id);
+                                                  },
+                                                  borderRadius:
+                                                      BorderRadius.horizontal(
+                                                    left: Radius.circular(28),
                                                   ),
+                                                  child: Container(
+                                                    alignment: Alignment.center,
+                                                    child: Icon(
+                                                      Icons.remove,
+                                                      color: Colors.white,
+                                                      size: 24,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              // Количество с анимацией
+                                              Container(
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 24),
+                                                child: AnimatedSwitcher(
+                                                  duration: Duration(
+                                                      milliseconds: 200),
+                                                  transitionBuilder:
+                                                      (child, animation) {
+                                                    return ScaleTransition(
+                                                      scale: animation,
+                                                      child: child,
+                                                    );
+                                                  },
+                                                  child: Text(
+                                                    '$quantity',
+                                                    key:
+                                                        ValueKey<int>(quantity),
+                                                    style: TextStyle(
+                                                      fontSize: 20,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              // Кнопка увеличения
+                                              Expanded(
+                                                child: InkWell(
+                                                  onTap: hasStock
+                                                      ? () {
+                                                          HapticFeedback
+                                                              .lightImpact();
+                                                          cart.incrementItem(
+                                                              product.id);
+                                                        }
+                                                      : null,
+                                                  borderRadius:
+                                                      BorderRadius.horizontal(
+                                                    right: Radius.circular(28),
+                                                  ),
+                                                  child: Container(
+                                                    alignment: Alignment.center,
+                                                    child: Icon(
+                                                      Icons.add,
+                                                      color: hasStock
+                                                          ? Colors.white
+                                                          : Colors.white
+                                                              .withOpacity(0.3),
+                                                      size: 24,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : GestureDetector(
+                                          onTap: hasStock
+                                              ? () {
+                                                  HapticFeedback.mediumImpact();
+                                                  // 🔥 КРИТИЧЕСКАЯ ПРОВЕРКА: принудительно проверяем saleType
+                                                  final actualSaleType =
+                                                      product.saleType ??
+                                                          'поштучно';
+                                                  final actualInPackage =
+                                                      product.inPackage ?? 1;
+
+                                                  // ✅ Правильная цена в зависимости от типа продажи
+                                                  final priceToUse = (actualSaleType ==
+                                                              'поштучно' &&
+                                                          actualInPackage > 1)
+                                                      ? (product.price /
+                                                          actualInPackage) // Цена за штуку
+                                                      : product
+                                                          .price; // Цена за упаковку
+
+                                                  // ✅ Правильная единица измерения
+                                                  final unitToUse =
+                                                      (actualSaleType ==
+                                                              'поштучно')
+                                                          ? (product.baseUnit ??
+                                                              'шт')
+                                                          : product.unit;
+
+                                                  cart.addItem(
+                                                    productId: product.id,
+                                                    name: product.name,
+                                                    price: priceToUse,
+                                                    unit: unitToUse,
+                                                    quantity: 1,
+                                                    saleType: actualSaleType,
+                                                    inPackage: actualInPackage,
+                                                  );
+                                                  // Показываем снекбар с анимацией
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(
+                                                    SnackBar(
+                                                      content: Row(
+                                                        children: [
+                                                          Icon(
+                                                            Icons.check_circle,
+                                                            color: Colors.white,
+                                                            size: 20,
+                                                          ),
+                                                          SizedBox(width: 8),
+                                                          Text(
+                                                              'Добавлено в корзину'),
+                                                        ],
+                                                      ),
+                                                      backgroundColor:
+                                                          AppColors.success,
+                                                      behavior: SnackBarBehavior
+                                                          .floating,
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(12),
+                                                      ),
+                                                      duration:
+                                                          Duration(seconds: 2),
+                                                    ),
+                                                  );
+                                                }
+                                              : null,
+                                          child: Container(
+                                            height: 56,
+                                            decoration: BoxDecoration(
+                                              gradient: isOutOfStock
+                                                  ? LinearGradient(
+                                                      colors: [
+                                                        Colors.grey.shade400,
+                                                        Colors.grey.shade600,
+                                                      ],
+                                                    )
+                                                  : AppGradients.button,
+                                              borderRadius:
+                                                  BorderRadius.circular(28),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: isOutOfStock
+                                                      ? Colors.grey
+                                                          .withOpacity(0.3)
+                                                      : AppColors.primaryLight
+                                                          .withOpacity(0.4),
+                                                  blurRadius: 20,
+                                                  offset: Offset(0, 10),
                                                 ),
                                               ],
                                             ),
+                                            child: Center(
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    isOutOfStock
+                                                        ? Icons
+                                                            .remove_shopping_cart
+                                                        : Icons
+                                                            .shopping_cart_outlined,
+                                                    color: Colors.white,
+                                                    size: 22,
+                                                  ),
+                                                  SizedBox(width: 12),
+                                                  Text(
+                                                    isOutOfStock
+                                                        ? 'Нет в наличии'
+                                                        : 'Добавить в корзину',
+                                                    style: TextStyle(
+                                                      fontSize: 18,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.white,
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                              );
-                            },
-                          ),
+                                );
+                              },
+                            ),
 
-                          // Минимальное количество для заказа
-                          if (product.minQuantity > 1)
-                            Container(
-                              margin: EdgeInsets.only(top: 12),
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppColors.info.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: AppColors.info.withOpacity(0.3),
-                                  width: 1,
+                            // Минимальное количество для заказа
+                            if (product.minQuantity > 1)
+                              Container(
+                                margin: EdgeInsets.only(top: 12),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.info.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: AppColors.info.withOpacity(0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline,
+                                      size: 14,
+                                      color: AppColors.info,
+                                    ),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'Минимальный заказ: ${product.minQuantity} ${product.unit}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.info,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.info_outline,
-                                    size: 14,
-                                    color: AppColors.info,
-                                  ),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'Минимальный заказ: ${product.minQuantity} ${product.unit}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.info,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
 
-                    // // Дополнительная информация
-                    // if (product.id != null)
-                    //   Container(
-                    //     margin: EdgeInsets.only(top: 16),
-                    //     padding: EdgeInsets.symmetric(vertical: 8),
-                    //     child: Row(
-                    //       mainAxisAlignment: MainAxisAlignment.center,
-                    //       children: [
-                    //         Icon(
-                    //           Icons.qr_code_2,
-                    //           size: 16,
-                    //           color: AppColors.textSecondary.withOpacity(0.5),
-                    //         ),
-                    //         SizedBox(width: 6),
-                    //         // Text(
-                    //         //   'Артикул: #${product.id.toString().padLeft(6, '0')}',
-                    //         //   style: TextStyle(
-                    //         //     fontSize: 12,
-                    //         //     color: AppColors.textSecondary.withOpacity(0.5),
-                    //         //     letterSpacing: 0.5,
-                    //         //   ),
-                    //         // ),
-                    //       ],
-                    //     ),
-                    //   ),
-                  ],
+                      // // Дополнительная информация
+                      // if (product.id != null)
+                      //   Container(
+                      //     margin: EdgeInsets.only(top: 16),
+                      //     padding: EdgeInsets.symmetric(vertical: 8),
+                      //     child: Row(
+                      //       mainAxisAlignment: MainAxisAlignment.center,
+                      //       children: [
+                      //         Icon(
+                      //           Icons.qr_code_2,
+                      //           size: 16,
+                      //           color: AppColors.textSecondary.withOpacity(0.5),
+                      //         ),
+                      //         SizedBox(width: 6),
+                      //         // Text(
+                      //         //   'Артикул: #${product.id.toString().padLeft(6, '0')}',
+                      //         //   style: TextStyle(
+                      //         //     fontSize: 12,
+                      //         //     color: AppColors.textSecondary.withOpacity(0.5),
+                      //         //     letterSpacing: 0.5,
+                      //         //   ),
+                      //         // ),
+                      //       ],
+                      //     ),
+                      //   ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
