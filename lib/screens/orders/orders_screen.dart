@@ -249,7 +249,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                         backgroundColor: Colors.white,
                         child: TabBarView(
                           controller: _tabController,
-                          physics: NeverScrollableScrollPhysics(),
+                          physics: AlwaysScrollableScrollPhysics(),
                           children: [
                             _buildActiveOrders(),
                             _buildInTransitOrders(),

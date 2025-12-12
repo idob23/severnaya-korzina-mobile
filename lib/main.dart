@@ -147,6 +147,32 @@ class _AppInitializerState extends State<AppInitializer>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // Настраиваем автоматический logout при истечении токена
+    ApiService.onTokenExpired = () async {
+      if (!mounted) return;
+
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.logout();
+
+      // Показываем уведомление
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('Сессия истекла. Войдите снова.')),
+              ],
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    };
+
     _initializeApp();
   }
 

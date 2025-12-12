@@ -533,15 +533,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
 
                         _buildInstructionSection(
+                          'Для пользователей Web версии (Iphone и ПК) рекоммендуется (но не обязательно) использовать браузер в режиме инкогнито для предотвращения ошибок, связанных с кэшированием данных предыдущих версий приложения',
+                          [],
+                        ),
+
+                        _buildInstructionSection(
                           '🛒 Как сделать заказ',
                           [
                             '1. Перейдите в раздел "Каталог"',
-                            '2. Выберите нужную категорию товаров',
-                            '3. Укажите количество и нажмите "В корзину"',
-                            '4. Товары сохраняются в корзине даже после закрытия приложения',
-                            '5. Перейдите в "Корзину" для оформления заказа',
-                            '6. Кнопка "Оформить заказ" активна только при наличии товаров и иногда может быть неактивна, когда проводятся профилактические работы или нет активной закупки.',
-                            '7. Оформить заказ не получится если не указать адрес доставки во вкладке "Профиль"!'
+                            '2. Выбирайте нужные товары и добавляйте "В корзину"',
+                            '3. Товары сохраняются в корзине даже после закрытия приложения',
+                            '4. Перейдите в "Корзину" для оформления заказа',
+                            '5. Кнопка "Оформить заказ" активна только при наличии товаров и иногда может быть неактивна, когда проводятся профилактические работы или нет активной закупки.',
+                            '6. Оформить заказ не получится если не указать адрес доставки во вкладке "Профиль"!'
                           ],
                         ),
 
@@ -583,8 +587,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             '• Приложение автоматически проверяет обновления',
                             '• При наличии новой версии появится уведомление. В веб-версии при обновлении появится сверху уведомление и кнопка "Update", её нужно нажать.',
                             '• Нажмите "Обновить" для загрузки',
-                            '• Обновление установится автоматически',
-                            '• Важные обновления обязательны для установки',
+                            '• Обновления обязательны для установки',
                           ],
                         ),
 
@@ -834,23 +837,31 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildAuthenticatedView(
       BuildContext context, user, AuthProvider authProvider) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _buildBatchProgressCard(),
-          SizedBox(height: 12),
-          _buildUserInfoCard(user),
-          SizedBox(height: 12),
-          _buildSettingsCard(context, authProvider),
-          SizedBox(height: 12),
-          _buildWhatsAppGroupCard(),
-          SizedBox(height: 12),
-          _buildTelegramGroupCard(),
-          _buildAboutSection(),
-          SizedBox(height: 16),
-          _buildLogoutButton(context, authProvider),
-        ],
+    return RefreshIndicator(
+      onRefresh: () async {
+        HapticFeedback.mediumImpact();
+        await _loadActiveBatch();
+      },
+      color: AppColors.primaryLight,
+      child: SingleChildScrollView(
+        physics: AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _buildBatchProgressCard(),
+            SizedBox(height: 12),
+            _buildUserInfoCard(user),
+            SizedBox(height: 12),
+            _buildSettingsCard(context, authProvider),
+            SizedBox(height: 12),
+            _buildWhatsAppGroupCard(),
+            SizedBox(height: 12),
+            _buildTelegramGroupCard(),
+            _buildAboutSection(),
+            SizedBox(height: 16),
+            _buildLogoutButton(context, authProvider),
+          ],
+        ),
       ),
     );
   }
@@ -931,8 +942,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       );
     }
 
-    return GestureDetector(
-      onTap: _showBatchDetailsDialog,
+    return Container(
+      // onTap: _showBatchDetailsDialog,
       child: Container(
         padding: EdgeInsets.all(20),
         decoration: BoxDecoration(

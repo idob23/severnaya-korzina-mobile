@@ -13,12 +13,13 @@ import '../../design_system/colors/app_colors.dart';
 import '../../design_system/colors/gradients.dart';
 
 class CartScreen extends StatefulWidget {
+  const CartScreen({Key? key}) : super(key: key);
   // ИЗМЕНЕНО на StatefulWidget
   @override
-  _CartScreenState createState() => _CartScreenState();
+  CartScreenState createState() => CartScreenState();
 }
 
-class _CartScreenState extends State<CartScreen> {
+class CartScreenState extends State<CartScreen> {
   final ApiService _apiService = ApiService();
   bool _checkoutEnabled = true;
   bool _isLoadingStatus = false;
@@ -26,6 +27,11 @@ class _CartScreenState extends State<CartScreen> {
   @override
   void initState() {
     super.initState();
+    _checkCheckoutStatus();
+  }
+
+  /// Публичный метод для обновления статуса оформления заказов
+  void refreshCheckoutStatus() {
     _checkCheckoutStatus();
   }
 
@@ -76,13 +82,21 @@ class _CartScreenState extends State<CartScreen> {
 
               // Список товаров в корзине
               Expanded(
-                child: ListView.builder(
-                  padding: EdgeInsets.all(16),
-                  itemCount: cartProvider.itemsList.length,
-                  itemBuilder: (context, index) {
-                    final item = cartProvider.itemsList[index];
-                    return _buildCartItem(context, item, cartProvider);
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    HapticFeedback.mediumImpact();
+                    _checkCheckoutStatus();
                   },
+                  color: Colors.blue,
+                  child: ListView.builder(
+                    physics: AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.all(16),
+                    itemCount: cartProvider.itemsList.length,
+                    itemBuilder: (context, index) {
+                      final item = cartProvider.itemsList[index];
+                      return _buildCartItem(context, item, cartProvider);
+                    },
+                  ),
                 ),
               ),
 

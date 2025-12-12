@@ -925,6 +925,7 @@ class _CatalogScreenState extends State<CatalogScreen>
                   }
 
                   // Отображение ошибки
+                  // Отображение ошибки - красивое и понятное
                   if (productsProvider.hasError) {
                     return Center(
                       child: Padding(
@@ -933,64 +934,57 @@ class _CatalogScreenState extends State<CatalogScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              padding: EdgeInsets.all(20),
+                              padding: EdgeInsets.all(24),
                               decoration: BoxDecoration(
-                                color: AppColors.error.withOpacity(0.1),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.primaryLight.withOpacity(0.1),
+                                    AppColors.aurora1.withOpacity(0.1),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                Icons.error_outline,
-                                size: 48,
-                                color: AppColors.error,
+                                Icons.cloud_off_rounded,
+                                size: 56,
+                                color: AppColors.primaryLight,
                               ),
                             ),
-                            SizedBox(height: 16),
+                            SizedBox(height: 24),
                             Text(
-                              'Ошибка загрузки',
+                              'Нет подключения',
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 20,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.textPrimary,
                               ),
                             ),
-                            SizedBox(height: 8),
-                            Text(
-                              productsProvider.error ?? 'Неизвестная ошибка',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: AppColors.textSecondary),
-                            ),
-                            SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ElevatedButton.icon(
-                                  icon: Icon(Icons.refresh),
-                                  label: Text('Обновить'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primaryDark,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                  ),
-                                  onPressed: () => productsProvider.refresh(),
+                            SizedBox(height: 12),
+                            // Text(
+                            //   'Проверьте интернет и нажмите "Повторить"',
+                            //   textAlign: TextAlign.center,
+                            //   style: TextStyle(
+                            //     fontSize: 15,
+                            //     color: AppColors.textSecondary,
+                            //   ),
+                            // ),
+                            SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              icon: Icon(Icons.refresh_rounded),
+                              label: Text('Повторить'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryDark,
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 32, vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
                                 ),
-                                SizedBox(width: 16),
-                                OutlinedButton(
-                                  child: Text('Подробнее'),
-                                  style: OutlinedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    _showErrorDetails(
-                                      context,
-                                      productsProvider.error ??
-                                          'Нет дополнительной информации',
-                                    );
-                                  },
-                                ),
-                              ],
+                                elevation: 4,
+                              ),
+                              onPressed: () => productsProvider.refresh(),
                             ),
                           ],
                         ),
@@ -1071,28 +1065,38 @@ class _CatalogScreenState extends State<CatalogScreen>
                   }
 
                   // Отображение списка товаров
-                  return ListView.builder(
-                    controller: _scrollController, // 🆕 ДОБАВИТЬ
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: products.length +
-                        (productsProvider.hasMore ? 1 : 0), // 🆕 ИЗМЕНИТЬ
-                    itemBuilder: (context, index) {
-                      // 🆕 ДОБАВИТЬ проверку для индикатора загрузки
-                      if (index == products.length) {
-                        return Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                  AppColors.primaryLight),
-                            ),
-                          ),
-                        );
-                      }
-
-                      final product = products[index];
-                      return _buildProductCard(context, product);
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      HapticFeedback.mediumImpact();
+                      await productsProvider.refresh();
                     },
+                    color: AppColors.primaryLight,
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      physics:
+                          AlwaysScrollableScrollPhysics(), // Важно для pull-to-refresh
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: products.length +
+                          (productsProvider.hasMore ? 1 : 0), // 🆕 ИЗМЕНИТЬ
+                      itemBuilder: (context, index) {
+                        // 🆕 ДОБАВИТЬ проверку для индикатора загрузки
+                        if (index == products.length) {
+                          return Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    AppColors.primaryLight),
+                              ),
+                            ),
+                          );
+                        }
+
+                        final product = products[index];
+                        return _buildProductCard(context, product);
+                      },
+                    ),
                   );
                 },
               ),

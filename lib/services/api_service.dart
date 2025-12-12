@@ -25,6 +25,8 @@ class ApiService {
   // HTTP клиент с настройками
   final http.Client _client = http.Client();
   String? _authToken;
+  // Callback для автоматического logout при истечении токена
+  static Function? onTokenExpired;
 
   // Заголовки по умолчанию
   Map<String, String> get _defaultHeaders => {
@@ -144,6 +146,15 @@ class ApiService {
           errorMessage = errorData['error']?.toString() ?? errorMessage;
         } catch (e) {
           // Если не удалось распарсить ошибку, используем стандартное сообщение
+        }
+
+        // Автоматический logout при истечении токена (401)
+        if (response.statusCode == 401) {
+          if (kDebugMode) {
+            print('🔐 Токен истёк, выполняем автоматический logout');
+          }
+          _authToken = null;
+          onTokenExpired?.call();
         }
 
         return {

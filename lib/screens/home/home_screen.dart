@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Для HapticFeedback
 import 'package:provider/provider.dart';
+import 'package:severnaya_korzina/providers/products_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../services/api_service.dart';
@@ -31,16 +32,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late int _currentIndex; // ✅ ИЗМЕНИТЬ на late
   Timer? _maintenanceCheckTimer;
   final ApiService _apiService = ApiService();
+  final GlobalKey<CartScreenState> _cartKey = GlobalKey<CartScreenState>();
 
-  final List<Widget> _screens = [
-    CatalogScreen(),
-    CartScreen(),
-    OrdersScreen(),
-    ProfileScreen(),
-  ];
+  // final List<Widget> _screens = [
+  //   CatalogScreen(),
+  //   CartScreen(),
+  //   OrdersScreen(),
+  //   ProfileScreen(),
+  // ];
+  late final List<Widget> _screens;
 
   @override
   void initState() {
+    _screens = [
+      CatalogScreen(),
+      CartScreen(key: _cartKey),
+      OrdersScreen(),
+      ProfileScreen(),
+    ];
     super.initState();
     _currentIndex = widget.initialIndex;
     WidgetsBinding.instance.addObserver(this);
@@ -64,6 +73,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Когда приложение возвращается из фона, проверяем статус
       print('📱 Приложение вернулось из фона, проверяем режим обслуживания');
       _checkMaintenanceStatus();
+      // Обновляем статус оформления заказов
+      _cartKey.currentState?.refreshCheckoutStatus();
+      // Обновляем каталог и категории
+      Provider.of<ProductsProvider>(context, listen: false).refresh();
     }
   }
 
@@ -252,9 +265,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 type: BottomNavigationBarType.fixed,
                 currentIndex: _currentIndex,
                 onTap: (index) {
-                  // Добавляем тактильный отклик
                   HapticFeedback.lightImpact();
                   setState(() => _currentIndex = index);
+                  // Обновляем статус оформления при открытии корзины
+                  if (index == 1) {
+                    _cartKey.currentState?.refreshCheckoutStatus();
+                  }
                 },
                 backgroundColor: Colors.transparent, // Прозрачный фон
                 selectedItemColor: Colors.white,
