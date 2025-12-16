@@ -291,6 +291,14 @@ class ApiService {
     return await _makeRequest('GET', '/products/categories/all');
   }
 
+  /// Проверка товаров корзины на существование
+  Future<Map<String, dynamic>> validateCartProducts(
+      List<int> productIds) async {
+    return await _makeRequest('POST', '/products/validate', body: {
+      'productIds': productIds,
+    });
+  }
+
   // === МЕТОДЫ ДЛЯ АДРЕСОВ ===
 
   /// Получить все адреса пользователя

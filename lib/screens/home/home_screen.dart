@@ -270,6 +270,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   // Обновляем статус оформления при открытии корзины
                   if (index == 1) {
                     _cartKey.currentState?.refreshCheckoutStatus();
+                    _cartKey.currentState?.refreshCartValidation();
                   }
                 },
                 backgroundColor: Colors.transparent, // Прозрачный фон

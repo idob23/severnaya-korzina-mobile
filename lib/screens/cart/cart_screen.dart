@@ -23,16 +23,47 @@ class CartScreenState extends State<CartScreen> {
   final ApiService _apiService = ApiService();
   bool _checkoutEnabled = true;
   bool _isLoadingStatus = false;
+  bool _isValidating = false;
 
   @override
   void initState() {
     super.initState();
+    print('🔴🔴🔴 CartScreen initState ВЫЗВАН'); // ← ДОБАВЬ
     _checkCheckoutStatus();
+    _validateCart();
   }
 
   /// Публичный метод для обновления статуса оформления заказов
   void refreshCheckoutStatus() {
     _checkCheckoutStatus();
+  }
+
+  /// Публичный метод для валидации корзины (вызывается из HomeScreen)
+  void refreshCartValidation() {
+    _validateCart();
+  }
+
+  Future<void> _validateCart() async {
+    if (_isValidating) return; // ← защита от повторного вызова
+    _isValidating = true;
+
+    try {
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      await cartProvider.validateCart();
+
+      final message = cartProvider.getAndClearValidationMessage();
+      if (message != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    } finally {
+      _isValidating = false;
+    }
   }
 
   Future<void> _checkCheckoutStatus() async {

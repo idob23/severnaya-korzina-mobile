@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 // Импортируем Product из products_provider
 import 'products_provider.dart';
+import '../services/api_service.dart';
 
 /// Модель элемента корзины
 class CartItem {
@@ -92,6 +93,13 @@ class CartProvider with ChangeNotifier {
   Map<int, CartItem> _items = {};
   static const String _cartStorageKey = 'cart_items';
   bool _isInitialized = false;
+  String? _validationMessage;
+
+  String? getAndClearValidationMessage() {
+    final msg = _validationMessage;
+    _validationMessage = null;
+    return msg;
+  }
 
   /// Инициализация провайдера БЕЗ автоматической загрузки
   /// чтобы избежать двойного вызова loadCart()
@@ -163,6 +171,54 @@ class CartProvider with ChangeNotifier {
 
     if (kDebugMode) {
       print('CartProvider: Добавлен товар $name (количество: $quantity)');
+    }
+  }
+
+  /// Проверяет товары корзины на существование в БД
+  Future<void> validateCart() async {
+    print('🛒 validateCart() вызван, items: ${_items.length}'); // ← ДОБАВЬ
+    if (_items.isEmpty) {
+      print('🛒 Корзина пуста, пропускаем'); // ← ДОБАВЬ
+      return;
+    }
+
+    try {
+      final apiService = ApiService();
+      final productIds = _items.keys.toList();
+
+      print('🛒 Проверяем productIds: $productIds'); // ← ДОБАВЬ
+
+      final response = await apiService.validateCartProducts(productIds);
+
+      print('🛒 Ответ сервера: $response'); // ← ДОБАВЬ
+
+      if (response['success'] == true && response['invalid'] != null) {
+        final List invalid = response['invalid'] as List;
+
+        if (invalid.isNotEmpty) {
+          final removedNames = <String>[];
+
+          for (final item in invalid) {
+            final productId = item['id'] as int;
+            final cartItem = _items[productId];
+            final name = cartItem?.name ?? item['name'] ?? 'Товар #$productId';
+            final reason = item['reason'] ?? 'недоступен';
+
+            _items.remove(productId);
+            removedNames.add('• $name ($reason)');
+          }
+
+          await saveCart();
+          notifyListeners();
+
+          if (removedNames.isNotEmpty) {
+            _validationMessage =
+                'Удалены недоступные товары:\n${removedNames.join('\n')}';
+          }
+        }
+      }
+    } catch (e) {
+      print('Ошибка валидации корзины: $e');
     }
   }
 
