@@ -130,6 +130,35 @@ class _CheckoutScreenState extends State<CheckoutScreen>
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.currentUser;
 
+      // Валидация корзины перед оплатой
+      await cartProvider.validateCart();
+      final validationMessage = cartProvider.getAndClearValidationMessage();
+      if (validationMessage != null && mounted) {
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(validationMessage),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        return;
+      }
+
+      if (cartProvider.isEmpty) {
+        setState(() => _isProcessing = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Корзина пуста'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          Navigator.pop(context);
+        }
+        return;
+      }
+
       if (user?.id == null) {
         throw Exception('Пользователь не авторизован');
       }

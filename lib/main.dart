@@ -217,6 +217,12 @@ class _AppInitializerState extends State<AppInitializer>
       print(
           '✅ Корзина загружена при запуске: ${cartProvider.totalItems} товаров');
 
+      // Валидируем корзину после загрузки
+      if (cartProvider.isNotEmpty) {
+        await cartProvider.validateCart();
+        print('✅ Корзина провалидирована при запуске');
+      }
+
       // Проверяем статус авторизации
       await authProvider.checkAuthStatus();
 
